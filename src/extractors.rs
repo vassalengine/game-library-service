@@ -7,13 +7,12 @@ use axum::{
     },
     http::request::Parts,
 };
-use sqlx::SqlitePool;
 
 use crate::{
     errors::AppError,
     jwt::{self, Claims, Key},
     model::Owner,
-    queries::user_is_owner
+    queries::{Database, user_is_owner}
 };
 
 #[async_trait]
@@ -44,7 +43,7 @@ impl<S> FromRequestParts<S> for Owner
 where
     S: Send + Sync,
     Key: FromRef<S>,
-    SqlitePool: FromRef<S>
+    Database: FromRef<S>
 {
     type Rejection = AppError;
 
@@ -56,11 +55,11 @@ where
         let claims = Claims::from_request_parts(parts, state).await?;
 
 // TODO: can we wrap the pool in our own struct?
-        let State(db_pool) = State::<SqlitePool>::from_request_parts(parts, state)
+        let State(db) = State::<Database>::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::InternalError)?;
 
-        match user_is_owner(&claims.sub, proj_id, &db_pool).await? {
+        match user_is_owner(&claims.sub, proj_id, &db).await? {
             true => Ok(Owner(claims.sub)),
             false =>  Err(AppError::Unauthorized)
         }

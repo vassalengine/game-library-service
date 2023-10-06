@@ -1,3 +1,5 @@
+#![feature(async_fn_in_trait)]
+
 use axum::{
     Router, Server,
     extract::{FromRef, Path, State},
@@ -7,9 +9,8 @@ use axum::{
 };
 //use base64::{Engine, engine::general_purpose};
 use jsonwebtoken::DecodingKey;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::sqlite::{Sqlite, SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::net::SocketAddr;
 
 mod config;
@@ -23,13 +24,13 @@ use crate::{
     config::Config,
     errors::AppError,
     model::{Owner, Users},
-    queries::{add_owner, get_owners, get_user_id, remove_owner}
+    queries::{Database, add_owners, get_owners, remove_owners}
 };
 
 #[derive(Clone, FromRef)]
 struct AppState {
     key: jwt::Key, 
-    database: SqlitePool 
+    database: Database 
 }
 
 /*
@@ -216,59 +217,37 @@ COLLATE NOCASE LIMIT ?
 
 async fn owners_get(
     Path(proj_id): Path<u32>,
-    State(db_pool): State<SqlitePool>
-) -> Result<Json<Users>, AppError> {
-    Ok(Json(get_owners(proj_id, &db_pool).await?))
+    State(db): State<Database>
+) -> Result<Json<Users>, AppError>
+{
+    Ok(Json(get_owners(proj_id, &db).await?))
 }
 
 async fn owners_add(
     requester: Owner,
     Path(proj_id): Path<u32>,
-    State(db_pool): State<SqlitePool>,
+    State(db): State<Database>,
     Json(owners): Json<Vec<String>>
 ) -> Result<(), AppError> {
-
-    let mut tx = db_pool.begin().await?;
-
-    for owner in owners {
-        // get user id of new owner
-        let owner_id = get_user_id(&owner, &mut *tx).await?;
-        // associate new owner with the project
-        add_owner(owner_id, proj_id, &mut tx).await?;
-    }
-
-    tx.commit().await?;
-
-    Ok(())
+    add_owners(&owners, proj_id, &db).await
 }
 
 async fn owners_remove(
     requester: Owner,
     Path(proj_id): Path<u32>,
-    State(db_pool): State<SqlitePool>,
+    State(db): State<Database>,
     Json(owners): Json<Vec<String>>
-) -> Result<(), AppError> {
-    let mut tx = db_pool.begin().await?;
-
-    for owner in owners {
-        // get user id of existing owner
-        let owner_id = get_user_id(&owner, &mut *tx).await?;
-        // remove old owner from the project
-        remove_owner(owner_id, proj_id, &mut tx).await?;
-    }
-
-    tx.commit().await?;
-
-    Ok(())
+) -> Result<(), AppError>
+{
+    remove_owners(&owners, proj_id, &db).await
 }
 
 fn app(config: &Config, db_pool: SqlitePool) -> Router {
     let api = &config.api_base_path;
-    let key = jwt::Key(DecodingKey::from_secret(&config.jwt_key));
 
     let state = AppState {
-        key: key,
-        database: db_pool
+        key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
+        database: Database(db_pool)
     };
 
     Router::new()
