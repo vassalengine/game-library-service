@@ -16,7 +16,7 @@ jsonwebtoken = "*"
 #mime = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-sqlx = { version = "*", features = ["runtime-tokio", "macros", "sqlite"] }
+sqlx = { version = "*", features = ["macros", "migrate", "runtime-tokio", "sqlite"] }
 tokio = { version = "*", features = ["full"] }
 #tower = { version = "*", features = ["buffer", "limit"] }
 
