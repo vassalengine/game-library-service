@@ -14,17 +14,17 @@ use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::net::SocketAddr;
 
 mod config;
+mod db;
 mod errors;
 mod extractors;
 mod jwt;
 mod model;
-mod queries;
 
 use crate::{
     config::Config,
     errors::AppError,
     model::{Owner, Users},
-    queries::{Database, add_owners, get_owners, remove_owners}
+    db::{Database, add_owners, get_owners, remove_owners}
 };
 
 #[derive(Clone, FromRef)]

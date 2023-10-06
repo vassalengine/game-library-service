@@ -12,7 +12,7 @@ use crate::{
     errors::AppError,
     jwt::{self, Claims, Key},
     model::Owner,
-    queries::{Database, user_is_owner}
+    db::{Database, user_is_owner}
 };
 
 #[async_trait]
