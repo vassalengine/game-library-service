@@ -179,12 +179,12 @@ ORDER BY users.username
 mod test {
     use super::*;
 
-    #[sqlx::test(fixtures("init"))]
+    #[sqlx::test(fixtures("user"))]
     async fn test_get_user_id_present(db: SqlitePool) {
         assert_eq!(get_user_id("bob", &db).await.unwrap(), 1);
     }
 
-    #[sqlx::test(fixtures("init"))]
+    #[sqlx::test(fixtures("user"))]
     async fn test_get_user_id_missing(db: SqlitePool) {
         assert!(get_user_id("not_a_user", &db).await.is_err());
     }
