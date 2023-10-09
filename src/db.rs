@@ -17,13 +17,10 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
-async fn get_user_id<'e, E>(
+async fn get_user_id(
     user: &str,
-    ex: E
-) -> Result<i64, sqlx::Error>
-where
-    E: Executor<'e, Database = Sqlite>
-{
+    db: &Database
+) -> Result<i64, sqlx::Error> {
     Ok(
         sqlx::query!(
             "
@@ -33,7 +30,7 @@ WHERE username = ?
             ",
             user
         )
-        .fetch_one(ex)
+        .fetch_one(&db.0)
         .await?
         .id
     )
@@ -96,7 +93,7 @@ pub async fn add_owners(
 
     for owner in owners {
         // get user id of new owner
-        let owner_id = get_user_id(owner, &mut *tx).await?;
+        let owner_id = get_user_id(owner, db).await?;
         // associate new owner with the project
         add_owner(owner_id, proj_id, &mut *tx).await?;
     }
@@ -138,7 +135,7 @@ pub async fn remove_owners(
 
     for owner in owners {
         // get user id of owner
-        let owner_id = get_user_id(owner, &mut *tx).await?;
+        let owner_id = get_user_id(owner, db).await?;
         // remove old owner from the project
         remove_owner(owner_id, proj_id, &mut *tx).await?;
     }
@@ -180,12 +177,14 @@ mod test {
     use super::*;
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_get_user_id_present(db: SqlitePool) {
+    async fn test_get_user_id_present(pool: SqlitePool) {
+        let db = Database(pool);
         assert_eq!(get_user_id("bob", &db).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_get_user_id_missing(db: SqlitePool) {
+    async fn test_get_user_id_missing(pool: SqlitePool) {
+        let db = Database(pool);
         assert!(get_user_id("not_a_user", &db).await.is_err());
     }
 }
