@@ -9,6 +9,7 @@ use axum::{
 };
 //use base64::{Engine, engine::general_purpose};
 use jsonwebtoken::DecodingKey;
+use serde::Serialize;
 use serde_json::json;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::net::SocketAddr;
@@ -215,6 +216,47 @@ COLLATE NOCASE LIMIT ?
 }
 */
 
+#[derive(Debug, Serialize)]
+struct Project {
+}
+
+#[derive(Debug, Serialize)]
+struct Projects {
+}
+
+async fn projects_get(
+    State(db): State<Database>
+) -> Result<Json<Projects>, AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn project_get(
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>
+) -> Result<Json<Project>, AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn project_update(
+    requester: Owner,
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>
+) -> Result<Json<Project>, AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn project_revision_get(
+    Path(proj_id): Path<u32>,
+    Path(revision): Path<u32>,
+    State(db): State<Database>
+) -> Result<Json<Project>, AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
 async fn owners_get(
     Path(proj_id): Path<u32>,
     State(db): State<Database>
@@ -242,29 +284,148 @@ async fn owners_remove(
     remove_owners(&owners, proj_id, &db).await
 }
 
+async fn players_get(
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>
+) -> Result<Json<Users>, AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn players_add(
+//    requester: Player,
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>
+) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+async fn players_remove(
+//    requester: Player,
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>,
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn package_get(
+    Path(proj_id): Path<u32>,
+    Path(pkg_name): Path<String>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn package_version_get(
+    Path(proj_id): Path<u32>,
+    Path(pkg_name): Path<String>,
+    Path(pkg_version): Path<String>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn package_version_put(
+    Path(proj_id): Path<u32>,
+    Path(pkg_name): Path<String>,
+    Path(pkg_version): Path<String>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn readme_get(
+    Path(proj_id): Path<u32>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn readme_revision_get(
+    Path(proj_id): Path<u32>,
+    Path(revision): Path<u32>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn image_get(
+    Path(proj_id): Path<u32>,
+    Path(img_name): Path<String>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+async fn image_put(
+    Path(proj_id): Path<u32>,
+    Path(img_name): Path<String>,
+    State(db): State<Database>
+) -> Result<(), AppError>
+{
+    Err(AppError::NotImplemented)
+}
+
+//fn app(api: &str) -> Router {
 fn app(config: &Config, db_pool: SqlitePool) -> Router {
     let api = &config.api_base_path;
-
     let state = AppState {
         key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
         database: Database(db_pool)
     };
 
     Router::new()
-        .route(&format!("{api}/"), get(root))
-//        .route(&format!("{base}/projects"), get(projects))
-//        .route(&format!("{base}/projects/:proj_id"), get(project_read).put(project_update))
-//        .route(&format!("{base}/projects/:proj_id/:revision"), get(project_revision))
+        .route(
+            &format!("{api}/"),
+            get(root)
+        )
+        .route(
+            &format!("{api}/projects"),
+            get(projects_get)
+        )
+        .route(&format!(
+            "{api}/projects/:proj_id"),
+            get(project_get).put(project_update)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/:revision"),
+            get(project_revision_get)
+        )
         .route(
             &format!("{api}/projects/:proj_id/owners"),
             get(owners_get).put(owners_add).delete(owners_remove)
         )
-//        .route(&format!("{base}/projects/:proj_id/players"), get(project_players_get).put(project_players_add).delete(project_players_remove))
-//        .route(&format!("{base}/projects/:proj_id/packages/:pkg_name"), get(project_package_read))
-//        .route(&format!("{base}/projects/:proj_id/packages/:pkg_name/:version"), get(project_package_version_read).put(project_package_version_write))
-//        .route(&format!("{base}/projects/:proj_id/readme"), get(project_readme))
-//        .route(&format!("{base}/projects/:proj_id//readme/:revision"), get(project_readme_revision))
-//        .route(&format!("{base}/projects/:proj_id//images/:img_name"), get(project_image_get).put(project_image_put))
+        .route(
+            &format!("{api}/projects/:proj_id/players"),
+            get(players_get).put(players_add).delete(players_remove)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/packages/:pkg_name"),
+            get(package_get)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/packages/:pkg_name/:version"),
+            get(package_version_get).put(package_version_put)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/readme"),
+            get(readme_get)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/readme/:revision"),
+            get(readme_revision_get)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/images/:img_name"),
+            get(image_get).put(image_put)
+        )
         .with_state(state)
 }
 
