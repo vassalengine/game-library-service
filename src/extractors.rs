@@ -47,7 +47,8 @@ where
 {
     type Rejection = AppError;
 
-     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Path(proj_id) = Path::<u32>::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::InternalError)?;
