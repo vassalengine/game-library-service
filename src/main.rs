@@ -373,14 +373,7 @@ async fn image_put(
     Err(AppError::NotImplemented)
 }
 
-//fn app(api: &str) -> Router {
-fn app(config: &Config, db_pool: SqlitePool) -> Router {
-    let api = &config.api_base_path;
-    let state = AppState {
-        key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
-        database: Database(db_pool)
-    };
-
+fn app(api: &str) -> Router<AppState> {
     Router::new()
         .route(
             &format!("{api}/"),
@@ -426,7 +419,6 @@ fn app(config: &Config, db_pool: SqlitePool) -> Router {
             &format!("{api}/projects/:proj_id/images/:img_name"),
             get(image_get).put(image_put)
         )
-        .with_state(state)
 }
 
 #[tokio::main]
@@ -447,7 +439,14 @@ async fn main() {
         .await
         .unwrap();
 
-    let app = app(&config, db_pool);
+    let api = &config.api_base_path;
+
+    let state = AppState {
+        key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
+        database: Database(db_pool)
+    };
+
+    let app = app(api).with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
     Server::bind(&addr)
