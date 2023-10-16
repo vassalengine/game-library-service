@@ -12,7 +12,7 @@ use crate::{
     errors::AppError,
     jwt::{self, Claims, Key},
     model::Owner,
-    db::{Database, user_is_owner}
+    db::{DB, Database}
 };
 
 #[async_trait]
@@ -60,7 +60,7 @@ where
             .await
             .map_err(|_| AppError::InternalError)?;
 
-        match user_is_owner(&claims.sub, proj_id, &db).await? {
+        match db.user_is_owner(&claims.sub, proj_id).await? {
             true => Ok(Owner(claims.sub)),
             false =>  Err(AppError::Unauthorized)
         }

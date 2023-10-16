@@ -8,8 +8,134 @@ use crate::{
     model::{User, Users}
 };
 
+pub trait DB {
+    async fn user_is_owner(
+        &self,
+        user: &str,
+        proj_id: u32
+    ) -> Result<bool, AppError>;
+
+    async fn add_owners(
+        &self,
+        owners: &[String],
+        proj_id: u32
+    ) -> Result<(), AppError>;
+
+    async fn remove_owners(
+        &self,
+        owners: &[String],
+        proj_id: u32
+    ) -> Result<(), AppError>;
+
+    async fn get_owners(
+        &self,
+        proj_id: u32
+    ) -> Result<Users, AppError>;
+
+}
+
 #[derive(Clone)]
 pub struct Database(pub SqlitePool);
+
+impl DB for Database {
+    async fn user_is_owner(
+        &self,
+        user: &str,
+        proj_id: u32
+    ) -> Result<bool, AppError>
+    {
+        Ok(
+            sqlx::query!(
+                "
+    SELECT 1 as present
+    FROM owners
+    JOIN users
+    ON users.id = owners.user_id
+    WHERE users.username = ? AND owners.project_id = ?
+    LIMIT 1
+                ",
+                user,
+                proj_id
+            )
+            .fetch_optional(&self.0)
+            .await?
+            .is_some()
+        )
+    }
+
+    async fn add_owners(
+        &self,
+        owners: &[String],
+        proj_id: u32
+    ) -> Result<(), AppError>
+    {
+        let mut tx = self.0.begin().await?;
+
+        for owner in owners {
+            // get user id of new owner
+            let owner_id = get_user_id(owner, &self).await?;
+            // associate new owner with the project
+            add_owner(owner_id, proj_id, &mut *tx).await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn remove_owners(
+        &self,
+        owners: &[String],
+        proj_id: u32
+    ) -> Result<(), AppError>
+    {
+        let mut tx = self.0.begin().await?;
+
+        for owner in owners {
+            // get user id of owner
+            let owner_id = get_user_id(owner, &self).await?;
+            // remove old owner from the project
+            remove_owner(owner_id, proj_id, &mut *tx).await?;
+        }
+
+        // prevent removal of last owner 
+        if !has_owner(proj_id, &mut *tx).await? {
+            return Err(AppError::DatabaseError("cannot remove last owner".into()));
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn get_owners(
+        &self,
+        proj_id: u32
+    ) -> Result<Users, AppError>
+    {
+        let users = sqlx::query_as!(
+            User,
+            "
+    SELECT users.username
+    FROM users
+    JOIN owners
+    ON users.id = owners.user_id
+    JOIN projects
+    ON owners.project_id = projects.id
+    WHERE projects.id = ?
+    ORDER BY users.username
+            ",
+            proj_id
+        )
+        .fetch_all(&self.0)
+        .await?;
+
+        Ok(Users {
+            users
+        })
+    }
+
+}
 
 impl From<sqlx::Error> for AppError {
     fn from(e: sqlx::Error) -> Self {
@@ -36,31 +162,6 @@ WHERE username = ?
     )
 }
 
-pub async fn user_is_owner(
-    user: &str,
-    proj_id: u32,
-    db: &Database
-) -> Result<bool, AppError>
-{
-    Ok(
-        sqlx::query!(
-            "
-SELECT 1 as present
-FROM owners
-JOIN users
-ON users.id = owners.user_id
-WHERE users.username = ? AND owners.project_id = ?
-LIMIT 1
-            ",
-            user,
-            proj_id
-        )
-        .fetch_optional(&db.0)
-        .await?
-        .is_some()
-    )
-}
-
 async fn add_owner<'e, E>(
     user_id: i64,
     proj_id: u32,
@@ -79,26 +180,6 @@ VALUES (?, ?)
     )
     .execute(ex)
     .await?;
-
-    Ok(())
-}
-
-pub async fn add_owners(
-    owners: &[String],
-    proj_id: u32,
-    db: &Database
-) -> Result<(), AppError>
-{
-    let mut tx = db.0.begin().await?;
-
-    for owner in owners {
-        // get user id of new owner
-        let owner_id = get_user_id(owner, db).await?;
-        // associate new owner with the project
-        add_owner(owner_id, proj_id, &mut *tx).await?;
-    }
-
-    tx.commit().await?;
 
     Ok(())
 }
@@ -146,58 +227,6 @@ LIMIT 1
         .await?
         .is_some()
     )
-}
-
-pub async fn remove_owners(
-    owners: &[String],
-    proj_id: u32,
-    db: &Database
-) -> Result<(), AppError>
-{
-    let mut tx = db.0.begin().await?;
-
-    for owner in owners {
-        // get user id of owner
-        let owner_id = get_user_id(owner, db).await?;
-        // remove old owner from the project
-        remove_owner(owner_id, proj_id, &mut *tx).await?;
-    }
-
-    // prevent removal of last owner 
-    if !has_owner(proj_id, &mut *tx).await? {
-        return Err(AppError::DatabaseError("cannot remove last owner".into()));
-    }
-
-    tx.commit().await?;
-
-    Ok(())
-}
-
-pub async fn get_owners(
-    proj_id: u32,
-    db: &Database
-) -> Result<Users, AppError>
-{
-    let users = sqlx::query_as!(
-        User,
-        "
-SELECT users.username
-FROM users
-JOIN owners
-ON users.id = owners.user_id
-JOIN projects
-ON owners.project_id = projects.id
-WHERE projects.id = ?
-ORDER BY users.username
-        ",
-        proj_id
-    )
-    .fetch_all(&db.0)
-    .await?;
-
-    Ok(Users {
-        users
-    })
 }
 
 #[cfg(test)]
@@ -352,7 +381,7 @@ LIMIT 1
     async fn get_owners_ok(pool: SqlitePool) {
         let db = Database(pool);
         assert_eq!(
-            get_owners(42, &db).await.unwrap(),
+            db.get_owners(42).await.unwrap(),
             Users { users: vec!(User { username: "bob".into() }) }
         );
     }
@@ -361,7 +390,7 @@ LIMIT 1
     async fn get_owners_not_a_project(pool: SqlitePool) {
         let db = Database(pool);
         assert_eq!(
-            get_owners(1, &db).await.unwrap(),
+            db.get_owners(1).await.unwrap(),
             Users { users: Vec::new() }
         );
     }

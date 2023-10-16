@@ -262,7 +262,7 @@ async fn owners_get(
     State(db): State<Database>
 ) -> Result<Json<Users>, AppError>
 {
-    Ok(Json(get_owners(proj_id, &db).await?))
+    Ok(Json(db.get_owners(proj_id).await?))
 }
 
 async fn owners_add(
@@ -271,7 +271,7 @@ async fn owners_add(
     State(db): State<Database>,
     Json(owners): Json<Vec<String>>
 ) -> Result<(), AppError> {
-    add_owners(&owners, proj_id, &db).await
+    db.add_owners(&owners, proj_id).await
 }
 
 async fn owners_remove(
@@ -281,7 +281,7 @@ async fn owners_remove(
     Json(owners): Json<Vec<String>>
 ) -> Result<(), AppError>
 {
-    remove_owners(&owners, proj_id, &db).await
+    db.remove_owners(&owners, proj_id).await
 }
 
 async fn players_get(
@@ -373,7 +373,7 @@ async fn image_put(
     Err(AppError::NotImplemented)
 }
 
-fn app(api: &str) -> Router<AppState> {
+fn routes(api: &str) -> Router<AppState> {
     Router::new()
         .route(
             &format!("{api}/"),
@@ -446,7 +446,7 @@ async fn main() {
         database: Database(db_pool)
     };
 
-    let app = app(api).with_state(state);
+    let app = routes(api).with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
     Server::bind(&addr)
