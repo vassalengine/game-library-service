@@ -369,8 +369,8 @@ async fn image_put(
 
 #[derive(Clone, FromRef)]
 struct AppStateImpl {
-    key: jwt::Key, 
-    database: Database 
+    key: jwt::Key,
+    database: Database
 }
 
 fn routes(api: &str) -> Router<AppStateImpl> {
