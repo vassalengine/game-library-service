@@ -28,12 +28,6 @@ use crate::{
     db::{Database, add_owners, get_owners, remove_owners}
 };
 
-#[derive(Clone, FromRef)]
-struct AppState {
-    key: jwt::Key, 
-    database: Database 
-}
-
 /*
 struct HttpError {
     status: u16,
@@ -373,7 +367,13 @@ async fn image_put(
     Err(AppError::NotImplemented)
 }
 
-fn routes(api: &str) -> Router<AppState> {
+#[derive(Clone, FromRef)]
+struct AppStateImpl {
+    key: jwt::Key, 
+    database: Database 
+}
+
+fn routes(api: &str) -> Router<AppStateImpl> {
     Router::new()
         .route(
             &format!("{api}/"),
@@ -441,7 +441,7 @@ async fn main() {
 
     let api = &config.api_base_path;
 
-    let state = AppState {
+    let state = AppStateImpl {
         key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
         database: Database(db_pool)
     };
