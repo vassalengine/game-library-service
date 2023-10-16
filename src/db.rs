@@ -73,7 +73,7 @@ impl DB for Database {
 
         for owner in owners {
             // get user id of new owner
-            let owner_id = get_user_id(owner, &self).await?;
+            let owner_id = get_user_id(owner, self).await?;
             // associate new owner with the project
             add_owner(owner_id, proj_id, &mut *tx).await?;
         }
@@ -93,7 +93,7 @@ impl DB for Database {
 
         for owner in owners {
             // get user id of owner
-            let owner_id = get_user_id(owner, &self).await?;
+            let owner_id = get_user_id(owner, self).await?;
             // remove old owner from the project
             remove_owner(owner_id, proj_id, &mut *tx).await?;
         }
