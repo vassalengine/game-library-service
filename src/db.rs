@@ -4,40 +4,15 @@ use sqlx::{
 };
 
 use crate::{
+    datastore::DataStore,
     errors::AppError,
     model::{User, Users}
 };
 
-pub trait DB {
-    async fn user_is_owner(
-        &self,
-        user: &str,
-        proj_id: u32
-    ) -> Result<bool, AppError>;
-
-    async fn add_owners(
-        &self,
-        owners: &[String],
-        proj_id: u32
-    ) -> Result<(), AppError>;
-
-    async fn remove_owners(
-        &self,
-        owners: &[String],
-        proj_id: u32
-    ) -> Result<(), AppError>;
-
-    async fn get_owners(
-        &self,
-        proj_id: u32
-    ) -> Result<Users, AppError>;
-
-}
-
 #[derive(Clone)]
 pub struct Database(pub SqlitePool);
 
-impl DB for Database {
+impl DataStore for Database {
     async fn user_is_owner(
         &self,
         user: &str,

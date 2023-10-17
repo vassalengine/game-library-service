@@ -18,7 +18,7 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sqlx = { version = "*", features = ["macros", "migrate", "runtime-tokio", "sqlite"] }
 tokio = { version = "*", features = ["full"] }
-#tower = { version = "*", features = ["buffer", "limit"] }
+tower = { version = "*", features = ["buffer", "limit"] }
 
 [dev-dependencies]
-#hyper = { version = "*", features = ["full"] }
+hyper = { version = "*", features = ["full"] }

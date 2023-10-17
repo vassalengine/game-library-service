@@ -9,10 +9,11 @@ use axum::{
 };
 
 use crate::{
+    datastore::DataStore,
+    db::Database,
     errors::AppError,
     jwt::{self, Claims, Key},
     model::Owner,
-    db::{DB, Database}
 };
 
 #[async_trait]
