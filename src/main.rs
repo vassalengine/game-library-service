@@ -411,7 +411,7 @@ mod test {
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri(&format!("{}/", api))
+                    .uri(&format!("{api}/"))
                     .body(Body::empty())
                     .unwrap()
             )
