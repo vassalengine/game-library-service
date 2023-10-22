@@ -1,23 +1,24 @@
+use axum::async_trait;
 use sqlx::{
     Executor,
     sqlite::{Sqlite, SqlitePool}
 };
 
 use crate::{
-    datastore::DataStore,
-    errors::AppError,
+    datastore::{DataStore, DataStoreError},
     model::{User, Users}
 };
 
 #[derive(Clone)]
 pub struct Database(pub SqlitePool);
 
+#[async_trait]
 impl DataStore for Database {
     async fn user_is_owner(
         &self,
-        user: &str,
+        user: &User,
         proj_id: u32
-    ) -> Result<bool, AppError>
+    ) -> Result<bool, DataStoreError>
     {
         Ok(
             sqlx::query!(
@@ -29,7 +30,7 @@ impl DataStore for Database {
     WHERE users.username = ? AND owners.project_id = ?
     LIMIT 1
                 ",
-                user,
+                user.0,
                 proj_id
             )
             .fetch_optional(&self.0)
@@ -40,15 +41,15 @@ impl DataStore for Database {
 
     async fn add_owners(
         &self,
-        owners: &[String],
+        owners: &Users,
         proj_id: u32
-    ) -> Result<(), AppError>
+    ) -> Result<(), DataStoreError>
     {
         let mut tx = self.0.begin().await?;
 
-        for owner in owners {
+        for owner in &owners.users {
             // get user id of new owner
-            let owner_id = get_user_id(owner, self).await?;
+            let owner_id = get_user_id(&owner.0, self).await?;
             // associate new owner with the project
             add_owner(owner_id, proj_id, &mut *tx).await?;
         }
@@ -60,22 +61,22 @@ impl DataStore for Database {
 
     async fn remove_owners(
         &self,
-        owners: &[String],
+        owners: &Users,
         proj_id: u32
-    ) -> Result<(), AppError>
+    ) -> Result<(), DataStoreError>
     {
         let mut tx = self.0.begin().await?;
 
-        for owner in owners {
+        for owner in &owners.users {
             // get user id of owner
-            let owner_id = get_user_id(owner, self).await?;
+            let owner_id = get_user_id(&owner.0, self).await?;
             // remove old owner from the project
             remove_owner(owner_id, proj_id, &mut *tx).await?;
         }
 
         // prevent removal of last owner 
         if !has_owner(proj_id, &mut *tx).await? {
-            return Err(AppError::DatabaseError("cannot remove last owner".into()));
+            return Err(DataStoreError::Problem("cannot remove last owner".into()));
         }
 
         tx.commit().await?;
@@ -86,10 +87,10 @@ impl DataStore for Database {
     async fn get_owners(
         &self,
         proj_id: u32
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, DataStoreError>
     {
-        let users = sqlx::query_as!(
-            User,
+// FIXME: Is this really the best way? Can't we fill users directly?
+        let users = sqlx::query_scalar!(
             "
     SELECT users.username
     FROM users
@@ -103,18 +104,18 @@ impl DataStore for Database {
             proj_id
         )
         .fetch_all(&self.0)
-        .await?;
+        .await?
+        .into_iter()
+        .map(User)
+        .collect();
 
-        Ok(Users {
-            users
-        })
+        Ok(Users { users })
     }
-
 }
 
-impl From<sqlx::Error> for AppError {
+impl From<sqlx::Error> for DataStoreError {
     fn from(e: sqlx::Error) -> Self {
-        AppError::DatabaseError(e.to_string())
+        DataStoreError::Problem(e.to_string())
     }
 }
 
@@ -357,7 +358,7 @@ LIMIT 1
         let db = Database(pool);
         assert_eq!(
             db.get_owners(42).await.unwrap(),
-            Users { users: vec!(User { username: "bob".into() }) }
+            Users { users: vec!(User("bob".into())) }
         );
     }
 

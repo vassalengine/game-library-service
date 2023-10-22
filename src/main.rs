@@ -2,40 +2,64 @@
 
 use axum::{
     Router, Server,
-    extract::{FromRef, Path, State},
+    extract::FromRef,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing::get
 };
 //use base64::{Engine, engine::general_purpose};
-use jsonwebtoken::DecodingKey;
-use serde::Serialize;
 use serde_json::json;
 use sqlx::sqlite::SqlitePoolOptions;
-use std::net::SocketAddr;
+use std::{
+    net::SocketAddr,
+    sync::Arc
+};
 
 mod config;
 mod datastore;
 mod db;
 mod errors;
 mod extractors;
+mod handlers;
 mod jwt;
 mod model;
 
 use crate::{
     config::Config,
-    datastore::DataStore,
+    datastore::{DataStore, DataStoreError},
     db::Database,
     errors::AppError,
-    model::{Owner, Users},
+    jwt::DecodingKey,
+    handlers::{
+        root_get,
+        projects_get,
+        project_get,
+        project_update,
+        project_revision_get,
+        owners_get,
+        owners_add,
+        owners_remove,
+        players_get,
+        players_add,
+        players_remove,
+        package_get,
+        package_version_get,
+        package_version_put,
+        readme_get,
+        readme_revision_get,
+        image_get,
+        image_put
+    },
+    model::{User, Users},
 };
 
-/*
-struct HttpError {
-    status: u16,
-    message: String
+impl From<DataStoreError> for AppError {
+    fn from(e: DataStoreError) -> Self {
+        match e {
+            DataStoreError::Problem(e) => AppError::DatabaseError(e.to_string())
+        }
+    }
 }
-*/
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
@@ -67,236 +91,64 @@ impl IntoResponse for AppError {
     }
 }
 
-async fn root() -> &'static str {
-    "hello world"
-}
-
-#[derive(Debug, Serialize)]
-struct Project {
-}
-
-#[derive(Debug, Serialize)]
-struct Projects {
-}
-
-async fn projects_get<D: DataStore>(
-    State(_db): State<D>
-) -> Result<Json<Projects>, AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn project_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<Json<Project>, AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn project_update<D: DataStore>(
-//    _requester: Owner,
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<Json<Project>, AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn project_revision_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_revision): Path<u32>,
-    State(_db): State<D>
-) -> Result<Json<Project>, AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn owners_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<Json<Users>, AppError>
-{
-    Err(AppError::NotImplemented)
-//    Ok(Json(db.get_owners(proj_id).await?))
-}
-
-async fn owners_add<D: DataStore>(
-//    _requester: Owner,
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>,
-    Json(_owners): Json<Vec<String>>
-) -> Result<(), AppError> {
-    Err(AppError::NotImplemented)
-//    db.add_owners(&owners, proj_id).await
-}
-
-async fn owners_remove<D: DataStore>(
-//    _requester: Owner,
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>,
-    Json(_owners): Json<Vec<String>>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-//    db.remove_owners(&owners, proj_id).await
-}
-
-async fn players_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<Json<Users>, AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn players_add<D: DataStore>(
-//    requester: Player,
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<(), AppError> {
-    Err(AppError::NotImplemented)
-}
-
-async fn players_remove<D: DataStore>(
-//    requester: Player,
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>,
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn package_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_pkg_name): Path<String>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn package_version_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_pkg_name): Path<String>,
-    Path(_pkg_version): Path<String>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn package_version_put<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_pkg_name): Path<String>,
-    Path(_pkg_version): Path<String>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn readme_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn readme_revision_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_revision): Path<u32>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn image_get<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_img_name): Path<String>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
-async fn image_put<D: DataStore>(
-    Path(_proj_id): Path<u32>,
-    Path(_img_name): Path<String>,
-    State(_db): State<D>
-) -> Result<(), AppError>
-{
-    Err(AppError::NotImplemented)
-}
-
 #[derive(Clone, FromRef)]
-struct AppStateImpl {
-    key: jwt::Key,
-    database: Database
+struct AppState {
+    key: DecodingKey,
+    db: Arc<dyn DataStore + Send + Sync>
 }
 
-trait AppState: Clone + Send + Sync { }
-
-impl AppState for AppStateImpl { }
-
-fn routes<S, D>(api: &str) -> Router<S>
-where
-    S: AppState + 'static,
-    D: DataStore + FromRef<S> + 'static
-{
+fn routes(api: &str) -> Router<AppState> {
     Router::new()
         .route(
             &format!("{api}/"),
-            get(root)
+            get(root_get)
         )
         .route(
             &format!("{api}/projects"),
-            get(projects_get::<D>)
+            get(projects_get)
         )
         .route(&format!(
             "{api}/projects/:proj_id"),
-            get(project_get::<D>)
-            .put(project_update::<D>)
+            get(project_get)
+            .put(project_update)
         )
         .route(
             &format!("{api}/projects/:proj_id/:revision"),
-            get(project_revision_get::<D>)
+            get(project_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/owners"),
-            get(owners_get::<D>)
-            .put(owners_add::<D>)
-            .delete(owners_remove::<D>)
+            get(owners_get)
+            .put(owners_add)
+            .delete(owners_remove)
         )
         .route(
             &format!("{api}/projects/:proj_id/players"),
-            get(players_get::<D>)
-            .put(players_add::<D>)
-            .delete(players_remove::<D>)
+            get(players_get)
+            .put(players_add)
+            .delete(players_remove)
         )
         .route(
             &format!("{api}/projects/:proj_id/packages/:pkg_name"),
-            get(package_get::<D>)
+            get(package_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/packages/:pkg_name/:version"),
-            get(package_version_get::<D>)
-            .put(package_version_put::<D>)
+            get(package_version_get)
+            .put(package_version_put)
         )
         .route(
             &format!("{api}/projects/:proj_id/readme"),
-            get(readme_get::<D>)
+            get(readme_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/readme/:revision"),
-            get(readme_revision_get::<D>)
+            get(readme_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/images/:img_name"),
-            get(image_get::<D>)
-            .put(image_put::<D>)
+            get(image_get)
+            .put(image_put)
         )
 }
 
@@ -320,12 +172,12 @@ async fn main() {
 
     let api = &config.api_base_path;
 
-    let state = AppStateImpl {
-        key: jwt::Key(DecodingKey::from_secret(&config.jwt_key)),
-        database: Database(db_pool)
+    let state = AppState {
+        key: DecodingKey::from_secret(&config.jwt_key),
+        db: Arc::new(Database(db_pool)) as Arc<dyn DataStore + Send + Sync>
     };
 
-    let app: Router<()> = routes::<AppStateImpl, Database>(api).with_state(state);
+    let app: Router = routes(api).with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
     Server::bind(&addr)
@@ -340,78 +192,83 @@ mod test {
 
     use axum::{
         body::Body,
-        http::{Method, Request}
+        http::{
+            Method, Request,
+            header::{AUTHORIZATION, CONTENT_TYPE}
+        }
     };
+    use mime::APPLICATION_JSON;
+    use serde::Deserialize;
     use tower::ServiceExt; // for oneshot
 
-    const API_V1: &str = "/api/v1";
-   
-    #[derive(Clone)]
-    struct UnimplementedStore { }
+    use crate::{
+      jwt::{self, EncodingKey}
+    };
 
+    const API_V1: &str = "/api/v1";
+    const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct HttpError {
+        error: String
+    }
+
+    #[derive(Clone)]
+    struct UnimplementedStore {} 
+
+    #[axum::async_trait]
     impl DataStore for UnimplementedStore {
         async fn user_is_owner(
             &self,
-            user: &str,
-            proj_id: u32
-        ) -> Result<bool, AppError>
+            _user: &User,
+            _proj_id: u32
+        ) -> Result<bool, DataStoreError>
         {
-            Err(AppError::NotImplemented)
+            unimplemented!()
         }
 
         async fn add_owners(
             &self,
-            owners: &[String],
-            proj_id: u32
-        ) -> Result<(), AppError>
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), DataStoreError>
         {
-            Err(AppError::NotImplemented)
+            unimplemented!()
         }
 
         async fn remove_owners(
             &self,
-            owners: &[String],
-            proj_id: u32
-        ) -> Result<(), AppError>
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), DataStoreError>
         {
-            Err(AppError::NotImplemented)
+            unimplemented!()
         }
 
         async fn get_owners(
             &self,
-            proj_id: u32
-        ) -> Result<Users, AppError>
+            _proj_id: u32
+        ) -> Result<Users, DataStoreError>
         {
-            Err(AppError::NotImplemented)
+            unimplemented!()
         }
     }
 
-    #[derive(Clone, FromRef)]
-    struct FakeAppStateImpl {
-        key: jwt::Key,
-        database: UnimplementedStore
-    }
-
-    impl AppState for FakeAppStateImpl { }
-
     #[tokio::test]
     async fn root_ok() {
-        let jwt_key = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z".to_vec();
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(UnimplementedStore {}) as Arc<dyn DataStore + Send + Sync>
 
-        let state = FakeAppStateImpl {
-            key: jwt::Key(DecodingKey::from_secret(&jwt_key)),
-            database: UnimplementedStore { }
         };
 
-        let api = API_V1;
-
-        let app: Router<()> = routes::<FakeAppStateImpl, UnimplementedStore>(api).with_state(state);
+        let app: Router = routes(API_V1).with_state(state);
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri(&format!("{api}/"))
+                    .uri(&format!("{API_V1}/"))
                     .body(Body::empty())
                     .unwrap()
             )
@@ -424,4 +281,234 @@ mod test {
         assert_eq!(&body[..], b"hello world");
     }
 
+    #[derive(Clone)]
+    struct TestStore { }
+
+    #[axum::async_trait]
+    impl DataStore for TestStore {
+        async fn user_is_owner(
+            &self,
+            user: &User,
+            _proj_id: u32
+        ) -> Result<bool, DataStoreError>
+        {
+            Ok(user == &User("bob".into()) || user == &User("alice".into()))
+        }
+
+        async fn add_owners(
+            &self,
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), DataStoreError>
+        {
+            Ok(())  
+        }
+
+        async fn remove_owners(
+            &self,
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), DataStoreError>
+        {
+            Ok(())
+        }
+
+        async fn get_owners(
+            &self,
+            _proj_id: u32
+        ) -> Result<Users, DataStoreError>
+        {
+            Ok(
+                Users { 
+                    users: vec!(
+                        User("alice".into()),
+                        User("bob".into())
+                    )
+                }
+            )
+        }
+    }
+
+    #[tokio::test]
+    async fn get_owners_ok() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+        };
+
+        let app = routes(API_V1).with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri(&format!("{API_V1}/projects/1/owners"))
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Users = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            body,
+            Users {
+                users: vec!(
+                    User("alice".into()),
+                    User("bob".into())
+                )
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn put_owners_ok() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, "bob", 899999999999).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let app = routes(API_V1).with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::PUT)
+                    .uri(&format!("{API_V1}/projects/1/owners"))
+                    .header(AUTHORIZATION, auth)
+                    .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                    .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(body.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn put_owners_unauth() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, "rando", 899999999999).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let app = routes(API_V1).with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::PUT)
+                    .uri(&format!("{API_V1}/projects/1/owners"))
+                    .header(AUTHORIZATION, auth)
+                    .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                    .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: HttpError = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            body,
+            HttpError { error: "Unauthorized".into() }
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_owners_ok() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, "bob", 899999999999).unwrap();
+        let auth = format!("Bearer {token}"); 
+
+        let app = routes(API_V1).with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::DELETE)
+                    .uri(&format!("{API_V1}/projects/1/owners"))
+                    .header(AUTHORIZATION, auth)
+                    .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                    .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(body.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_owners_unauth() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, "rando", 899999999999).unwrap();
+        let auth = format!("Bearer {token}"); 
+
+        let app = routes(API_V1).with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::DELETE)
+                    .uri(&format!("{API_V1}/projects/1/owners"))
+                    .header(AUTHORIZATION, auth)
+                    .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                    .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: HttpError = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            body,
+            HttpError { error: "Unauthorized".into() }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_players_ok() {
+    }
+
+    #[tokio::test]
+    async fn put_players_ok() {
+    }
+
+    #[tokio::test]
+    async fn delete_players_ok() {
+    }
 }

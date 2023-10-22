@@ -1,29 +1,36 @@
+use axum::async_trait;
+
 use crate::{
-    errors::AppError,
-    model::Users
+    model::{User, Users}
 };
 
-pub trait DataStore: Clone + Send {
+#[derive(Debug)]
+pub enum DataStoreError {
+    Problem(String)
+}
+
+#[async_trait]
+pub trait DataStore {
     async fn user_is_owner(
         &self,
-        user: &str,
+        user: &User,
         proj_id: u32
-    ) -> Result<bool, AppError>;
+    ) -> Result<bool, DataStoreError>;
 
     async fn add_owners(
         &self,
-        owners: &[String],
+        owners: &Users,
         proj_id: u32
-    ) -> Result<(), AppError>;
+    ) -> Result<(), DataStoreError>;
 
     async fn remove_owners(
         &self,
-        owners: &[String],
+        owners: &Users,
         proj_id: u32
-    ) -> Result<(), AppError>;
+    ) -> Result<(), DataStoreError>;
 
     async fn get_owners(
         &self,
         proj_id: u32
-    ) -> Result<Users, AppError>;
+    ) -> Result<Users, DataStoreError>;
 }

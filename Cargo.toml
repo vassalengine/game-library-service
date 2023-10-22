@@ -22,3 +22,4 @@ tower = { version = "*", features = ["buffer", "limit"] }
 
 [dev-dependencies]
 hyper = { version = "*", features = ["full"] }
+mime = "*"
