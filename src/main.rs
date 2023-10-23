@@ -17,8 +17,6 @@ use std::{
 mod app;
 mod config;
 mod core;
-mod datastore;
-mod db;
 mod errors;
 mod extractors;
 mod handlers;
@@ -31,38 +29,9 @@ use crate::{
     config::Config,
     core::Core,
     prod_core::ProdCore,
-    datastore::DataStoreError,
     errors::AppError,
     jwt::DecodingKey,
-    handlers::{
-        root_get,
-        projects_get,
-        project_get,
-        project_update,
-        project_revision_get,
-        owners_get,
-        owners_add,
-        owners_remove,
-        players_get,
-        players_add,
-        players_remove,
-        package_get,
-        package_version_get,
-        package_version_put,
-        readme_get,
-        readme_revision_get,
-        image_get,
-        image_put
-    }
 };
-
-impl From<DataStoreError> for AppError {
-    fn from(e: DataStoreError) -> Self {
-        match e {
-            DataStoreError::Problem(e) => AppError::DatabaseError(e.to_string())
-        }
-    }
-}
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
@@ -98,54 +67,54 @@ fn routes(api: &str) -> Router<AppState> {
     Router::new()
         .route(
             &format!("{api}/"),
-            get(root_get)
+            get(handlers::root_get)
         )
         .route(
             &format!("{api}/projects"),
-            get(projects_get)
+            get(handlers::projects_get)
         )
         .route(&format!(
             "{api}/projects/:proj_id"),
-            get(project_get)
-            .put(project_update)
+            get(handlers::project_get)
+            .put(handlers::project_update)
         )
         .route(
             &format!("{api}/projects/:proj_id/:revision"),
-            get(project_revision_get)
+            get(handlers::project_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/owners"),
-            get(owners_get)
-            .put(owners_add)
-            .delete(owners_remove)
+            get(handlers::owners_get)
+            .put(handlers::owners_add)
+            .delete(handlers::owners_remove)
         )
         .route(
             &format!("{api}/projects/:proj_id/players"),
-            get(players_get)
-            .put(players_add)
-            .delete(players_remove)
+            get(handlers::players_get)
+            .put(handlers::players_add)
+            .delete(handlers::players_remove)
         )
         .route(
             &format!("{api}/projects/:proj_id/packages/:pkg_name"),
-            get(package_get)
+            get(handlers::package_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/packages/:pkg_name/:version"),
-            get(package_version_get)
-            .put(package_version_put)
+            get(handlers::package_version_get)
+            .put(handlers::package_version_put)
         )
         .route(
             &format!("{api}/projects/:proj_id/readme"),
-            get(readme_get)
+            get(handlers::readme_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/readme/:revision"),
-            get(readme_revision_get)
+            get(handlers::readme_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj_id/images/:img_name"),
-            get(image_get)
-            .put(image_put)
+            get(handlers::image_get)
+            .put(handlers::image_put)
         )
 }
 

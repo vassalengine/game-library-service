@@ -1,6 +1,6 @@
 use axum::async_trait;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::Executor;
 
 use crate::{
     core::Core,
@@ -8,9 +8,18 @@ use crate::{
     model::{User, Users}
 };
 
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        AppError::DatabaseError(e.to_string())
+    }
+}
+
+type Database = sqlx::sqlite::Sqlite;
+type Pool = sqlx::Pool<Database>;
+
 #[derive(Clone)]
 pub struct ProdCore {
-    pub db: SqlitePool
+    pub db: Pool
 }
 
 #[async_trait]
@@ -20,7 +29,27 @@ impl Core for ProdCore {
         proj_id: u32
     ) -> Result<Users, AppError>
     {
-        todo!();
+// FIXME: Is this really the best way? Can't we fill users directly?
+        let users = sqlx::query_scalar!(
+            "
+SELECT users.username
+FROM users
+JOIN owners
+ON users.id = owners.user_id
+JOIN projects
+ON owners.project_id = projects.id
+WHERE projects.id = ?
+ORDER BY users.username
+            ",
+            proj_id
+        )
+        .fetch_all(&self.db)
+        .await?
+        .into_iter()
+        .map(User)
+        .collect();
+
+        Ok(Users { users })
     }
 
     async fn add_owners(
@@ -29,7 +58,18 @@ impl Core for ProdCore {
         proj_id: u32
     ) -> Result<(), AppError>
     {
-        todo!();
+        let mut tx = self.db.begin().await?;
+
+        for owner in &owners.users {
+            // get user id of new owner
+            let owner_id = get_user_id(&owner.0, &self.db).await?;
+            // associate new owner with the project
+            add_owner(owner_id, proj_id, &mut *tx).await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
     }
 
     async fn remove_owners(
@@ -38,7 +78,23 @@ impl Core for ProdCore {
         proj_id: u32
     ) -> Result<(), AppError>
     {
-        todo!();
+        let mut tx = self.db.begin().await?;
+
+        for owner in &owners.users {
+            // get user id of owner
+            let owner_id = get_user_id(&owner.0, &self.db).await?;
+            // remove old owner from the project
+            remove_owner(owner_id, proj_id, &mut *tx).await?;
+        }
+
+        // prevent removal of last owner
+        if !has_owner(proj_id, &mut *tx).await? {
+            return Err(AppError::DatabaseError("cannot remove last owner".into()));
+        }
+
+        tx.commit().await?;
+
+        Ok(())
     }
 
     async fn user_is_owner(
@@ -47,6 +103,117 @@ impl Core for ProdCore {
         proj_id: u32
     ) -> Result<bool, AppError>
     {
-        todo!();
+        Ok(
+            sqlx::query!(
+                "
+SELECT 1 as present
+FROM owners
+JOIN users
+ON users.id = owners.user_id
+WHERE users.username = ? AND owners.project_id = ?
+LIMIT 1
+                ",
+                user.0,
+                proj_id
+            )
+            .fetch_optional(&self.db)
+            .await?
+            .is_some()
+        )
     }
+}
+
+async fn get_user_id(
+    user: &str,
+    db: &Pool
+) -> Result<i64, sqlx::Error> {
+    Ok(
+        sqlx::query!(
+            "
+SELECT id
+FROM users
+WHERE username = ?
+            ",
+            user
+        )
+        .fetch_one(db)
+        .await?
+        .id
+    )
+}
+
+async fn add_owner<'e, E>(
+    user_id: i64,
+    proj_id: u32,
+    ex: E
+) -> Result<(), sqlx::Error>
+where
+    E: Executor<'e, Database = Database>
+{
+    sqlx::query!(
+        "
+INSERT OR IGNORE INTO owners (user_id, project_id)
+VALUES (?, ?)
+        ",
+        user_id,
+        proj_id
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+async fn remove_owner<'e, E>(
+    user_id: i64,
+    proj_id: u32,
+    ex: E
+) -> Result<(), sqlx::Error>
+where
+    E: Executor<'e, Database = Database>
+{
+    sqlx::query!(
+        "
+DELETE FROM owners
+WHERE user_id = ? AND project_id = ?
+        ",
+        user_id,
+        proj_id
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+async fn has_owner<'e, E>(
+    proj_id: u32,
+    ex: E
+) -> Result<bool, sqlx::Error>
+where
+    E: Executor<'e, Database = Database>
+{
+    Ok(
+        sqlx::query!(
+            "
+SELECT 1 as present
+FROM owners
+WHERE owners.project_id = ?
+LIMIT 1
+            ",
+            proj_id
+        )
+        .fetch_optional(ex)
+        .await?
+        .is_some()
+    )
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+
+
+
 }
