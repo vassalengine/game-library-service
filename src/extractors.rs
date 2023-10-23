@@ -315,6 +315,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
+    #[tokio::test]
     async fn owners_from_request_parts_not_owner() {
         let exp = Claims {
             sub: "alice".into(),
