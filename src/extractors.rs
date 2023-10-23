@@ -265,6 +265,40 @@ mod test {
         }
     }
 
+    async fn owner_ok(
+        requester: Owner,
+        _: Path<u32>,
+        State(_): State<AppState>
+    )
+    {
+        assert_eq!(requester, Owner("bob".into()));
+    }
+
+    async fn owner_fail(
+        _: Owner,
+        _: Path<u32>,
+        State(_): State<AppState>
+    )
+    {
+        unreachable!();
+    }
+
+    fn make_state() -> AppState {
+        AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        }
+    }
+
+    fn make_auth(key: &[u8], claims: &Claims) -> String {
+        let ekey = EncodingKey::from_secret(key);
+        let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
+        format!("Bearer {token}")
+    }
+
+    // We have to test Owner::from_request_parts via a Router because
+    // Path uses a private extension to get parameters from the request
+
     #[tokio::test]
     async fn owners_from_request_parts_ok() {
         let exp = Claims {
@@ -273,39 +307,16 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        requester: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        assert_eq!(requester, Owner("bob".into()));
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_ok))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
                     .uri("/42")
-                    .header(AUTHORIZATION, auth)
+                    .header(AUTHORIZATION, make_auth(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
             )
@@ -323,39 +334,16 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        _: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        unreachable!();
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_fail))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
                     .uri("/42")
-                    .header(AUTHORIZATION, auth)
+                    .header(AUTHORIZATION, make_auth(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
             )
@@ -373,39 +361,16 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        _: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        unreachable!();
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_fail))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
                     .uri("/42")
-                    .header(AUTHORIZATION, auth)
+                    .header(AUTHORIZATION, make_auth(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
              )
@@ -423,39 +388,16 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(b"wrong key");
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        _: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        unreachable!();
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_fail))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
                     .uri("/42")
-                    .header(AUTHORIZATION, auth)
+                    .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
              )
@@ -467,28 +409,9 @@ mod test {
 
     #[tokio::test]
     async fn owners_from_request_parts_no_token() {
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        _: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        unreachable!();
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_fail))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
@@ -507,28 +430,9 @@ mod test {
 
     #[tokio::test]
     async fn owners_from_request_parts_no_auth_header() {
-        let state = AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
-        };
-
-        // We have to test Owner::from_request_parts via a Router because
-        // Path uses a private extension to get parameters from the request
         let app = Router::new()
-            .route(
-                "/:proj_id",
-                get(
-                    |
-                        _: Owner,
-                        _: Path<u32>,
-                        State(_): State<AppState>
-                    | async move
-                    {
-                        unreachable!();
-                    }
-                )
-            )
-            .with_state(state);
+            .route("/:proj_id", get(owner_fail))
+            .with_state(make_state());
 
         let response = app
             .oneshot(
