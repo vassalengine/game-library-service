@@ -1,4 +1,5 @@
 use axum::async_trait;
+use std::sync::Arc;
 
 use crate::{
     errors::AppError,
@@ -68,3 +69,5 @@ pub trait Core {
         unimplemented!();
     }
 }
+
+pub type CoreArc = Arc<dyn Core + Send + Sync>;

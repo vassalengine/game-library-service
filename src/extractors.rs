@@ -7,16 +7,13 @@ use axum::{
     },
     http::request::Parts,
 };
-use std::sync::Arc;
 
 use crate::{
-    core::Core,
+    core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
     model::{Owner, User}
 };
-
-type CS = Arc<dyn Core + Send + Sync>;
 
 #[async_trait]
 impl<S> FromRequestParts<S> for Claims
@@ -62,7 +59,7 @@ impl<S> FromRequestParts<S> for Owner
 where
     S: Send + Sync,
     DecodingKey: FromRef<S>,
-    CS: FromRef<S>
+    CoreArc: FromRef<S>
 {
     type Rejection = AppError;
 
@@ -76,7 +73,7 @@ where
             .map_err(|_| AppError::InternalError)?;
 
         // should never fail
-        let State(core) = State::<CS>::from_request_parts(parts, state)
+        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::InternalError)?;
 
@@ -103,10 +100,12 @@ mod test {
         },
         routing::get
     };
+    use std::sync::Arc;
     use tower::ServiceExt; // for oneshot
 
     use crate::{
         app::AppState,
+        core::Core,
         jwt::EncodingKey,
         model::Users
     };
@@ -371,7 +370,7 @@ mod test {
     fn make_state() -> AppState {
         AppState {
             key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+            core: Arc::new(TestCore {}) as CoreArc
         }
     }
 
