@@ -30,7 +30,7 @@ use crate::{
     app::AppState,
     config::Config,
     core::Core,
-    prod_core::ProdCore, 
+    prod_core::ProdCore,
     datastore::DataStoreError,
     errors::AppError,
     jwt::DecodingKey,
@@ -214,7 +214,7 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct UnimplementedCore {} 
+    struct UnimplementedCore {}
 
     #[axum::async_trait]
     impl Core for UnimplementedCore {
@@ -301,7 +301,7 @@ mod test {
             _proj_id: u32
         ) -> Result<(), AppError>
         {
-            Ok(())  
+            Ok(())
         }
 
         async fn remove_owners(
@@ -319,7 +319,7 @@ mod test {
         ) -> Result<Users, AppError>
         {
             Ok(
-                Users { 
+                Users {
                     users: vec!(
                         User("alice".into()),
                         User("bob".into())
@@ -441,7 +441,7 @@ mod test {
 
         let ekey = EncodingKey::from_secret(KEY);
         let token = jwt::issue(&ekey, "bob", 899999999999).unwrap();
-        let auth = format!("Bearer {token}"); 
+        let auth = format!("Bearer {token}");
 
         let app = routes(API_V1).with_state(state);
 
@@ -473,7 +473,7 @@ mod test {
 
         let ekey = EncodingKey::from_secret(KEY);
         let token = jwt::issue(&ekey, "rando", 899999999999).unwrap();
-        let auth = format!("Bearer {token}"); 
+        let auth = format!("Bearer {token}");
 
         let app = routes(API_V1).with_state(state);
 

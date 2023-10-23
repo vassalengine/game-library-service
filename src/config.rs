@@ -4,5 +4,5 @@ pub struct Config {
     pub jwt_key: Vec<u8>,
     pub api_base_path: String,
     pub listen_ip: [u8; 4],
-    pub listen_port: u16 
+    pub listen_port: u16
 }

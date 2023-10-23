@@ -49,7 +49,7 @@ pub fn issue(key: &EncodingKey, username: &str, expiry: u64) -> Result<String, A
     let claims = Claims {
         sub: username.into(),
         exp: expiry,
-        iat: get_current_timestamp() 
+        iat: get_current_timestamp()
     };
 
     Ok(jsonwebtoken::encode(&Header::default(), &claims, &key.0)?)

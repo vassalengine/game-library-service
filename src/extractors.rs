@@ -77,7 +77,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-   
+
     use axum::{
         Router,
         body::{boxed, Empty},
@@ -256,7 +256,7 @@ mod test {
         ) -> Result<Users, AppError>
         {
             Ok(
-                Users { 
+                Users {
                     users: vec!(
                         User("bob".into())
                     )

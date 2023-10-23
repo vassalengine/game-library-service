@@ -74,7 +74,7 @@ impl DataStore for Database {
             remove_owner(owner_id, proj_id, &mut *tx).await?;
         }
 
-        // prevent removal of last owner 
+        // prevent removal of last owner
         if !has_owner(proj_id, &mut *tx).await? {
             return Err(DataStoreError::Problem("cannot remove last owner".into()));
         }
@@ -268,7 +268,7 @@ LIMIT 1
             sqlx::query!(
                 "
 SELECT 1 as present
-FROM projects 
+FROM projects
 WHERE id = ?
 LIMIT 1
                 ",
@@ -294,16 +294,16 @@ LIMIT 1
 
     #[sqlx::test(fixtures("owner"))]
     async fn add_owner_new(pool: SqlitePool) {
-        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap()); 
+        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap());
         assert!(add_owner(2, 42, &pool).await.is_ok());
-        assert!(user_id_is_owner(2, 42, &pool).await.unwrap()); 
+        assert!(user_id_is_owner(2, 42, &pool).await.unwrap());
     }
 
     #[sqlx::test(fixtures("owner"))]
     async fn add_owner_existing(pool: SqlitePool) {
-        assert!(user_id_is_owner(1, 42, &pool).await.unwrap()); 
+        assert!(user_id_is_owner(1, 42, &pool).await.unwrap());
         assert!(add_owner(1, 42, &pool).await.is_ok());
-        assert!(user_id_is_owner(1, 42, &pool).await.unwrap()); 
+        assert!(user_id_is_owner(1, 42, &pool).await.unwrap());
     }
 
     #[sqlx::test(fixtures("owner"))]
@@ -320,16 +320,16 @@ LIMIT 1
 
     #[sqlx::test(fixtures("owner"))]
     async fn remove_owner_existing(pool: SqlitePool) {
-        assert!(user_id_is_owner(1, 42, &pool).await.unwrap()); 
+        assert!(user_id_is_owner(1, 42, &pool).await.unwrap());
         assert!(remove_owner(1, 42, &pool).await.is_ok());
-        assert!(!user_id_is_owner(1, 42, &pool).await.unwrap()); 
+        assert!(!user_id_is_owner(1, 42, &pool).await.unwrap());
     }
 
     #[sqlx::test(fixtures("owner"))]
     async fn remove_owner_non_owner(pool: SqlitePool) {
-        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap()); 
+        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap());
         assert!(remove_owner(2, 42, &pool).await.is_ok());
-        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap()); 
+        assert!(!user_id_is_owner(2, 42, &pool).await.unwrap());
     }
 
     #[sqlx::test(fixtures("owner"))]
@@ -347,8 +347,8 @@ LIMIT 1
 /*
     #[sqlx::test(fixtures("owner"))]
     async fn remove_owner_last(pool: SqlitePool) {
-// HERE        
-        assert!(user_id_is_owner(1, 42, &pool).await.unwrap()); 
+// HERE
+        assert!(user_id_is_owner(1, 42, &pool).await.unwrap());
         assert!(remove_owner(1, 42, &pool).await.is_err());
     }
 */
