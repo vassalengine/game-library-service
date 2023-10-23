@@ -29,7 +29,7 @@ pub async fn project_get(
 }
 
 pub async fn project_update(
-//    _requester: Owner,
+    _: Owner,
     Path(_proj_id): Path<u32>,
     State(_core): State<CoreArc>
 ) -> Result<Json<Project>, AppError>
