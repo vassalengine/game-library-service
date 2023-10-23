@@ -16,4 +16,5 @@ pub struct Project {
 pub struct Projects {
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Owner(pub String);

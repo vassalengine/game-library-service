@@ -2,7 +2,6 @@
 
 use axum::{
     Router, Server,
-    extract::FromRef,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing::get
@@ -15,7 +14,9 @@ use std::{
     sync::Arc
 };
 
+mod app;
 mod config;
+mod core;
 mod datastore;
 mod db;
 mod errors;
@@ -23,11 +24,14 @@ mod extractors;
 mod handlers;
 mod jwt;
 mod model;
+mod prod_core;
 
 use crate::{
+    app::AppState,
     config::Config,
-    datastore::{DataStore, DataStoreError},
-    db::Database,
+    core::Core,
+    prod_core::ProdCore, 
+    datastore::DataStoreError,
     errors::AppError,
     jwt::DecodingKey,
     handlers::{
@@ -49,8 +53,7 @@ use crate::{
         readme_revision_get,
         image_get,
         image_put
-    },
-    model::{User, Users},
+    }
 };
 
 impl From<DataStoreError> for AppError {
@@ -89,12 +92,6 @@ impl IntoResponse for AppError {
 
         (status, body).into_response()
     }
-}
-
-#[derive(Clone, FromRef)]
-struct AppState {
-    key: DecodingKey,
-    db: Arc<dyn DataStore + Send + Sync>
 }
 
 fn routes(api: &str) -> Router<AppState> {
@@ -170,12 +167,14 @@ async fn main() {
         .await
         .unwrap();
 
-    let api = &config.api_base_path;
+    let core = ProdCore { db: db_pool };
 
     let state = AppState {
         key: DecodingKey::from_secret(&config.jwt_key),
-        db: Arc::new(Database(db_pool)) as Arc<dyn DataStore + Send + Sync>
+        core: Arc::new(core) as Arc<dyn Core + Send + Sync>
     };
+
+    let api = &config.api_base_path;
 
     let app: Router = routes(api).with_state(state);
 
@@ -202,7 +201,8 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-      jwt::{self, EncodingKey}
+      jwt::{self, EncodingKey},
+      model::{User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -214,15 +214,15 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct UnimplementedStore {} 
+    struct UnimplementedCore {} 
 
     #[axum::async_trait]
-    impl DataStore for UnimplementedStore {
+    impl Core for UnimplementedCore {
         async fn user_is_owner(
             &self,
             _user: &User,
             _proj_id: u32
-        ) -> Result<bool, DataStoreError>
+        ) -> Result<bool, AppError>
         {
             unimplemented!()
         }
@@ -231,7 +231,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj_id: u32
-        ) -> Result<(), DataStoreError>
+        ) -> Result<(), AppError>
         {
             unimplemented!()
         }
@@ -240,7 +240,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj_id: u32
-        ) -> Result<(), DataStoreError>
+        ) -> Result<(), AppError>
         {
             unimplemented!()
         }
@@ -248,7 +248,7 @@ mod test {
         async fn get_owners(
             &self,
             _proj_id: u32
-        ) -> Result<Users, DataStoreError>
+        ) -> Result<Users, AppError>
         {
             unimplemented!()
         }
@@ -258,7 +258,7 @@ mod test {
     async fn root_ok() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(UnimplementedStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(UnimplementedCore {}) as Arc<dyn Core + Send + Sync>
 
         };
 
@@ -282,15 +282,15 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct TestStore { }
+    struct TestCore { }
 
     #[axum::async_trait]
-    impl DataStore for TestStore {
+    impl Core for TestCore {
         async fn user_is_owner(
             &self,
             user: &User,
             _proj_id: u32
-        ) -> Result<bool, DataStoreError>
+        ) -> Result<bool, AppError>
         {
             Ok(user == &User("bob".into()) || user == &User("alice".into()))
         }
@@ -299,7 +299,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj_id: u32
-        ) -> Result<(), DataStoreError>
+        ) -> Result<(), AppError>
         {
             Ok(())  
         }
@@ -308,7 +308,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj_id: u32
-        ) -> Result<(), DataStoreError>
+        ) -> Result<(), AppError>
         {
             Ok(())
         }
@@ -316,7 +316,7 @@ mod test {
         async fn get_owners(
             &self,
             _proj_id: u32
-        ) -> Result<Users, DataStoreError>
+        ) -> Result<Users, AppError>
         {
             Ok(
                 Users { 
@@ -333,7 +333,7 @@ mod test {
     async fn get_owners_ok() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         };
 
         let app = routes(API_V1).with_state(state);
@@ -368,7 +368,7 @@ mod test {
     async fn put_owners_ok() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         };
 
         let ekey = EncodingKey::from_secret(KEY);
@@ -400,7 +400,7 @@ mod test {
     async fn put_owners_unauth() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         };
 
         let ekey = EncodingKey::from_secret(KEY);
@@ -436,7 +436,7 @@ mod test {
     async fn delete_owners_ok() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         };
 
         let ekey = EncodingKey::from_secret(KEY);
@@ -468,7 +468,7 @@ mod test {
     async fn delete_owners_unauth() {
         let state = AppState {
             key: DecodingKey::from_secret(KEY),
-            db: Arc::new(TestStore {}) as Arc<dyn DataStore + Send + Sync>
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         };
 
         let ekey = EncodingKey::from_secret(KEY);

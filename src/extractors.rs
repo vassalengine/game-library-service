@@ -10,13 +10,13 @@ use axum::{
 use std::sync::Arc;
 
 use crate::{
-    datastore::DataStore,
+    core::Core,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
     model::{Owner, User}
 };
 
-type DS = Arc<dyn DataStore + Send + Sync>;
+type CS = Arc<dyn Core + Send + Sync>;
 
 #[async_trait]
 impl<S> FromRequestParts<S> for Claims
@@ -46,24 +46,28 @@ impl<S> FromRequestParts<S> for Owner
 where
     S: Send + Sync,
     DecodingKey: FromRef<S>,
-    DS: FromRef<S>
+    CS: FromRef<S>
 {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // check that the requester is authorized
+        let claims = Claims::from_request_parts(parts, state).await?;
+
+        // should never fail
         let Path(proj_id) = Path::<u32>::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::InternalError)?;
 
-        let claims = Claims::from_request_parts(parts, state).await?;
-
-        let State(db) = State::<DS>::from_request_parts(parts, state)
+        // should never fail
+        let State(core) = State::<CS>::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::InternalError)?;
 
+        // check that that requester owns the project
         let requester = User(claims.sub.clone());
 
-        match db.user_is_owner(&requester, proj_id).await? {
+        match core.user_is_owner(&requester, proj_id).await? {
             true => Ok(Owner(claims.sub)),
             false =>  Err(AppError::Unauthorized)
         }
@@ -74,13 +78,21 @@ where
 mod test {
     use super::*;
    
-    use axum::http::{
-        Method, Request,
-        header::AUTHORIZATION,
+    use axum::{
+        Router,
+        body::{boxed, Empty},
+        http::{
+            Method, Request, StatusCode,
+            header::AUTHORIZATION
+        },
+        routing::get
     };
+    use tower::ServiceExt; // for oneshot
 
     use crate::{
-      jwt::{self, EncodingKey}
+        app::AppState,
+        jwt::EncodingKey,
+        model::Users
     };
 
     const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
@@ -100,11 +112,11 @@ mod test {
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
-                    .method(Method::GET)
-                    .uri("/")
-                    .header(AUTHORIZATION, auth)
-                    .body(())
-                    .unwrap();
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, auth)
+            .body(())
+            .unwrap();
 
         let mut parts;
         (parts, _) = request.into_parts();
@@ -130,11 +142,11 @@ mod test {
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
-                    .method(Method::GET)
-                    .uri("/")
-                    .header(AUTHORIZATION, auth)
-                    .body(())
-                    .unwrap();
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, auth)
+            .body(())
+            .unwrap();
 
         let mut parts;
         (parts, _) = request.into_parts();
@@ -151,18 +163,18 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(b"other key");
+        let ekey = EncodingKey::from_secret(b"wrong key");
         let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
         let auth = format!("Bearer {token}");
 
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
-                    .method(Method::GET)
-                    .uri("/")
-                    .header(AUTHORIZATION, auth)
-                    .body(())
-                    .unwrap();
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, auth)
+            .body(())
+            .unwrap();
 
         let mut parts;
         (parts, _) = request.into_parts();
@@ -176,11 +188,11 @@ mod test {
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
-                    .method(Method::GET)
-                    .uri("/")
-                    .header(AUTHORIZATION, "")
-                    .body(())
-                    .unwrap();
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, "")
+            .body(())
+            .unwrap();
 
         let mut parts;
         (parts, _) = request.into_parts();
@@ -190,14 +202,14 @@ mod test {
     }
 
     #[tokio::test]
-    async fn claims_from_request_parts_no_header() {
+    async fn claims_from_request_parts_no_auth_header() {
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
-                    .method(Method::GET)
-                    .uri("/")
-                    .body(())
-                    .unwrap();
+            .method(Method::GET)
+            .uri("/")
+            .body(())
+            .unwrap();
 
         let mut parts;
         (parts, _) = request.into_parts();
@@ -206,4 +218,328 @@ mod test {
         assert!(act.is_err());
     }
 
+    #[derive(Clone)]
+    struct TestCore {}
+
+    #[axum::async_trait]
+    impl Core for TestCore {
+        async fn user_is_owner(
+            &self,
+            user: &User,
+            proj_id: u32
+        ) -> Result<bool, AppError>
+        {
+            Ok(proj_id == 42 && user == &User("bob".into()))
+        }
+
+        async fn add_owners(
+            &self,
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), AppError>
+        {
+            unimplemented!()
+        }
+
+        async fn remove_owners(
+            &self,
+            _owners: &Users,
+            _proj_id: u32
+        ) -> Result<(), AppError>
+        {
+            unimplemented!()
+        }
+
+        async fn get_owners(
+            &self,
+            _proj_id: u32
+        ) -> Result<Users, AppError>
+        {
+            Ok(
+                Users { 
+                    users: vec!(
+                        User("bob".into())
+                    )
+                }
+            )
+        }
+    }
+
+    #[tokio::test]
+    async fn owners_from_request_parts_ok() {
+        let exp = Claims {
+            sub: "bob".into(),
+            exp: 899999999999,
+            iat: 0
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        requester: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert_eq!(requester, Owner("bob".into()));
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .header(AUTHORIZATION, auth)
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    async fn owners_from_request_parts_not_owner() {
+        let exp = Claims {
+            sub: "alice".into(),
+            exp: 899999999999,
+            iat: 0
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        requester: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert!(false);
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .header(AUTHORIZATION, auth)
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn owners_from_request_parts_expired() {
+        let exp = Claims {
+            sub: "bob".into(),
+            exp: 0,
+            iat: 0
+        };
+
+        let ekey = EncodingKey::from_secret(KEY);
+        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        _: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert!(false);
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .header(AUTHORIZATION, auth)
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+             )
+             .await
+             .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn owners_from_request_parts_wrong_key() {
+        let exp = Claims {
+            sub: "bob".into(),
+            exp: 899999999999,
+            iat: 0
+        };
+
+        let ekey = EncodingKey::from_secret(b"wrong key");
+        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
+        let auth = format!("Bearer {token}");
+
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        _: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert!(false);
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .header(AUTHORIZATION, auth)
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+             )
+             .await
+             .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn owners_from_request_parts_no_token() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        _: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert!(false);
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .header(AUTHORIZATION, "")
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+             )
+             .await
+             .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn owners_from_request_parts_no_auth_header() {
+        let state = AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
+        };
+
+        // We have to test Owner::from_request_parts via a Router because
+        // Path uses a private extension to get parameters from the request
+        let app = Router::new()
+            .route(
+                "/:proj_id",
+                get(
+                    |
+                        _: Owner,
+                        _: Path<u32>,
+                        State(state): State<AppState>
+                    | async move
+                    {
+                        assert!(false);
+                    }
+                )
+            )
+            .with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/42")
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+             )
+             .await
+             .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
 }
