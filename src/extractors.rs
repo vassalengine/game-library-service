@@ -97,6 +97,12 @@ mod test {
 
     const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
 
+    fn make_auth(key: &[u8], claims: &Claims) -> String {
+        let ekey = EncodingKey::from_secret(key);
+        let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
+        format!("Bearer {token}")
+    }
+
     #[tokio::test]
     async fn claims_from_request_parts_ok() {
         let exp = Claims {
@@ -105,16 +111,12 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, auth)
+            .header(AUTHORIZATION, make_auth(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -135,16 +137,12 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, auth)
+            .header(AUTHORIZATION, make_auth(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -163,16 +161,12 @@ mod test {
             iat: 0
         };
 
-        let ekey = EncodingKey::from_secret(b"wrong key");
-        let token = jwt::issue(&ekey, &exp.sub, exp.exp).unwrap();
-        let auth = format!("Bearer {token}");
-
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, auth)
+            .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
             .body(())
             .unwrap();
 
@@ -288,12 +282,6 @@ mod test {
             key: DecodingKey::from_secret(KEY),
             core: Arc::new(TestCore {}) as Arc<dyn Core + Send + Sync>
         }
-    }
-
-    fn make_auth(key: &[u8], claims: &Claims) -> String {
-        let ekey = EncodingKey::from_secret(key);
-        let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
-        format!("Bearer {token}")
     }
 
     // We have to test Owner::from_request_parts via a Router because
