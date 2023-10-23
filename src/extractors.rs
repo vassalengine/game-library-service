@@ -42,6 +42,22 @@ where
 }
 
 #[async_trait]
+impl<S> FromRequestParts<S> for User
+where
+    S: Send + Sync,
+    DecodingKey: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // check that the requester is authorized
+        let claims = Claims::from_request_parts(parts, state).await?;
+        // extract the username
+        Ok(User(claims.sub))
+    }
+}
+
+#[async_trait]
 impl<S> FromRequestParts<S> for Owner
 where
     S: Send + Sync,
@@ -210,6 +226,98 @@ mod test {
         (parts, _) = request.into_parts();
 
         let act = Claims::from_request_parts(&mut parts, &dkey).await;
+        assert!(act.is_err());
+    }
+
+    #[tokio::test]
+    async fn user_from_request_parts_ok() {
+        let exp = bob_ok();
+        let dkey = DecodingKey::from_secret(KEY);
+
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .body(())
+            .unwrap();
+
+        let mut parts;
+        (parts, _) = request.into_parts();
+
+        let act = User::from_request_parts(&mut parts, &dkey).await.unwrap();
+        assert_eq!(act, User(exp.sub));
+    }
+
+    #[tokio::test]
+    async fn user_from_request_parts_expired() {
+        let exp = bob_expired();
+        let dkey = DecodingKey::from_secret(KEY);
+
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .body(())
+            .unwrap();
+
+        let mut parts;
+        (parts, _) = request.into_parts();
+
+        let act = User::from_request_parts(&mut parts, &dkey).await;
+        assert!(act.is_err());
+    }
+
+    #[tokio::test]
+    async fn user_from_request_parts_wrong_key() {
+        let exp = bob_ok();
+        let dkey = DecodingKey::from_secret(KEY);
+
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
+            .body(())
+            .unwrap();
+
+        let mut parts;
+        (parts, _) = request.into_parts();
+
+        let act = User::from_request_parts(&mut parts, &dkey).await;
+        assert!(act.is_err());
+    }
+
+    #[tokio::test]
+    async fn user_from_request_parts_no_token() {
+        let dkey = DecodingKey::from_secret(KEY);
+
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(AUTHORIZATION, "")
+            .body(())
+            .unwrap();
+
+        let mut parts;
+        (parts, _) = request.into_parts();
+
+        let act = User::from_request_parts(&mut parts, &dkey).await;
+        assert!(act.is_err());
+    }
+
+    #[tokio::test]
+    async fn user_from_request_parts_no_auth_header() {
+        let dkey = DecodingKey::from_secret(KEY);
+
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .body(())
+            .unwrap();
+
+        let mut parts;
+        (parts, _) = request.into_parts();
+
+        let act = User::from_request_parts(&mut parts, &dkey).await;
         assert!(act.is_err());
     }
 
