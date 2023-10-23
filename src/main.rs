@@ -217,42 +217,7 @@ mod test {
     struct UnimplementedCore {}
 
     #[axum::async_trait]
-    impl Core for UnimplementedCore {
-        async fn user_is_owner(
-            &self,
-            _user: &User,
-            _proj_id: u32
-        ) -> Result<bool, AppError>
-        {
-            unimplemented!()
-        }
-
-        async fn add_owners(
-            &self,
-            _owners: &Users,
-            _proj_id: u32
-        ) -> Result<(), AppError>
-        {
-            unimplemented!()
-        }
-
-        async fn remove_owners(
-            &self,
-            _owners: &Users,
-            _proj_id: u32
-        ) -> Result<(), AppError>
-        {
-            unimplemented!()
-        }
-
-        async fn get_owners(
-            &self,
-            _proj_id: u32
-        ) -> Result<Users, AppError>
-        {
-            unimplemented!()
-        }
-    }
+    impl Core for UnimplementedCore {}
 
     #[tokio::test]
     async fn root_ok() {

@@ -227,24 +227,6 @@ mod test {
             Ok(proj_id == 42 && user == &User("bob".into()))
         }
 
-        async fn add_owners(
-            &self,
-            _owners: &Users,
-            _proj_id: u32
-        ) -> Result<(), AppError>
-        {
-            unimplemented!()
-        }
-
-        async fn remove_owners(
-            &self,
-            _owners: &Users,
-            _proj_id: u32
-        ) -> Result<(), AppError>
-        {
-            unimplemented!()
-        }
-
         async fn get_owners(
             &self,
             _proj_id: u32
