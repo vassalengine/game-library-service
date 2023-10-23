@@ -166,15 +166,3 @@ pub async fn image_put(
 {
     todo!();
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-/*
-    #[tokio::test]
-    async fn root_ok() {
-
-    }
-*/
-}

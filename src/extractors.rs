@@ -291,7 +291,7 @@ mod test {
                     |
                         requester: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
                         assert_eq!(requester, Owner("bob".into()));
@@ -339,12 +339,12 @@ mod test {
                 "/:proj_id",
                 get(
                     |
-                        requester: Owner,
+                        _: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
-                        assert!(false);
+                        unreachable!();
                     }
                 )
             )
@@ -391,10 +391,10 @@ mod test {
                     |
                         _: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
-                        assert!(false);
+                        unreachable!();
                     }
                 )
             )
@@ -441,10 +441,10 @@ mod test {
                     |
                         _: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
-                        assert!(false);
+                        unreachable!();
                     }
                 )
             )
@@ -481,10 +481,10 @@ mod test {
                     |
                         _: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
-                        assert!(false);
+                        unreachable!();
                     }
                 )
             )
@@ -521,10 +521,10 @@ mod test {
                     |
                         _: Owner,
                         _: Path<u32>,
-                        State(state): State<AppState>
+                        State(_): State<AppState>
                     | async move
                     {
-                        assert!(false);
+                        unreachable!();
                     }
                 )
             )
