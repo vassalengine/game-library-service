@@ -97,6 +97,22 @@ mod test {
 
     const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
 
+    fn bob_ok() -> Claims {
+        Claims {
+            sub: "bob".into(),
+            exp: 899999999999,
+            iat: 0
+        }
+    }
+
+    fn bob_expired() -> Claims {
+        Claims {
+            sub: "bob".into(),
+            exp: 0,
+            iat: 0
+        }
+    }
+
     fn make_auth(key: &[u8], claims: &Claims) -> String {
         let ekey = EncodingKey::from_secret(key);
         let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
@@ -105,12 +121,7 @@ mod test {
 
     #[tokio::test]
     async fn claims_from_request_parts_ok() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 899999999999,
-            iat: 0
-        };
-
+        let exp = bob_ok();
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
@@ -131,12 +142,7 @@ mod test {
 
     #[tokio::test]
     async fn claims_from_request_parts_expired() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 0,
-            iat: 0
-        };
-
+        let exp = bob_expired();
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
@@ -155,12 +161,7 @@ mod test {
 
     #[tokio::test]
     async fn claims_from_request_parts_wrong_key() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 0,
-            iat: 0
-        };
-
+        let exp = bob_ok();
         let dkey = DecodingKey::from_secret(KEY);
 
         let request = Request::builder()
@@ -289,11 +290,7 @@ mod test {
 
     #[tokio::test]
     async fn owners_from_request_parts_ok() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 899999999999,
-            iat: 0
-        };
+        let exp = bob_ok();
 
         let app = Router::new()
             .route("/:proj_id", get(owner_ok))
@@ -343,11 +340,7 @@ mod test {
 
     #[tokio::test]
     async fn owners_from_request_parts_expired() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 0,
-            iat: 0
-        };
+        let exp = bob_expired();
 
         let app = Router::new()
             .route("/:proj_id", get(owner_fail))
@@ -370,11 +363,7 @@ mod test {
 
     #[tokio::test]
     async fn owners_from_request_parts_wrong_key() {
-        let exp = Claims {
-            sub: "bob".into(),
-            exp: 899999999999,
-            iat: 0
-        };
+        let exp = bob_ok();
 
         let app = Router::new()
             .route("/:proj_id", get(owner_fail))
