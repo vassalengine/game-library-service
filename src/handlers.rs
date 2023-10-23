@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{Project, Projects, Owner, Users}
+    model::{Project, Projects, Owner, Users, User}
 };
 
 type CS = Arc<dyn Core + Send + Sync>;
@@ -58,7 +58,7 @@ pub async fn owners_get(
 }
 
 pub async fn owners_add(
-    _requester: Owner,
+    _: Owner,
     Path(proj_id): Path<u32>,
     State(core): State<CS>,
     Json(owners): Json<Users>
@@ -68,7 +68,7 @@ pub async fn owners_add(
 }
 
 pub async fn owners_remove(
-    _requester: Owner,
+    _: Owner,
     Path(proj_id): Path<u32>,
     State(core): State<CS>,
     Json(owners): Json<Users>
@@ -78,29 +78,29 @@ pub async fn owners_remove(
 }
 
 pub async fn players_get(
-    Path(_proj_id): Path<u32>,
-    State(_core): State<CS>
+    Path(proj_id): Path<u32>,
+    State(core): State<CS>
 ) -> Result<Json<Users>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_players(proj_id).await?))
 }
 
 pub async fn players_add(
-//    requester: Player,
-    Path(_proj_id): Path<u32>,
-    State(_core): State<CS>
+    requester: User,
+    Path(proj_id): Path<u32>,
+    State(core): State<CS>
 ) -> Result<(), AppError>
 {
-    todo!();
+    core.add_player(&requester, proj_id).await
 }
 
 pub async fn players_remove(
-//    requester: Player,
-    Path(_proj_id): Path<u32>,
-    State(_core): State<CS>,
+    requester: User,
+    Path(proj_id): Path<u32>,
+    State(core): State<CS>,
 ) -> Result<(), AppError>
 {
-    todo!();
+    core.remove_player(&requester, proj_id).await
 }
 
 pub async fn package_get(
