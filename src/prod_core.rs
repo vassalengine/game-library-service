@@ -405,7 +405,27 @@ mod test {
         assert!(core.remove_owners(&users, 1).await.is_err());
     }
 
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn get_players_ok(pool: Pool) {
+    }
 
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn get_players_not_a_project(pool: Pool) {
+    }
 
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn add_player_ok(pool: Pool) {
+    }
 
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn add_player_not_a_project(pool: Pool) {
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn remove_player_ok(pool: Pool) {
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn remove_player_not_a_project(pool: Pool) {
+    }
 }
