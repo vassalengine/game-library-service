@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{errors::AppError};
 
 impl From<jsonwebtoken::errors::Error> for AppError {
-    fn from(e: jsonwebtoken::errors::Error) -> Self {
+    fn from(_: jsonwebtoken::errors::Error) -> Self {
         AppError::Unauthorized
     }
 }
