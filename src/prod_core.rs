@@ -320,7 +320,7 @@ WHERE user_id = ? AND project_id = ?
 mod test {
     use super::*;
 
-    #[sqlx::test(fixtures("owner"))]
+    #[sqlx::test(fixtures("one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         let core = ProdCore { db: pool };
         assert_eq!(
@@ -329,7 +329,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("owner"))]
+    #[sqlx::test(fixtures("one_owner"))]
     async fn get_owners_not_a_project(pool: Pool) {
         let core = ProdCore { db: pool };
         assert_eq!(
@@ -337,6 +337,74 @@ mod test {
             Users { users: Vec::new() }
         );
     }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn user_is_owner_true(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn user_is_owner_false(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn user_is_owner_not_a_project(pool: Pool) {
+        let core = ProdCore { db: pool };
+        // FIXME: should this be an error?
+        assert!(!core.user_is_owner(&User("bob".into()), 1).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn add_owners_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let users = Users { users: vec!(User("alice".into())) };
+        core.add_owners(&users, 42).await.unwrap();
+        assert_eq!(
+            core.get_owners(42).await.unwrap(),
+            Users {
+                users: vec!(
+                    User("alice".into()),
+                    User("bob".into())
+                )
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn add_owners_not_a_project(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let users = Users { users: vec!(User("bob".into())) };
+        assert!(core.add_owners(&users, 1).await.is_err());
+    }
+
+    #[sqlx::test(fixtures("two_owners"))]
+    async fn remove_owners_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let users = Users { users: vec!(User("bob".into())) };
+        core.remove_owners(&users, 42).await.unwrap();
+        assert_eq!(
+            core.get_owners(42).await.unwrap(),
+            Users { users: vec!(User("alice".into())) }
+        );
+    }
+
+    #[sqlx::test(fixtures("one_owner"))]
+    async fn remove_owners_fail_if_last(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let users = Users { users: vec!(User("bob".into())) };
+        assert!(core.remove_owners(&users, 1).await.is_err());
+    }
+
+    #[sqlx::test(fixtures("two_owners"))]
+    async fn remove_owners_not_a_project(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let users = Users { users: vec!(User("bob".into())) };
+        assert!(core.remove_owners(&users, 1).await.is_err());
+    }
+
 
 
 

@@ -1,7 +1,8 @@
 INSERT INTO users (id, username)
 VALUES
   (1, "bob"),
-  (2, "alice");
+  (2, "alice"),
+  (3, "chuck");
 
 INSERT INTO projects (id)
 VALUES (42);
