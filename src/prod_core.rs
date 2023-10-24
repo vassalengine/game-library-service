@@ -121,6 +121,70 @@ LIMIT 1
             .is_some()
         )
     }
+
+    async fn get_players(
+        &self,
+        proj_id: u32
+    ) -> Result<Users, AppError>
+    {
+// FIXME: Is this really the best way? Can't we fill users directly?
+        let users = sqlx::query_scalar!(
+            "
+SELECT users.username
+FROM users
+JOIN players
+ON users.id = players.user_id
+JOIN projects
+ON players.project_id = projects.id
+WHERE projects.id = ?
+ORDER BY users.username
+            ",
+            proj_id
+        )
+        .fetch_all(&self.db)
+        .await?
+        .into_iter()
+        .map(User)
+        .collect();
+
+        Ok(Users { users })
+    }
+
+    async fn add_player(
+        &self,
+        player: &User,
+        proj_id: u32
+    ) -> Result<(), AppError>
+    {
+        let mut tx = self.db.begin().await?;
+
+        // get user id of new player
+        let player_id = get_user_id(&player.0, &self.db).await?;
+        // associate new player with the project
+        add_player(player_id, proj_id, &mut *tx).await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn remove_player(
+        &self,
+        player: &User,
+        proj_id: u32
+    ) -> Result<(), AppError>
+    {
+        let mut tx = self.db.begin().await?;
+
+        // get user id of player
+        let player_id = get_user_id(&player.0, &self.db).await?;
+        // remove player from the project
+        remove_player(player_id, proj_id, &mut *tx).await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
 }
 
 async fn get_user_id(
@@ -207,6 +271,50 @@ LIMIT 1
         .await?
         .is_some()
     )
+}
+
+async fn add_player<'e, E>(
+    user_id: i64,
+    proj_id: u32,
+    ex: E
+) -> Result<(), sqlx::Error>
+where
+    E: Executor<'e, Database = Database>
+{
+    sqlx::query!(
+        "
+INSERT OR IGNORE INTO players (user_id, project_id)
+VALUES (?, ?)
+        ",
+        user_id,
+        proj_id
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+async fn remove_player<'e, E>(
+    user_id: i64,
+    proj_id: u32,
+    ex: E
+) -> Result<(), sqlx::Error>
+where
+    E: Executor<'e, Database = Database>
+{
+    sqlx::query!(
+        "
+DELETE FROM players
+WHERE user_id = ? AND project_id = ?
+        ",
+        user_id,
+        proj_id
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

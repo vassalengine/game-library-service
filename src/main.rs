@@ -4,7 +4,7 @@ use axum::{
     Router, Server,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing::get
+    routing::{get, post}
 };
 //use base64::{Engine, engine::general_purpose};
 use serde_json::json;
@@ -115,6 +115,10 @@ fn routes(api: &str) -> Router<AppState> {
             &format!("{api}/projects/:proj_id/images/:img_name"),
             get(handlers::image_get)
             .put(handlers::image_put)
+        )
+        .route(
+            &format!("{api}/projects/:proj_id/flag"),
+            post(handlers::flag_post)
         )
 }
 

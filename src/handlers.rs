@@ -163,3 +163,12 @@ pub async fn image_put(
 {
     todo!();
 }
+
+pub async fn flag_post(
+    _requester: User,
+    Path(_proj_id): Path<u32>,
+    State(_core): State<CoreArc>
+) -> Result<(), AppError>
+{
+    todo!();
+}
