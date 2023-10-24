@@ -1,5 +1,4 @@
 use axum::async_trait;
-
 use sqlx::Executor;
 
 use crate::{
@@ -321,6 +320,23 @@ WHERE user_id = ? AND project_id = ?
 mod test {
     use super::*;
 
+    #[sqlx::test(fixtures("owner"))]
+    async fn get_owners_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_owners(42).await.unwrap(),
+            Users { users: vec!(User("bob".into())) }
+        );
+    }
+
+    #[sqlx::test(fixtures("owner"))]
+    async fn get_owners_not_a_project(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_owners(1).await.unwrap(),
+            Users { users: Vec::new() }
+        );
+    }
 
 
 
