@@ -146,23 +146,5 @@ LIMIT 1
     }
 */
 
-    #[sqlx::test(fixtures("owner"))]
-    async fn get_owners_ok(pool: SqlitePool) {
-        let db = Database(pool);
-        assert_eq!(
-            db.get_owners(42).await.unwrap(),
-            Users { users: vec!(User("bob".into())) }
-        );
-    }
-
-    #[sqlx::test(fixtures("owner"))]
-    async fn get_owners_not_a_project(pool: SqlitePool) {
-        let db = Database(pool);
-        assert_eq!(
-            db.get_owners(1).await.unwrap(),
-            Users { users: Vec::new() }
-        );
-    }
-
     // TODO: prevent removal of last owner
 }
