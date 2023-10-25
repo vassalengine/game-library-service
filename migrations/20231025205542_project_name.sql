@@ -1,0 +1,7 @@
+DROP TABLE projects;
+
+CREATE TABLE projects (
+  id INTEGER PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  UNIQUE(name)
+);
