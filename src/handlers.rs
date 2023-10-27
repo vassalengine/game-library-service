@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Project, Projects, Owner, Users, User}
+    model::{Project, ProjectID, Projects, Owner, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -21,7 +21,7 @@ pub async fn projects_get(
 }
 
 pub async fn project_get(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     State(_core): State<CoreArc>
 ) -> Result<Json<Project>, AppError>
 {
@@ -30,7 +30,7 @@ pub async fn project_get(
 
 pub async fn project_update(
     _: Owner,
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     State(_core): State<CoreArc>
 ) -> Result<Json<Project>, AppError>
 {
@@ -38,7 +38,7 @@ pub async fn project_update(
 }
 
 pub async fn project_revision_get(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_revision): Path<u32>,
     State(_core): State<CoreArc>
 ) -> Result<Json<Project>, AppError>
@@ -47,57 +47,57 @@ pub async fn project_revision_get(
 }
 
 pub async fn owners_get(
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>
 ) -> Result<Json<Users>, AppError>
 {
-    Ok(Json(core.get_owners(proj_id).await?))
+    Ok(Json(core.get_owners(proj_id.0).await?))
 }
 
 pub async fn owners_add(
     _: Owner,
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>,
     Json(owners): Json<Users>
 ) -> Result<(), AppError>
 {
-    core.add_owners(&owners, proj_id).await
+    core.add_owners(&owners, proj_id.0).await
 }
 
 pub async fn owners_remove(
     _: Owner,
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>,
     Json(owners): Json<Users>
 ) -> Result<(), AppError>
 {
-    core.remove_owners(&owners, proj_id).await
+    core.remove_owners(&owners, proj_id.0).await
 }
 
 pub async fn players_get(
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>
 ) -> Result<Json<Users>, AppError>
 {
-    Ok(Json(core.get_players(proj_id).await?))
+    Ok(Json(core.get_players(proj_id.0).await?))
 }
 
 pub async fn players_add(
     requester: User,
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>
 ) -> Result<(), AppError>
 {
-    core.add_player(&requester, proj_id).await
+    core.add_player(&requester, proj_id.0).await
 }
 
 pub async fn players_remove(
     requester: User,
-    Path(proj_id): Path<u32>,
+    proj_id: ProjectID,
     State(core): State<CoreArc>,
 ) -> Result<(), AppError>
 {
-    core.remove_player(&requester, proj_id).await
+    core.remove_player(&requester, proj_id.0).await
 }
 
 pub async fn package_get(

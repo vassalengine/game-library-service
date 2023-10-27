@@ -4,8 +4,8 @@ VALUES
   (2, "alice"),
   (3, "chuck");
 
-INSERT INTO projects (id)
-VALUES (42);
+INSERT INTO projects (id, name)
+VALUES (42, "some_game");
 
 INSERT INTO owners (user_id, project_id)
 VALUES

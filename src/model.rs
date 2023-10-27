@@ -8,9 +8,14 @@ pub struct Users {
     pub users: Vec<User>
 }
 
+#[derive(Debug, PartialEq)]
+pub struct UserID(pub i64);
+
 #[derive(Debug, Serialize)]
-pub struct Project {
-}
+pub struct Project(pub String);
+
+#[derive(Debug, PartialEq)]
+pub struct ProjectID(pub i64);
 
 #[derive(Debug, Serialize)]
 pub struct Projects {

@@ -12,7 +12,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owner, User}
+    model::{Owner, Project, ProjectID, User, UserID}
 };
 
 #[async_trait]
@@ -54,6 +54,55 @@ where
     }
 }
 
+/*
+#[async_trait]
+impl<S> FromRequestParts<S> for UserID
+where
+    S: Send + Sync,
+    DecodingKey: FromRef<S>,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // extract the user
+        let user = User::from_request_parts(parts, state).await?;
+
+        // should never fail
+        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::InternalError)?;
+
+        // lookup the user id
+        Ok(core.get_user_id(&user).await?)
+    }
+}
+*/
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ProjectID
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // should never fail
+        let Path(proj) = Path::<String>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::InternalError)?;
+
+        // should never fail
+        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::InternalError)?;
+
+        // look up the user id
+        Ok(core.get_project_id(&Project(proj)).await?)
+    }
+}
+
 #[async_trait]
 impl<S> FromRequestParts<S> for Owner
 where
@@ -67,10 +116,8 @@ where
         // check that the requester is authorized
         let claims = Claims::from_request_parts(parts, state).await?;
 
-        // should never fail
-        let Path(proj_id) = Path::<u32>::from_request_parts(parts, state)
-            .await
-            .map_err(|_| AppError::InternalError)?;
+        // check that that project exists
+        let proj_id = ProjectID::from_request_parts(parts, state).await?;
 
         // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)
@@ -80,7 +127,7 @@ where
         // check that that requester owns the project
         let requester = User(claims.sub.clone());
 
-        match core.user_is_owner(&requester, proj_id).await? {
+        match core.user_is_owner(&requester, proj_id.0).await? {
             true => Ok(Owner(claims.sub)),
             false =>  Err(AppError::Unauthorized)
         }
@@ -128,7 +175,7 @@ mod test {
         }
     }
 
-    fn make_auth(key: &[u8], claims: &Claims) -> String {
+    fn token(key: &[u8], claims: &Claims) -> String {
         let ekey = EncodingKey::from_secret(key);
         let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
         format!("Bearer {token}")
@@ -142,7 +189,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .header(AUTHORIZATION, token(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -163,7 +210,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .header(AUTHORIZATION, token(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -182,7 +229,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
+            .header(AUTHORIZATION, token(b"wrong key", &exp))
             .body(())
             .unwrap();
 
@@ -236,7 +283,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .header(AUTHORIZATION, token(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -255,7 +302,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(KEY, &exp))
+            .header(AUTHORIZATION, token(KEY, &exp))
             .body(())
             .unwrap();
 
@@ -274,7 +321,7 @@ mod test {
         let request = Request::builder()
             .method(Method::GET)
             .uri("/")
-            .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
+            .header(AUTHORIZATION, token(b"wrong key", &exp))
             .body(())
             .unwrap();
 
@@ -320,15 +367,112 @@ mod test {
         assert!(act.is_err());
     }
 
+    fn make_state(core: impl Core + Send + Sync + 'static) -> AppState {
+        AppState {
+            key: DecodingKey::from_secret(KEY),
+            core: Arc::new(core) as CoreArc
+        }
+    }
+
+    // We have to test ProjectID::from_request_parts via a Router because
+    // Path uses a private extension to get parameters from the request
+
     #[derive(Clone)]
-    struct TestCore {}
+    struct ProjectIDTestCore {}
 
     #[axum::async_trait]
-    impl Core for TestCore {
+    impl Core for ProjectIDTestCore {
+        async fn get_project_id(
+            &self,
+            proj: &Project
+        ) -> Result<ProjectID, AppError>
+        {
+            match proj.0.as_str() {
+                "a_project" => Ok(ProjectID(42)),
+                _ => Err(AppError::NotAProject)
+            }
+        }
+    }
+
+    async fn project_ok(
+        proj_id: ProjectID,
+        State(_): State<AppState>
+    )
+    {
+        assert_eq!(proj_id, ProjectID(42));
+    }
+
+    async fn project_fail(
+        _proj_id: ProjectID,
+        State(_): State<AppState>
+    )
+    {
+        unreachable!();
+    }
+
+    #[tokio::test]
+    async fn project_id_from_request_parts_ok() {
+        let app = Router::new()
+            .route("/:proj", get(project_ok))
+            .with_state(make_state(ProjectIDTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project")
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn project_id_from_request_parts_not_a_project() {
+        let app = Router::new()
+            .route("/:proj", get(project_fail))
+            .with_state(make_state(ProjectIDTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/not_a_project")
+                    .body(boxed(Empty::new()))
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    // We have to test Owner::from_request_parts via a Router because
+    // Path uses a private extension to get parameters from the request
+
+    #[derive(Clone)]
+    struct OwnersTestCore {}
+
+    #[axum::async_trait]
+    impl Core for OwnersTestCore {
+        async fn get_project_id(
+            &self,
+            proj: &Project
+        ) -> Result<ProjectID, AppError>
+        {
+            match proj.0.as_str() {
+                "a_project" => Ok(ProjectID(42)),
+                _ => Err(AppError::NotAProject)
+            }
+        }
+
         async fn user_is_owner(
             &self,
             user: &User,
-            proj_id: u32
+            proj_id: i64
         ) -> Result<bool, AppError>
         {
             Ok(proj_id == 42 && user == &User("bob".into()))
@@ -336,7 +480,7 @@ mod test {
 
         async fn get_owners(
             &self,
-            _proj_id: u32
+            _proj_id: i64
         ) -> Result<Users, AppError>
         {
             Ok(
@@ -351,7 +495,7 @@ mod test {
 
     async fn owner_ok(
         requester: Owner,
-        _: Path<u32>,
+        _: Path<String>,
         State(_): State<AppState>
     )
     {
@@ -360,37 +504,27 @@ mod test {
 
     async fn owner_fail(
         _: Owner,
-        _: Path<u32>,
+        _: Path<String>,
         State(_): State<AppState>
     )
     {
         unreachable!();
     }
 
-    fn make_state() -> AppState {
-        AppState {
-            key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as CoreArc
-        }
-    }
-
-    // We have to test Owner::from_request_parts via a Router because
-    // Path uses a private extension to get parameters from the request
-
     #[tokio::test]
     async fn owners_from_request_parts_ok() {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj_id", get(owner_ok))
-            .with_state(make_state());
+            .route("/:proj", get(owner_ok))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
-                    .header(AUTHORIZATION, make_auth(KEY, &exp))
+                    .uri("/a_project")
+                    .header(AUTHORIZATION, token(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
             )
@@ -409,15 +543,15 @@ mod test {
         };
 
         let app = Router::new()
-            .route("/:proj_id", get(owner_fail))
-            .with_state(make_state());
+            .route("/:proj", get(owner_fail))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
-                    .header(AUTHORIZATION, make_auth(KEY, &exp))
+                    .uri("/a_project")
+                    .header(AUTHORIZATION, token(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
             )
@@ -432,15 +566,15 @@ mod test {
         let exp = bob_expired();
 
         let app = Router::new()
-            .route("/:proj_id", get(owner_fail))
-            .with_state(make_state());
+            .route("/:proj", get(owner_fail))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
-                    .header(AUTHORIZATION, make_auth(KEY, &exp))
+                    .uri("/a_project")
+                    .header(AUTHORIZATION, token(KEY, &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
              )
@@ -455,15 +589,15 @@ mod test {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj_id", get(owner_fail))
-            .with_state(make_state());
+            .route("/:proj", get(owner_fail))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
-                    .header(AUTHORIZATION, make_auth(b"wrong key", &exp))
+                    .uri("/a_project")
+                    .header(AUTHORIZATION, token(b"wrong key", &exp))
                     .body(boxed(Empty::new()))
                     .unwrap()
              )
@@ -476,14 +610,14 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_token() {
         let app = Router::new()
-            .route("/:proj_id", get(owner_fail))
-            .with_state(make_state());
+            .route("/:proj", get(owner_fail))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
+                    .uri("/a_project")
                     .header(AUTHORIZATION, "")
                     .body(boxed(Empty::new()))
                     .unwrap()
@@ -497,14 +631,14 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_auth_header() {
         let app = Router::new()
-            .route("/:proj_id", get(owner_fail))
-            .with_state(make_state());
+            .route("/:proj", get(owner_fail))
+            .with_state(make_state(OwnersTestCore {}));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method(Method::GET)
-                    .uri("/42")
+                    .uri("/a_project")
                     .body(boxed(Empty::new()))
                     .unwrap()
              )

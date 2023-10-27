@@ -4,7 +4,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{User, Users}
+    model::{Project, ProjectID, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -21,16 +21,39 @@ pub struct ProdCore {
     pub db: Pool
 }
 
+// TODO: switch proj_id to proj_name; then we will always know if the project
+// exists because we have to look up the name to get the id
+
 #[async_trait]
 impl Core for ProdCore {
+    async fn get_project_id(
+         &self,
+        proj: &Project
+    ) -> Result<ProjectID, AppError>
+    {
+        sqlx::query_scalar!(
+            "
+SELECT id
+FROM projects
+WHERE name = ?
+            ",
+            proj.0
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .map(ProjectID)
+        .ok_or(AppError::NotAProject)
+    }
+
     async fn get_owners(
         &self,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<Users, AppError>
     {
-// FIXME: Is this really the best way? Can't we fill users directly?
-        let users = sqlx::query_scalar!(
-            "
+        Ok(
+            Users {
+                users: sqlx::query_scalar!(
+                    "
 SELECT users.username
 FROM users
 JOIN owners
@@ -39,22 +62,22 @@ JOIN projects
 ON owners.project_id = projects.id
 WHERE projects.id = ?
 ORDER BY users.username
-            ",
-            proj_id
+                    ",
+                    proj_id
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(User)
+                .collect()
+            }
         )
-        .fetch_all(&self.db)
-        .await?
-        .into_iter()
-        .map(User)
-        .collect();
-
-        Ok(Users { users })
     }
 
     async fn add_owners(
         &self,
         owners: &Users,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<(), AppError>
     {
         let mut tx = self.db.begin().await?;
@@ -74,7 +97,7 @@ ORDER BY users.username
     async fn remove_owners(
         &self,
         owners: &Users,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<(), AppError>
     {
         let mut tx = self.db.begin().await?;
@@ -88,7 +111,7 @@ ORDER BY users.username
 
         // prevent removal of last owner
         if !has_owner(proj_id, &mut *tx).await? {
-            return Err(AppError::DatabaseError("cannot remove last owner".into()));
+            return Err(AppError::CannotRemoveLastOwner);
         }
 
         tx.commit().await?;
@@ -99,7 +122,7 @@ ORDER BY users.username
     async fn user_is_owner(
         &self,
         user: &User,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<bool, AppError>
     {
         Ok(
@@ -123,12 +146,13 @@ LIMIT 1
 
     async fn get_players(
         &self,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<Users, AppError>
     {
-// FIXME: Is this really the best way? Can't we fill users directly?
-        let users = sqlx::query_scalar!(
-            "
+        Ok(
+            Users {
+                users: sqlx::query_scalar!(
+                    "
 SELECT users.username
 FROM users
 JOIN players
@@ -137,22 +161,22 @@ JOIN projects
 ON players.project_id = projects.id
 WHERE projects.id = ?
 ORDER BY users.username
-            ",
-            proj_id
+                    ",
+                    proj_id
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(User)
+                .collect()
+            }
         )
-        .fetch_all(&self.db)
-        .await?
-        .into_iter()
-        .map(User)
-        .collect();
-
-        Ok(Users { users })
     }
 
     async fn add_player(
         &self,
         player: &User,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<(), AppError>
     {
         let mut tx = self.db.begin().await?;
@@ -170,7 +194,7 @@ ORDER BY users.username
     async fn remove_player(
         &self,
         player: &User,
-        proj_id: u32
+        proj_id: i64
     ) -> Result<(), AppError>
     {
         let mut tx = self.db.begin().await?;
@@ -207,9 +231,9 @@ WHERE username = ?
 
 async fn add_owner<'e, E>(
     user_id: i64,
-    proj_id: u32,
+    proj_id: i64,
     ex: E
-) -> Result<(), sqlx::Error>
+) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Database>
 {
@@ -229,7 +253,7 @@ VALUES (?, ?)
 
 async fn remove_owner<'e, E>(
     user_id: i64,
-    proj_id: u32,
+    proj_id: i64,
     ex: E
 ) -> Result<(), sqlx::Error>
 where
@@ -250,7 +274,7 @@ WHERE user_id = ? AND project_id = ?
 }
 
 async fn has_owner<'e, E>(
-    proj_id: u32,
+    proj_id: i64,
     ex: E
 ) -> Result<bool, sqlx::Error>
 where
@@ -274,9 +298,9 @@ LIMIT 1
 
 async fn add_player<'e, E>(
     user_id: i64,
-    proj_id: u32,
+    proj_id: i64,
     ex: E
-) -> Result<(), sqlx::Error>
+) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Database>
 {
@@ -296,7 +320,7 @@ VALUES (?, ?)
 
 async fn remove_player<'e, E>(
     user_id: i64,
-    proj_id: u32,
+    proj_id: i64,
     ex: E
 ) -> Result<(), sqlx::Error>
 where
@@ -330,16 +354,6 @@ mod test {
     }
 
     #[sqlx::test(fixtures("one_owner"))]
-    async fn get_owners_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        // FIXME: should this be an error?
-        assert_eq!(
-            core.get_owners(1).await.unwrap(),
-            Users { users: Vec::new() }
-        );
-    }
-
-    #[sqlx::test(fixtures("one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         let core = ProdCore { db: pool };
         assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
@@ -349,13 +363,6 @@ mod test {
     async fn user_is_owner_false(pool: Pool) {
         let core = ProdCore { db: pool };
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
-    }
-
-    #[sqlx::test(fixtures("one_owner"))]
-    async fn user_is_owner_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        // FIXME: should this be an error?
-        assert!(!core.user_is_owner(&User("bob".into()), 1).await.unwrap());
     }
 
     #[sqlx::test(fixtures("one_owner"))]
@@ -374,13 +381,6 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("one_owner"))]
-    async fn add_owners_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        let users = Users { users: vec!(User("bob".into())) };
-        assert!(core.add_owners(&users, 1).await.is_err());
-    }
-
     #[sqlx::test(fixtures("two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
         let core = ProdCore { db: pool };
@@ -396,14 +396,10 @@ mod test {
     async fn remove_owners_fail_if_last(pool: Pool) {
         let core = ProdCore { db: pool };
         let users = Users { users: vec!(User("bob".into())) };
-        assert!(core.remove_owners(&users, 1).await.is_err());
-    }
-
-    #[sqlx::test(fixtures("two_owners"))]
-    async fn remove_owners_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        let users = Users { users: vec!(User("bob".into())) };
-        assert!(core.remove_owners(&users, 1).await.is_err());
+        assert_eq!(
+            core.remove_owners(&users, 1).await.unwrap_err(),
+            AppError::CannotRemoveLastOwner
+        );
     }
 
     #[sqlx::test(fixtures("players"))]
@@ -417,16 +413,6 @@ mod test {
                     User("bob".into())
                 )
             }
-        );
-    }
-
-    #[sqlx::test(fixtures("players"))]
-    async fn get_players_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        // FIXME: should this be an error?
-        assert_eq!(
-            core.get_players(1).await.unwrap(),
-            Users { users: Vec::new() }
         );
     }
 
@@ -447,12 +433,6 @@ mod test {
     }
 
     #[sqlx::test(fixtures("players"))]
-    async fn add_player_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        assert!(core.add_player(&User("chuck".into()), 1).await.is_err());
-    }
-
-    #[sqlx::test(fixtures("players"))]
     async fn remove_player_ok(pool: Pool) {
         let core = ProdCore { db: pool };
         core.remove_player(&User("bob".into()), 42).await.unwrap();
@@ -460,12 +440,5 @@ mod test {
             core.get_players(42).await.unwrap(),
             Users { users: vec!(User("alice".into())) }
         );
-    }
-
-    #[sqlx::test(fixtures("players"))]
-    async fn remove_player_not_a_project(pool: Pool) {
-        let core = ProdCore { db: pool };
-        // FIXME: should this be an error?
-        core.remove_player(&User("bob".into()), 1).await.unwrap();
     }
 }
