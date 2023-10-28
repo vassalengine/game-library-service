@@ -211,19 +211,47 @@ ORDER BY users.username
 
     async fn get_readme(
         &self,
-        _proj_id: i64
+        proj_id: i64
     ) -> Result<Readme, AppError>
     {
-        unimplemented!();
+        Ok(
+            sqlx::query_as!(
+                Readme,
+                "
+SELECT text
+FROM readmes
+WHERE project_id = ?
+ORDER BY revision DESC
+LIMIT 1
+                ",
+                proj_id
+            )
+            .fetch_one(&self.db)
+            .await?
+        )
     }
 
     async fn get_readme_revision(
         &self,
-        _proj_id: i64,
-        _revision: u32
+        proj_id: i64,
+        revision: u32
     ) -> Result<Readme, AppError>
     {
-        unimplemented!();
+        sqlx::query_as!(
+            Readme,
+            "
+SELECT text
+FROM readmes
+WHERE project_id = ?
+AND revision = ?
+LIMIT 1
+            ",
+            proj_id,
+            revision
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .ok_or(AppError::NotARevision)
     }
 }
 
@@ -456,6 +484,33 @@ mod test {
         assert_eq!(
             core.get_players(42).await.unwrap(),
             Users { users: vec!(User("alice".into())) }
+        );
+    }
+
+    #[sqlx::test(fixtures("readme"))]
+    async fn get_readme_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_readme(42).await.unwrap(),
+            Readme { text: "third try".into() }
+        );
+    }
+
+    #[sqlx::test(fixtures("readme"))]
+    async fn get_readme_revision_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_readme_revision(42, 2).await.unwrap(),
+            Readme { text: "second try".into() }
+        );
+    }
+
+    #[sqlx::test(fixtures("readme"))]
+    async fn get_readme_revision_bad(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_readme_revision(42, 4).await.unwrap_err(),
+            AppError::NotARevision
         );
     }
 }
