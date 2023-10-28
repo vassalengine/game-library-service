@@ -7,6 +7,7 @@ pub enum AppError {
     Unauthorized,
     DatabaseError(String),
     NotAProject,
+    NotARevision,
     NotImplemented
 }
 
@@ -17,6 +18,7 @@ impl fmt::Display for AppError {
             AppError::DatabaseError(e) => write!(f, "{}", e),
             AppError::InternalError => write!(f, "Internal error"),
             AppError::NotAProject => write!(f, "Bad request"),
+            AppError::NotARevision => write!(f, "Bad request"),
             AppError::NotImplemented => write!(f, "Not implemented"),
             AppError::Unauthorized => write!(f, "Unauthorized")
         }

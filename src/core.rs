@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Project, ProjectID, User, UserID, Users}
+    model::{Project, ProjectID, Readme, User, UserID, Users}
 };
 
 #[async_trait]
@@ -81,6 +81,23 @@ pub trait Core {
         _player: &User,
         _proj_id: i64
     ) -> Result<(), AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_readme(
+        &self,
+        _proj_id: i64
+    ) -> Result<Readme, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_readme_revision(
+        &self,
+        _proj_id: i64,
+        _revision: u32
+    ) -> Result<Readme, AppError>
     {
         unimplemented!();
     }

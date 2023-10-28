@@ -4,7 +4,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{Project, ProjectID, User, Users}
+    model::{Project, ProjectID, Readme, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -207,6 +207,23 @@ ORDER BY users.username
         tx.commit().await?;
 
         Ok(())
+    }
+
+    async fn get_readme(
+        &self,
+        _proj_id: i64
+    ) -> Result<Readme, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_readme_revision(
+        &self,
+        _proj_id: i64,
+        _revision: u32
+    ) -> Result<Readme, AppError>
+    {
+        unimplemented!();
     }
 }
 

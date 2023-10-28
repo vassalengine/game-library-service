@@ -40,6 +40,7 @@ impl From<&AppError> for StatusCode {
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotAProject => StatusCode::BAD_REQUEST,
+            AppError::NotARevision => StatusCode::BAD_REQUEST,
             AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
@@ -177,7 +178,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{Project, ProjectID, User, Users}
+        model::{Project, ProjectID, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -284,6 +285,27 @@ mod test {
         ) -> Result<(), AppError>
         {
             Ok(())
+        }
+
+        async fn get_readme(
+            &self,
+            _proj_id: i64
+        ) -> Result<Readme, AppError>
+        {
+            Ok(Readme { text: "Stuff!".into() })
+        }
+
+        async fn get_readme_revision(
+            &self,
+            _proj_id: i64,
+            revision: u32
+        ) -> Result<Readme, AppError>
+        {
+            match revision {
+                    1 => Ok(Readme { text: "Old stuff!".into() }),
+                    2 => Ok(Readme { text: "Stuff!".into() }),
+                    _ => Err(AppError::NotARevision)
+            }
         }
     }
 
@@ -586,6 +608,96 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_readme_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/readme"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Readme>(response).await,
+            Readme { text: "Stuff!".into() }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_readme_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/readme"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_readme_revision_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/readme/2"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Readme>(response).await,
+            Readme { text: "Stuff!".into() }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_readme_revision_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/readme/2"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_readme_revision_not_a_revision() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/readme/3"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotARevision)
         );
     }
 }

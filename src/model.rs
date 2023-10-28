@@ -23,3 +23,8 @@ pub struct Projects {
 
 #[derive(Debug, PartialEq)]
 pub struct Owner(pub String);
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Readme {
+    pub text: String
+}

@@ -88,10 +88,17 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // should never fail
-        let Path(proj) = Path::<String>::from_request_parts(parts, state)
-            .await
-            .map_err(|_| AppError::InternalError)?;
+        // extract however many path elements there are; should never fail
+        let Path(params) =
+            Path::<Vec<(String, String)>>::from_request_parts(parts, state)
+                .await
+                .map_err(|_| AppError::InternalError)?;
+
+        // extract the first path element, which is the project name
+        let (_, proj) = params
+            .into_iter()
+            .next()
+            .ok_or(AppError::InternalError)?;
 
         // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)

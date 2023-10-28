@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Project, ProjectID, Projects, Owner, Users, User}
+    model::{Owner, Project, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -101,7 +101,7 @@ pub async fn players_remove(
 }
 
 pub async fn package_get(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_pkg_name): Path<String>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
@@ -110,7 +110,7 @@ pub async fn package_get(
 }
 
 pub async fn package_version_get(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_pkg_name): Path<String>,
     Path(_pkg_version): Path<String>,
     State(_core): State<CoreArc>
@@ -120,7 +120,7 @@ pub async fn package_version_get(
 }
 
 pub async fn package_version_put(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_pkg_name): Path<String>,
     Path(_pkg_version): Path<String>,
     State(_core): State<CoreArc>
@@ -130,24 +130,24 @@ pub async fn package_version_put(
 }
 
 pub async fn readme_get(
-    Path(_proj_id): Path<u32>,
-    State(_core): State<CoreArc>
-) -> Result<(), AppError>
+    proj_id: ProjectID,
+    State(core): State<CoreArc>
+) -> Result<Json<Readme>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_readme(proj_id.0).await?))
 }
 
 pub async fn readme_revision_get(
-    Path(_proj_id): Path<u32>,
-    Path(_revision): Path<u32>,
-    State(_core): State<CoreArc>
-) -> Result<(), AppError>
+    proj_id: ProjectID,
+    Path((_, revision)): Path<(String, u32)>,
+    State(core): State<CoreArc>
+) -> Result<Json<Readme>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_readme_revision(proj_id.0, revision).await?))
 }
 
 pub async fn image_get(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_img_name): Path<String>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
@@ -156,7 +156,7 @@ pub async fn image_get(
 }
 
 pub async fn image_put(
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     Path(_img_name): Path<String>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
@@ -166,7 +166,7 @@ pub async fn image_put(
 
 pub async fn flag_post(
     _requester: User,
-    Path(_proj_id): Path<u32>,
+    _proj_id: ProjectID,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
