@@ -1,4 +1,5 @@
 use axum::async_trait;
+use semver::Version;
 use sqlx::Executor;
 
 use crate::{
@@ -22,7 +23,7 @@ pub struct ProdCore {
 }
 
 // TODO: switch proj_id to proj_name; then we will always know if the project
-// exists because we have to look up the name to get the id
+// exists because we have to look up the id
 
 #[async_trait]
 impl Core for ProdCore {
@@ -144,6 +145,59 @@ LIMIT 1
         )
     }
 
+    async fn get_package(
+        &self,
+        _proj_id: i64,
+        pkg_id: i64
+    ) -> Result<String, AppError>
+    {
+        sqlx::query_scalar!(
+            "
+SELECT package_versions.url
+FROM package_versions
+WHERE package_versions.package_id = ?
+ORDER BY
+    package_versions.version_major DESC,
+    package_versions.version_minor DESC,
+    package_versions.version_patch DESC
+LIMIT 1
+            ",
+            pkg_id
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .ok_or(AppError::NotAVersion)
+    }
+
+    async fn get_package_version(
+        &self,
+        _proj_id: i64,
+        pkg_id: i64,
+        version: &str
+    ) -> Result<String, AppError>
+    {
+        let version = parse_version(version)?;
+
+        sqlx::query_scalar!(
+            "
+SELECT package_versions.url
+FROM package_versions
+WHERE package_versions.package_id = ?
+AND package_versions.version_major = ?
+AND package_versions.version_minor = ?
+AND package_versions.version_patch = ?
+LIMIT 1
+            ",
+            pkg_id,
+            version.0,
+            version.1,
+            version.2
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .ok_or(AppError::NotAVersion)
+    }
+
     async fn get_players(
         &self,
         proj_id: i64
@@ -253,6 +307,24 @@ LIMIT 1
         .await?
         .ok_or(AppError::NotARevision)
     }
+}
+
+// TODO: check pre and build fields of Version
+
+fn try_vtup(v: Version) -> Result<(i64, i64, i64), AppError>  {
+    Ok(
+        (
+            i64::try_from(v.major).or(Err(AppError::MalformedVersion))?,
+            i64::try_from(v.minor).or(Err(AppError::MalformedVersion))?,
+            i64::try_from(v.patch).or(Err(AppError::MalformedVersion))?
+        )
+    )
+}
+
+fn parse_version(version: &str) -> Result<(i64, i64, i64), AppError> {
+    Version::parse(version)
+        .or(Err(AppError::MalformedVersion))
+        .and_then(try_vtup)
 }
 
 async fn get_user_id(
@@ -389,6 +461,42 @@ WHERE user_id = ? AND project_id = ?
 mod test {
     use super::*;
 
+    #[sqlx::test(fixtures("packages"))]
+    async fn get_package_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_package(42, 1).await.unwrap(),
+            "https://example.com/a_package-1.2.4"
+        );
+    }
+
+    #[sqlx::test(fixtures("packages"))]
+    async fn get_package_version_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_package_version(42, 1, "1.2.3").await.unwrap(),
+            "https://example.com/a_package-1.2.3"
+        );
+    }
+
+    #[sqlx::test(fixtures("packages"))]
+    async fn get_package_version_malformed(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_package_version(42, 1, "xyzzy").await.unwrap_err(),
+            AppError::MalformedVersion
+        );
+    }
+
+    #[sqlx::test(fixtures("packages"))]
+    async fn get_package_version_not_a_version(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_package_version(42, 1, "1.0.0").await.unwrap_err(),
+            AppError::NotAVersion
+        );
+    }
+
     #[sqlx::test(fixtures("one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         let core = ProdCore { db: pool };
@@ -409,6 +517,8 @@ mod test {
         let core = ProdCore { db: pool };
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
     }
+
+// TODO: add test for non-user owner
 
     #[sqlx::test(fixtures("one_owner"))]
     async fn add_owners_ok(pool: Pool) {

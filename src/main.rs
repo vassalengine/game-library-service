@@ -33,14 +33,20 @@ use crate::{
     jwt::DecodingKey,
 };
 
+
+// TOOD: the NotA* results should be 404s
+
 impl From<&AppError> for StatusCode {
     fn from(err: &AppError) -> Self {
         match err {
             AppError::CannotRemoveLastOwner => StatusCode::BAD_REQUEST,
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::MalformedVersion => StatusCode::BAD_REQUEST,
+            AppError::NotAPackage => StatusCode::BAD_REQUEST,
             AppError::NotAProject => StatusCode::BAD_REQUEST,
             AppError::NotARevision => StatusCode::BAD_REQUEST,
+            AppError::NotAVersion => StatusCode::BAD_REQUEST,
             AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
@@ -96,6 +102,10 @@ fn routes(api: &str) -> Router<AppState> {
             get(handlers::players_get)
             .put(handlers::players_add)
             .delete(handlers::players_remove)
+        )
+        .route(
+            &format!("{api}/projects/:proj/packages"),
+            get(handlers::packages_get)
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name"),
@@ -169,7 +179,7 @@ mod test {
         body::{Body, Bytes},
         http::{
             Method, Request,
-            header::{AUTHORIZATION, CONTENT_TYPE}
+            header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
     use mime::APPLICATION_JSON;
@@ -178,7 +188,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{Project, ProjectID, Readme, User, Users}
+        model::{Package, PackageID, Project, ProjectID, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -209,6 +219,18 @@ mod test {
             match proj.0.as_str() {
                 "a_project" => Ok(ProjectID(1)),
                 _ => Err(AppError::NotAProject)
+            }
+        }
+
+        async fn get_package_id(
+            &self,
+            _proj_id: i64,
+            pkg: &Package
+        ) -> Result<PackageID, AppError>
+        {
+            match pkg.0.as_str() {
+                "a_package" => Ok(PackageID(1)),
+                _ => Err(AppError::NotAPackage)
             }
         }
 
@@ -252,6 +274,28 @@ mod test {
                     )
                 }
             )
+        }
+
+        async fn get_package(
+            &self,
+            _proj_id: i64,
+            _pkg_id: i64
+        ) -> Result<String, AppError>
+        {
+            Ok("https://example.com/package".into())
+        }
+
+        async fn get_package_version(
+            &self,
+            _proj_id: i64,
+            _pkg_id: i64,
+            version: &str
+        ) -> Result<String, AppError>
+        {
+            match version {
+                "1.2.3" => Ok("https://example.com/package-1.2.3".into()),
+                _ => Err(AppError::NotAPackage)
+            }
         }
 
         async fn get_players(
@@ -343,6 +387,132 @@ mod test {
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(&body_bytes(response).await[..], b"hello world");
+    }
+
+    #[tokio::test]
+    async fn get_package_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers().get(LOCATION).unwrap(),
+            "https://example.com/package"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_not_a_package() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAPackage)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers().get(LOCATION).unwrap(),
+            "https://example.com/package-1.2.3"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_not_a_package() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAPackage)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_not_a_version() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAPackage)
+        );
     }
 
     #[tokio::test]

@@ -1,12 +1,12 @@
 use axum::{
     extract::{Path, State},
-    response::Json
+    response::{Json, Redirect}
 };
 
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owner, Project, ProjectID, Projects, Readme, Users, User}
+    model::{Owner, PackageID, Project, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -100,23 +100,35 @@ pub async fn players_remove(
     core.remove_player(&requester, proj_id.0).await
 }
 
-pub async fn package_get(
+pub async fn packages_get(
     _proj_id: ProjectID,
-    Path(_pkg_name): Path<String>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
     todo!();
 }
 
-pub async fn package_version_get(
-    _proj_id: ProjectID,
-    Path(_pkg_name): Path<String>,
-    Path(_pkg_version): Path<String>,
-    State(_core): State<CoreArc>
-) -> Result<(), AppError>
+pub async fn package_get(
+    proj_id: ProjectID,
+    pkg_id: PackageID,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
 {
-    todo!();
+    Ok(Redirect::to(&core.get_package(proj_id.0, pkg_id.0).await?))
+}
+
+pub async fn package_version_get(
+    proj_id: ProjectID,
+    pkg_id: PackageID,
+    Path((_, _, pkg_version)): Path<(String, String, String)>,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
+{
+    Ok(
+        Redirect::to(
+            &core.get_package_version(proj_id.0, pkg_id.0, &pkg_version).await?
+        )
+    )
 }
 
 pub async fn package_version_put(

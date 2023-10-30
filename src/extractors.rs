@@ -12,7 +12,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owner, Project, ProjectID, User, UserID}
+    model::{Owner, Package, PackageID, Project, ProjectID, User}
 };
 
 #[async_trait]
@@ -107,6 +107,40 @@ where
 
         // look up the user id
         Ok(core.get_project_id(&Project(proj)).await?)
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for PackageID
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // check that that project exists
+        let proj_id = ProjectID::from_request_parts(parts, state).await?;
+
+        // extract however many path elements there are; should never fail
+        let Path(params) =
+            Path::<Vec<(String, String)>>::from_request_parts(parts, state)
+                .await
+                .map_err(|_| AppError::InternalError)?;
+
+        // extract the second path element, which is the package name
+        let (_, pkg) = params
+            .into_iter()
+            .nth(1)
+            .ok_or(AppError::InternalError)?;
+
+        // should never fail
+        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::InternalError)?;
+
+        // look up the package id
+        Ok(core.get_package_id(proj_id.0, &Package(pkg)).await?)
     }
 }
 

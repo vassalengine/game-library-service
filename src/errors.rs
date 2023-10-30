@@ -6,8 +6,11 @@ pub enum AppError {
     InternalError,
     Unauthorized,
     DatabaseError(String),
+    MalformedVersion,
+    NotAPackage,
     NotAProject,
     NotARevision,
+    NotAVersion,
     NotImplemented
 }
 
@@ -17,8 +20,11 @@ impl fmt::Display for AppError {
             AppError::CannotRemoveLastOwner => write!(f, "Bad request"),
             AppError::DatabaseError(e) => write!(f, "{}", e),
             AppError::InternalError => write!(f, "Internal error"),
+            AppError::MalformedVersion => write!(f, "Bad request"),
+            AppError::NotAPackage => write!(f, "Bad request"),
             AppError::NotAProject => write!(f, "Bad request"),
             AppError::NotARevision => write!(f, "Bad request"),
+            AppError::NotAVersion => write!(f, "Bad request"),
             AppError::NotImplemented => write!(f, "Not implemented"),
             AppError::Unauthorized => write!(f, "Unauthorized")
         }
