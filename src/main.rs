@@ -82,8 +82,8 @@ fn routes(api: &str) -> Router<AppState> {
             &format!("{api}/projects"),
             get(handlers::projects_get)
         )
-        .route(&format!(
-            "{api}/projects/:proj"),
+        .route(
+            &format!("{api}/projects/:proj"),
             get(handlers::project_get)
             .put(handlers::project_update)
         )
@@ -188,7 +188,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{Package, PackageID, Project, ProjectID, Readme, User, Users}
+        model::{GameData, Package, PackageID, Project, ProjectData, ProjectID, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -272,6 +272,31 @@ mod test {
                         User("alice".into()),
                         User("bob".into())
                     )
+                }
+            )
+        }
+
+        async fn get_project(
+            &self,
+            _proj_id: i64,
+        ) -> Result<ProjectData, AppError>
+        {
+            Ok(
+                ProjectData {
+                    name: "eia".into(),
+                    description: "A module for Empires in Arms".into(),
+                    revision: 1,
+                    created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
+                    modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                    tags: vec!(),
+                    game: GameData {
+                        title: "Empires in Arms".into(),
+                        title_sort_key: "Empires in Arms".into(),
+                        publisher: "Avalon Hill".into(),
+                        year: "1983".into()
+                    },
+                    owners: vec!(),
+                    packages: vec!()
                 }
             )
         }
@@ -387,6 +412,44 @@ mod test {
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(&body_bytes(response).await[..], b"hello world");
+    }
+
+    #[tokio::test]
+    async fn get_project_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+/*
+        assert_eq!(
+            body_as::<ProjectData>(response).await,
+            ProjectData { }
+        );
+*/
+    }
+
+    #[tokio::test]
+    async fn get_project_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
     }
 
     #[tokio::test]

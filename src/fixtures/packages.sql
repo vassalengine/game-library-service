@@ -1,6 +1,3 @@
-INSERT INTO projects (id, name)
-VALUES (42, "a_project");
-
 INSERT INTO packages (id, project_id, name)
 VALUES (1, 42, "a_package");
 

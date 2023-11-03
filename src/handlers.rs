@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owner, PackageID, Project, ProjectID, Projects, Readme, Users, User}
+    model::{Owner, PackageID, Project, ProjectData, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -21,11 +21,11 @@ pub async fn projects_get(
 }
 
 pub async fn project_get(
-    _proj_id: ProjectID,
-    State(_core): State<CoreArc>
-) -> Result<Json<Project>, AppError>
+    proj_id: ProjectID,
+    State(core): State<CoreArc>
+) -> Result<Json<ProjectData>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_project(proj_id.0).await?))
 }
 
 pub async fn project_update(

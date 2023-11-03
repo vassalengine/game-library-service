@@ -34,3 +34,43 @@ pub struct Owner(pub String);
 pub struct Readme {
     pub text: String
 }
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct GameData {
+    pub title: String,
+    pub title_sort_key: String,
+    pub publisher: String,
+    pub year: String
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct VersionData {
+    pub version: String,
+    pub url: String,
+    pub size: u64,
+    pub checksum: String,
+    pub published_at: String,
+    pub published_by: String,
+    pub requires: String,
+    pub authors: Vec<String>
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct PackageData {
+    pub name: String,
+    pub description: String,
+    pub versions: Vec<VersionData>
+}
+
+#[derive(Debug,Deserialize, PartialEq, Serialize)]
+pub struct ProjectData {
+    pub name: String,
+    pub description: String,
+    pub revision: i64,
+    pub created_at: String, // TOOD: type for timestamp?
+    pub modified_at: String,
+    pub tags: Vec<String>,
+    pub game: GameData,
+    pub owners: Vec<String>,
+    pub packages: Vec<PackageData>
+}
