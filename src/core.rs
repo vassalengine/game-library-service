@@ -76,6 +76,15 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn get_project_revision(
+        &self,
+        _proj_id: i64,
+        _revision: u32
+    ) -> Result<ProjectData, AppError>
+    {
+        unimplemented!();
+    }
+
     async fn get_package(
         &self,
         _proj_id: i64,

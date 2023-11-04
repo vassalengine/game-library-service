@@ -38,12 +38,12 @@ pub async fn project_update(
 }
 
 pub async fn project_revision_get(
-    _proj_id: ProjectID,
-    Path(_revision): Path<u32>,
-    State(_core): State<CoreArc>
-) -> Result<Json<Project>, AppError>
+    proj_id: ProjectID,
+    Path((_, revision)): Path<(String, u32)>,
+    State(core): State<CoreArc>
+) -> Result<Json<ProjectData>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_project_revision(proj_id.0, revision).await?))
 }
 
 pub async fn owners_get(
@@ -133,8 +133,7 @@ pub async fn package_version_get(
 
 pub async fn package_version_put(
     _proj_id: ProjectID,
-    Path(_pkg_name): Path<String>,
-    Path(_pkg_version): Path<String>,
+    Path((_pkg_name, _pkg_version)): Path<(String, String)>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
