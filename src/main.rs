@@ -43,10 +43,10 @@ impl From<&AppError> for StatusCode {
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
-            AppError::NotAPackage => StatusCode::BAD_REQUEST,
-            AppError::NotAProject => StatusCode::BAD_REQUEST,
-            AppError::NotARevision => StatusCode::BAD_REQUEST,
-            AppError::NotAVersion => StatusCode::BAD_REQUEST,
+            AppError::NotAPackage => StatusCode::NOT_FOUND,
+            AppError::NotAProject => StatusCode::NOT_FOUND,
+            AppError::NotARevision => StatusCode::NOT_FOUND,
+            AppError::NotAVersion => StatusCode::NOT_FOUND,
             AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
@@ -457,7 +457,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -495,7 +495,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -513,7 +513,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotARevision)
@@ -549,7 +549,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -567,7 +567,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAPackage)
@@ -603,7 +603,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -621,7 +621,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAPackage)
@@ -639,7 +639,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAPackage)
@@ -680,7 +680,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -717,7 +717,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -774,7 +774,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -835,7 +835,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -870,7 +870,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -905,7 +905,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -941,7 +941,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -977,7 +977,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
@@ -995,7 +995,7 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotARevision)

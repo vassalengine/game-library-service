@@ -488,7 +488,7 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     // We have to test Owner::from_request_parts via a Router because
