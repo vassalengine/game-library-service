@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owner, PackageID, Project, ProjectData, ProjectID, Projects, Readme, Users, User}
+    model::{Owner, Owned, PackageID, Project, ProjectData, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -29,8 +29,7 @@ pub async fn project_get(
 }
 
 pub async fn project_update(
-    _: Owner,
-    _proj_id: ProjectID,
+    Owned(_, _) : Owned,
     State(_core): State<CoreArc>
 ) -> Result<Json<Project>, AppError>
 {
@@ -55,8 +54,7 @@ pub async fn owners_get(
 }
 
 pub async fn owners_add(
-    _: Owner,
-    proj_id: ProjectID,
+    Owned(_, proj_id): Owned,
     State(core): State<CoreArc>,
     Json(owners): Json<Users>
 ) -> Result<(), AppError>
@@ -65,8 +63,7 @@ pub async fn owners_add(
 }
 
 pub async fn owners_remove(
-    _: Owner,
-    proj_id: ProjectID,
+    Owned(_, proj_id): Owned,
     State(core): State<CoreArc>,
     Json(owners): Json<Users>
 ) -> Result<(), AppError>

@@ -30,6 +30,9 @@ pub struct Projects {
 #[derive(Debug, PartialEq)]
 pub struct Owner(pub String);
 
+#[derive(Debug, PartialEq)]
+pub struct Owned(pub Owner, pub ProjectID);
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Readme {
     pub text: String

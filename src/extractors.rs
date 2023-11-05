@@ -12,7 +12,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owner, Package, PackageID, Project, ProjectID, User}
+    model::{Owned, Owner, Package, PackageID, Project, ProjectID, User}
 };
 
 #[async_trait]
@@ -145,7 +145,7 @@ where
 }
 
 #[async_trait]
-impl<S> FromRequestParts<S> for Owner
+impl<S> FromRequestParts<S> for Owned
 where
     S: Send + Sync,
     DecodingKey: FromRef<S>,
@@ -169,7 +169,7 @@ where
         let requester = User(claims.sub.clone());
 
         match core.user_is_owner(&requester, proj_id.0).await? {
-            true => Ok(Owner(claims.sub)),
+            true => Ok(Owned(Owner(claims.sub), proj_id)),
             false =>  Err(AppError::Unauthorized)
         }
     }
@@ -534,18 +534,16 @@ mod test {
         }
     }
 
-    async fn owner_ok(
-        requester: Owner,
-        _: Path<String>,
+    async fn owned_ok(
+        owned: Owned,
         State(_): State<AppState>
     )
     {
-        assert_eq!(requester, Owner("bob".into()));
+        assert_eq!(owned, Owned(Owner("bob".into()), ProjectID(42)));
     }
 
-    async fn owner_fail(
-        _: Owner,
-        _: Path<String>,
+    async fn owned_fail(
+        _: Owned,
         State(_): State<AppState>
     )
     {
@@ -557,7 +555,7 @@ mod test {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj", get(owner_ok))
+            .route("/:proj", get(owned_ok))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -584,7 +582,7 @@ mod test {
         };
 
         let app = Router::new()
-            .route("/:proj", get(owner_fail))
+            .route("/:proj", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -607,7 +605,7 @@ mod test {
         let exp = bob_expired();
 
         let app = Router::new()
-            .route("/:proj", get(owner_fail))
+            .route("/:proj", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -630,7 +628,7 @@ mod test {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj", get(owner_fail))
+            .route("/:proj", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -651,7 +649,7 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_token() {
         let app = Router::new()
-            .route("/:proj", get(owner_fail))
+            .route("/:proj", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -672,7 +670,7 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_auth_header() {
         let app = Router::new()
-            .route("/:proj", get(owner_fail))
+            .route("/:proj", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
