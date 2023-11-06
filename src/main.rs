@@ -33,9 +33,6 @@ use crate::{
     jwt::DecodingKey,
 };
 
-
-// TOOD: the NotA* results should be 404s
-
 impl From<&AppError> for StatusCode {
     fn from(err: &AppError) -> Self {
         match err {
