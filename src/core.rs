@@ -70,8 +70,27 @@ pub trait Core {
 
     async fn get_project(
         &self,
-        _proj_id: i64,
+        _proj_id: i64
     ) -> Result<ProjectData, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn create_project(
+        &self,
+        _user: &User,
+        _proj: &str,
+        _proj_data: &ProjectData
+    ) -> Result<(), AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn update_project(
+        &self,
+        _proj_id: i64,
+        _proj_data: &ProjectData
+    ) -> Result<(), AppError>
     {
         unimplemented!();
     }

@@ -33,6 +33,12 @@ pub struct Owner(pub String);
 #[derive(Debug, PartialEq)]
 pub struct Owned(pub Owner, pub ProjectID);
 
+#[derive(Debug, PartialEq)]
+pub enum OwnedOrNew {
+    Owned(Owned),
+    User(User)
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Readme {
     pub text: String

@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owner, Owned, PackageID, Project, ProjectData, ProjectID, Projects, Readme, Users, User}
+    model::{Owned, OwnedOrNew, Owner, PackageID, Project, ProjectData, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -28,12 +28,17 @@ pub async fn project_get(
     Ok(Json(core.get_project(proj_id.0).await?))
 }
 
-pub async fn project_update(
-    Owned(_, _) : Owned,
-    State(_core): State<CoreArc>
-) -> Result<Json<Project>, AppError>
+pub async fn project_put(
+    owned: OwnedOrNew,
+    Path(proj): Path<String>,
+    State(core): State<CoreArc>,
+    Json(proj_data): Json<ProjectData>
+) -> Result<(), AppError>
 {
-    todo!();
+    match owned {
+        OwnedOrNew::Owned(owned) => core.update_project(owned.1.0, &proj_data).await,
+        OwnedOrNew::User(user) => core.create_project(&user, &proj, &proj_data).await
+    }
 }
 
 pub async fn project_revision_get(

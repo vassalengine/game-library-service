@@ -82,7 +82,8 @@ fn routes(api: &str) -> Router<AppState> {
         .route(
             &format!("{api}/projects/:proj"),
             get(handlers::project_get)
-            .put(handlers::project_update)
+// TODO: create project
+            .put(handlers::project_put)
         )
         .route(
             &format!("{api}/projects/:proj/:revision"),

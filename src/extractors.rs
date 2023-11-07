@@ -12,7 +12,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, Owner, Package, PackageID, Project, ProjectID, User}
+    model::{Owned, OwnedOrNew, Owner, Package, PackageID, Project, ProjectID, User}
 };
 
 #[async_trait]
@@ -171,6 +171,41 @@ where
         match core.user_is_owner(&requester, proj_id.0).await? {
             true => Ok(Owned(Owner(claims.sub), proj_id)),
             false =>  Err(AppError::Unauthorized)
+        }
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for OwnedOrNew
+where
+    S: Send + Sync,
+    DecodingKey: FromRef<S>,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // check that the requester is authorized
+        let claims = Claims::from_request_parts(parts, state).await?;
+
+        // check that that project exists
+        match ProjectID::from_request_parts(parts, state).await {
+            Ok(proj_id) => {
+                // should never fail
+                let State(core) = State::<CoreArc>::from_request_parts(parts, state)
+                    .await
+                    .map_err(|_| AppError::InternalError)?;
+
+                // check that that requester owns the project
+                let requester = User(claims.sub.clone());
+
+                match core.user_is_owner(&requester, proj_id.0).await? {
+                    true => Ok(OwnedOrNew::Owned(Owned(Owner(claims.sub), proj_id))),
+                    false =>  Err(AppError::Unauthorized)
+                }
+            },
+            Err(AppError::NotAProject) => Ok(OwnedOrNew::User(User(claims.sub))),
+            Err(e) => Err(e)
         }
     }
 }
