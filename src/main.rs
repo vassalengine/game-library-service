@@ -179,7 +179,7 @@ mod test {
             header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
-    use mime::APPLICATION_JSON;
+    use mime::{APPLICATION_JSON, TEXT_PLAIN};
     use tower::ServiceExt; // for oneshot
 
     use crate::{
@@ -668,7 +668,7 @@ mod test {
 
     #[tokio::test]
     async fn get_owners_bad_project() {
-        let response = try_request( 
+        let response = try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
@@ -723,7 +723,7 @@ mod test {
 
     #[tokio::test]
     async fn put_owners_unauth() {
-        let response = try_request( 
+        let response = try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
@@ -739,6 +739,56 @@ mod test {
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::Unauthorized)
         );
+    }
+
+    #[tokio::test]
+    async fn put_owners_wrong_json() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(r#"{ "garbage": "whatever" }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn put_owners_wrong_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn put_owners_no_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
     }
 
     #[tokio::test]
@@ -796,6 +846,56 @@ mod test {
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::Unauthorized)
         );
+    }
+
+    #[tokio::test]
+    async fn delete_owners_wrong_json() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(r#"{ "garbage": "whatever" }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn delete_owners_wrong_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn delete_owners_no_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
     }
 
     #[tokio::test]
