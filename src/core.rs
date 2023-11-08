@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Package, PackageID, Project, ProjectData, ProjectID, Readme, User, UserID, Users}
+    model::{Package, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users}
 };
 
 #[async_trait]
@@ -80,7 +80,7 @@ pub trait Core {
         &self,
         _user: &User,
         _proj: &str,
-        _proj_data: &ProjectData
+        _proj_data: &ProjectDataPut
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -89,7 +89,7 @@ pub trait Core {
     async fn update_project(
         &self,
         _proj_id: i64,
-        _proj_data: &ProjectData
+        _proj_data: &ProjectDataPut
     ) -> Result<(), AppError>
     {
         unimplemented!();

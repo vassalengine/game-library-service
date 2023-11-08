@@ -185,7 +185,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Project, ProjectData, ProjectID, Readme, User, Users}
+        model::{GameData, Package, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -296,6 +296,25 @@ mod test {
                     packages: vec!()
                 }
             )
+        }
+
+        async fn create_project(
+            &self,
+            _user: &User,
+            _proj: &str,
+            _proj_data: &ProjectDataPut
+        ) -> Result<(), AppError>
+        {
+            Ok(())
+        }
+
+        async fn update_project(
+            &self,
+            _proj_id: i64,
+            _proj_data: &ProjectDataPut
+        ) -> Result<(), AppError>
+        {
+            Ok(())
         }
 
         async fn get_project_revision(
@@ -462,6 +481,143 @@ mod test {
     }
 
     #[tokio::test]
+    async fn put_project_create() {
+        let proj_data = ProjectDataPut {
+            description: "A module for Empires in Arms".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "Empires in Arms".into(),
+                title_sort_key: "Empires in Arms".into(),
+                publisher: "Avalon Hill".into(),
+                year: "1983".into()
+            }
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[tokio::test]
+    async fn put_project_update() {
+        let proj_data = ProjectDataPut {
+            description: "A module for Empires in Arms".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "Empires in Arms".into(),
+                title_sort_key: "Empires in Arms".into(),
+                publisher: "Avalon Hill".into(),
+                year: "1983".into()
+            }
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[tokio::test]
+    async fn put_project_unauth() {
+        let proj_data = ProjectDataPut {
+            description: "A module for Empires in Arms".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "Empires in Arms".into(),
+                title_sort_key: "Empires in Arms".into(),
+                publisher: "Avalon Hill".into(),
+                year: "1983".into()
+            }
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn put_project_wrong_json() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from(r#"{ "garbage": "whatever" }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn put_project_wrong_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
+    }
+
+    #[tokio::test]
+    async fn put_project_no_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // TODO: error body
+    }
+
+    #[tokio::test]
     async fn get_project_revision_ok() {
         let response = try_request(
             Request::builder()
@@ -473,6 +629,7 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::OK);
+// TODO
 /*
         assert_eq!(
             body_as::<ProjectData>(response).await,
