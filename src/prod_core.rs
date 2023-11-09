@@ -153,17 +153,17 @@ LIMIT 1
         let row = sqlx::query!(
             "
 SELECT
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
-WHERE projects.id == ?
+WHERE id == ?
 LIMIT 1
             ",
             proj_id
@@ -199,13 +199,13 @@ LIMIT 1
     {
         sqlx::query_scalar!(
             "
-SELECT package_versions.url
+SELECT url
 FROM package_versions
-WHERE package_versions.package_id = ?
+WHERE package_id = ?
 ORDER BY
-    package_versions.version_major DESC,
-    package_versions.version_minor DESC,
-    package_versions.version_patch DESC
+    version_major DESC,
+    version_minor DESC,
+    version_patch DESC
 LIMIT 1
             ",
             pkg_id
@@ -226,12 +226,12 @@ LIMIT 1
 
         sqlx::query_scalar!(
             "
-SELECT package_versions.url
+SELECT url
 FROM package_versions
-WHERE package_versions.package_id = ?
-AND package_versions.version_major = ?
-AND package_versions.version_minor = ?
-AND package_versions.version_patch = ?
+WHERE package_id = ?
+    AND version_major = ?
+    AND version_minor = ?
+    AND version_patch = ?
 LIMIT 1
             ",
             pkg_id,
@@ -402,7 +402,10 @@ where
 {
     sqlx::query!(
         "
-INSERT OR IGNORE INTO owners (user_id, project_id)
+INSERT OR IGNORE INTO owners (
+    user_id,
+    project_id
+)
 VALUES (?, ?)
         ",
         user_id,
@@ -425,7 +428,8 @@ where
     sqlx::query!(
         "
 DELETE FROM owners
-WHERE user_id = ? AND project_id = ?
+WHERE user_id = ?
+    AND project_id = ?
         ",
         user_id,
         proj_id
@@ -448,7 +452,7 @@ where
             "
 SELECT 1 AS present
 FROM owners
-WHERE owners.project_id = ?
+WHERE project_id = ?
 LIMIT 1
             ",
             proj_id
@@ -469,7 +473,10 @@ where
 {
     sqlx::query!(
         "
-INSERT OR IGNORE INTO players (user_id, project_id)
+INSERT OR IGNORE INTO players (
+    user_id,
+    project_id
+)
 VALUES (?, ?)
         ",
         user_id,
@@ -492,7 +499,8 @@ where
     sqlx::query!(
         "
 DELETE FROM players
-WHERE user_id = ? AND project_id = ?
+WHERE user_id = ?
+    AND project_id = ?
         ",
         user_id,
         proj_id
