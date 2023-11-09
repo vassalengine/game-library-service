@@ -129,7 +129,7 @@ ORDER BY users.username
         Ok(
             sqlx::query!(
                 "
-SELECT 1 as present
+SELECT 1 AS present
 FROM owners
 JOIN users
 ON users.id = owners.user_id
@@ -446,7 +446,7 @@ where
     Ok(
         sqlx::query!(
             "
-SELECT 1 as present
+SELECT 1 AS present
 FROM owners
 WHERE owners.project_id = ?
 LIMIT 1
