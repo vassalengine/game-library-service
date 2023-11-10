@@ -10,6 +10,7 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "*", features = ["headers", "http1", "json", "macros", "tokio"] }
+chrono = "*"
 base64 = "*"
 #const_format = "*"
 jsonwebtoken = "*"

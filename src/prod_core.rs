@@ -1,11 +1,12 @@
 use axum::async_trait;
+use chrono::Utc;
 use semver::Version;
 use sqlx::Executor;
 
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Project, ProjectData, ProjectID, Readme, User, Users}
+    model::{GameData, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -189,6 +190,118 @@ LIMIT 1
                 packages: Vec::new()
             }
         )
+    }
+
+// TODO: require project names to match [A-Za-z][A-Za-z0-9_-]{,63}?
+// TODO: maybe also compare case-insensitively and equate - and _?
+// TODO: length limits on strings
+
+    async fn create_project(
+        &self,
+        user: &User,
+        proj: &str,
+        proj_data: &ProjectDataPut
+    ) -> Result<(), AppError>
+    {
+        let now = Utc::now().to_rfc3339();
+        let game_title_sort_key = title_sort_key(&proj_data.game.title);
+
+        let mut tx = self.db.begin().await?;
+
+        sqlx::query!(
+            "
+INSERT INTO projects (
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
+)
+VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
+            ",
+            proj,
+            proj_data.description,
+            now,
+            now,
+            proj_data.game.title,
+            game_title_sort_key,
+            proj_data.game.publisher,
+            proj_data.game.year
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        // get user id of new owner
+        let owner_id = get_user_id(&user.0, &self.db).await?;
+
+        // get project id of new project
+        let proj_id = self.get_project_id(&Project(proj.into())).await?;
+
+        // associate new owner with the project
+        add_owner(owner_id, proj_id.0, &mut *tx).await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn update_project(
+        &self,
+        proj_id: i64,
+        proj_data: &ProjectDataPut
+    ) -> Result<(), AppError>
+    {
+        let now = Utc::now().to_rfc3339();
+
+        let mut tx = self.db.begin().await?;
+
+        // archive the previous revision
+        let revision = 1 + sqlx::query_scalar!(
+            "
+INSERT INTO projects_revisions
+SELECT *
+FROM projects
+WHERE projects.id = ?
+RETURNING revision
+            ",
+            proj_id
+         )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        // update to the current revision
+        sqlx::query!(
+            "
+UPDATE projects
+SET
+    description = ?,
+    revision = ?,
+    modified_at = ?,
+    game_title = ?,
+    game_title_sort = ?,
+    game_publisher = ?,
+    game_year = ?
+WHERE id = ?
+            ",
+            proj_data.description,
+            revision,
+            now,
+            proj_data.game.title,
+            proj_data.game.title_sort_key,
+            proj_data.game.publisher,
+            proj_data.game.year,
+            proj_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
     }
 
     async fn get_package(
