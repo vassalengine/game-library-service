@@ -646,6 +646,24 @@ fn title_sort_key(title: &str) -> String {
 mod test {
     use super::*;
 
+    #[sqlx::test(fixtures("projects", "users"))]
+    async fn create_project_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        let user = User("bob".into());
+        let data = ProjectDataPut {
+            description: "".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "".into(),
+                title_sort_key: "".into(),
+                publisher: "".into(),
+                year: "".into()
+            }
+        };
+
+        core.create_project(&user, "newproj", &data).await.unwrap();
+    }
+
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
         let core = ProdCore { db: pool };
