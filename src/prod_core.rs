@@ -664,6 +664,24 @@ mod test {
         core.create_project(&user, "newproj", &data).await.unwrap();
     }
 
+    #[sqlx::test(fixtures("projects"))]
+    async fn update_project_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+
+        let data = ProjectDataPut {
+            description: "new description".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "A New Game".into(),
+                title_sort_key: "New Game, A".into(),
+                publisher: "XYZ".into(),
+                year: "1979".into()
+            }
+        };
+
+        core.update_project(42, &data).await.unwrap();
+    }
+
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
         let core = ProdCore { db: pool };
