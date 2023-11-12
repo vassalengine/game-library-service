@@ -208,7 +208,7 @@ LIMIT 1
 
         let mut tx = self.db.begin().await?;
 
-        sqlx::query!(
+        let proj_id = sqlx::query_scalar!(
             "
 INSERT INTO projects (
     name,
@@ -222,6 +222,7 @@ INSERT INTO projects (
     game_year
 )
 VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
+RETURNING id
             ",
             proj,
             proj_data.description,
@@ -232,17 +233,14 @@ VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
             proj_data.game.publisher,
             proj_data.game.year
         )
-        .execute(&mut *tx)
+        .fetch_one(&mut *tx)
         .await?;
 
         // get user id of new owner
         let owner_id = get_user_id(&user.0, &self.db).await?;
 
-        // get project id of new project
-        let proj_id = self.get_project_id(&Project(proj.into())).await?;
-
         // associate new owner with the project
-        add_owner(owner_id, proj_id.0, &mut *tx).await?;
+        add_owner(owner_id, proj_id, &mut *tx).await?;
 
         tx.commit().await?;
 
