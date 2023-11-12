@@ -12,13 +12,13 @@ INSERT INTO projects (
 )
 VALUES (
   42,
-  "some_game",
-  "",
+  "test_game",
+  "Brian's Trademarked Game of Being a Test Case",
   1,
-  "",
-  "",
-  "",
-  "",
-  "",
-  ""
+  "2023-11-12T17:50:06,419538067+00:00",
+  "2023-11-12T17:50:06,419538067+00:00",
+  "A Game of Tests",
+  "Game of Tests, A",
+  "Test Game Company",
+  "1979"
 );

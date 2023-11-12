@@ -151,7 +151,7 @@ LIMIT 1
         proj_id: i64,
     ) -> Result<ProjectData, AppError>
     {
-        let row = sqlx::query!(
+        let proj_row = sqlx::query!(
             "
 SELECT
     name,
@@ -172,21 +172,28 @@ LIMIT 1
         .fetch_one(&self.db)
         .await?;
 
+        let owners = self.get_owners(proj_id)
+            .await?
+            .users
+            .into_iter()
+            .map(|u| u.0)
+            .collect();
+
         Ok(
             ProjectData {
-                name: row.name,
-                description: row.description,
-                revision: row.revision,
-                created_at: row.created_at,
-                modified_at: row.modified_at,
+                name: proj_row.name,
+                description: proj_row.description,
+                revision: proj_row.revision,
+                created_at: proj_row.created_at,
+                modified_at: proj_row.modified_at,
                 tags: Vec::new(),
                 game: GameData {
-                    title: row.game_title,
-                    title_sort_key: row.game_title_sort,
-                    publisher: row.game_publisher,
-                    year: row.game_year
+                    title: proj_row.game_title,
+                    title_sort_key: proj_row.game_title_sort,
+                    publisher: proj_row.game_publisher,
+                    year: proj_row.game_year
                 },
-                owners: Vec::new(),
+                owners: owners,
                 packages: Vec::new()
             }
         )
@@ -645,6 +652,30 @@ fn title_sort_key(title: &str) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[sqlx::test(fixtures("projects", "two_owners"))]
+    async fn get_project_ok(pool: Pool) {
+        let core = ProdCore { db: pool };
+        assert_eq!(
+            core.get_project(42).await.unwrap(),
+            ProjectData {
+                name: "test_game".into(),
+                description: "Brian's Trademarked Game of Being a Test Case".into(),
+                revision: 1,
+                created_at: "2023-11-12T17:50:06,419538067+00:00".into(),
+                modified_at: "2023-11-12T17:50:06,419538067+00:00".into(),
+                tags: Vec::new(),
+                game: GameData {
+                    title: "A Game of Tests".into(),
+                    title_sort_key: "Game of Tests, A".into(),
+                    publisher: "Test Game Company".into(),
+                    year: "1979".into()
+                },
+                owners: vec!("alice".into(), "bob".into()),
+                packages: Vec::new()
+            }
+        );
+    }
 
     #[sqlx::test(fixtures("projects", "users"))]
     async fn create_project_ok(pool: Pool) {
