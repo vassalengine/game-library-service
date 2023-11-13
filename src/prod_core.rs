@@ -737,25 +737,45 @@ mod test {
         assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
     }
 
-    #[sqlx::test(fixtures("projects"))]
+    #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn update_project_ok(pool: Pool) {
         let core = ProdCore {
             db: pool,
             now: fake_now
         };
 
-        let data = ProjectDataPut {
+        let proj = Project("test_game".into());
+        let data = ProjectData {
+            name: proj.0.clone(),
             description: "new description".into(),
-            tags: vec!(),
+            revision: 2,
+            created_at: NOW.into(),
+            modified_at: NOW.into(),
+            tags: Vec::new(),
             game: GameData {
                 title: "Some New Game".into(),
                 title_sort_key: "Some New Game".into(),
-                publisher: "XYZ".into(),
+                publisher: "XYZ Games".into(),
                 year: "1999".into()
+            },
+            owners: vec!("bob".into()),
+            packages: Vec::new()
+        };
+
+        let cdata = ProjectDataPut {
+            description: data.description.clone(),
+            tags: vec!(),
+            game: GameData {
+                title: data.game.title.clone(),
+                title_sort_key: data.game.title_sort_key.clone(),
+                publisher: data.game.publisher.clone(),
+                year: data.game.year.clone()
             }
         };
 
-        core.update_project(42, &data).await.unwrap();
+        core.update_project(42, &cdata).await.unwrap();
+        let proj_id = core.get_project_id(&proj).await.unwrap();
+        assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
