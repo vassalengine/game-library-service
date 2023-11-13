@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post}
 };
 //use base64::{Engine, engine::general_purpose};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::{
@@ -150,7 +151,10 @@ async fn main() {
         .await
         .unwrap();
 
-    let core = ProdCore { db: db_pool };
+    let core = ProdCore {
+        db: db_pool,
+        now: Utc::now
+    };
 
     let state = AppState {
         key: DecodingKey::from_secret(&config.jwt_key),

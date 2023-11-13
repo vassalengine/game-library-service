@@ -22,4 +22,5 @@ tower = { version = "*", features = ["buffer", "limit"] }
 [dev-dependencies]
 hyper = { version = "*", features = ["full"] }
 mime = "*"
+once_cell = "*"
 serde_json = "*"

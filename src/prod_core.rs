@@ -1,5 +1,5 @@
 use axum::async_trait;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use semver::Version;
 use sqlx::Executor;
 
@@ -20,7 +20,8 @@ type Pool = sqlx::Pool<Database>;
 
 #[derive(Clone)]
 pub struct ProdCore {
-    pub db: Pool
+    pub db: Pool,
+    pub now: fn() -> DateTime<Utc>
 }
 
 // TODO: switch proj_id to proj_name; then we will always know if the project
@@ -210,7 +211,7 @@ LIMIT 1
         proj_data: &ProjectDataPut
     ) -> Result<(), AppError>
     {
-        let now = Utc::now().to_rfc3339();
+        let now = (self.now)().to_rfc3339();
         let game_title_sort_key = title_sort_key(&proj_data.game.title);
 
         let mut tx = self.db.begin().await?;
@@ -260,7 +261,7 @@ RETURNING id
         proj_data: &ProjectDataPut
     ) -> Result<(), AppError>
     {
-        let now = Utc::now().to_rfc3339();
+        let now = (self.now)().to_rfc3339();
 
         let mut tx = self.db.begin().await?;
 
@@ -653,17 +654,34 @@ fn title_sort_key(title: &str) -> String {
 mod test {
     use super::*;
 
+    use once_cell::sync::Lazy;
+
+    const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
+
+    static NOW_DT: Lazy<DateTime<Utc>> = Lazy::new(|| {
+        DateTime::parse_from_rfc3339(NOW)
+            .unwrap()
+            .with_timezone(&Utc)
+    });
+
+    fn fake_now() -> DateTime<Utc> {
+        *NOW_DT
+    }
+
     #[sqlx::test(fixtures("projects", "two_owners"))]
     async fn get_project_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_project(42).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 1,
-                created_at: "2023-11-12T17:50:06,419538067+00:00".into(),
-                modified_at: "2023-11-12T17:50:06,419538067+00:00".into(),
+                created_at: NOW.into(),
+                modified_at: NOW.into(),
                 tags: Vec::new(),
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -679,34 +697,61 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "users"))]
     async fn create_project_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
+
         let user = User("bob".into());
-        let data = ProjectDataPut {
-            description: "".into(),
+        let proj = Project("newproj".into());
+        let data = ProjectData {
+            name: proj.0.clone(),
+            description: "A New Game".into(),
+            revision: 1,
+            created_at: NOW.into(),
+            modified_at: NOW.into(),
+            tags: Vec::new(),
+            game: GameData {
+                title: "Some New Game".into(),
+                title_sort_key: "Some New Game".into(),
+                publisher: "XYZ Games".into(),
+                year: "1999".into()
+            },
+            owners: vec!("bob".into()),
+            packages: Vec::new()
+        };
+
+        let cdata = ProjectDataPut {
+            description: data.description.clone(),
             tags: vec!(),
             game: GameData {
-                title: "".into(),
-                title_sort_key: "".into(),
-                publisher: "".into(),
-                year: "".into()
+                title: data.game.title.clone(),
+                title_sort_key: data.game.title_sort_key.clone(),
+                publisher: data.game.publisher.clone(),
+                year: data.game.year.clone()
             }
         };
 
-        core.create_project(&user, "newproj", &data).await.unwrap();
+        core.create_project(&user, &proj.0, &cdata).await.unwrap();
+        let proj_id = core.get_project_id(&proj).await.unwrap();
+        assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
     }
 
     #[sqlx::test(fixtures("projects"))]
     async fn update_project_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
 
         let data = ProjectDataPut {
             description: "new description".into(),
             tags: vec!(),
             game: GameData {
-                title: "A New Game".into(),
-                title_sort_key: "New Game, A".into(),
+                title: "Some New Game".into(),
+                title_sort_key: "Some New Game".into(),
                 publisher: "XYZ".into(),
-                year: "1979".into()
+                year: "1999".into()
             }
         };
 
@@ -715,7 +760,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_package(42, 1).await.unwrap(),
             "https://example.com/a_package-1.2.4"
@@ -724,7 +772,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_version_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_package_version(42, 1, "1.2.3").await.unwrap(),
             "https://example.com/a_package-1.2.3"
@@ -733,7 +784,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_version_malformed(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_package_version(42, 1, "xyzzy").await.unwrap_err(),
             AppError::MalformedVersion
@@ -742,7 +796,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_version_not_a_version(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_package_version(42, 1, "1.0.0").await.unwrap_err(),
             AppError::NotAVersion
@@ -751,7 +808,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_owners(42).await.unwrap(),
             Users { users: vec!(User("bob".into())) }
@@ -760,13 +820,19 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
     }
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
     }
 
@@ -774,7 +840,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         let users = Users { users: vec!(User("alice".into())) };
         core.add_owners(&users, 42).await.unwrap();
         assert_eq!(
@@ -790,7 +859,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         let users = Users { users: vec!(User("bob".into())) };
         core.remove_owners(&users, 42).await.unwrap();
         assert_eq!(
@@ -801,7 +873,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         let users = Users { users: vec!(User("bob".into())) };
         assert_eq!(
             core.remove_owners(&users, 1).await.unwrap_err(),
@@ -811,7 +886,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "players"))]
     async fn get_players_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_players(42).await.unwrap(),
             Users {
@@ -825,7 +903,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "players"))]
     async fn add_player_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         core.add_player(&User("chuck".into()), 42).await.unwrap();
         assert_eq!(
             core.get_players(42).await.unwrap(),
@@ -841,7 +922,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "players"))]
     async fn remove_player_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         core.remove_player(&User("bob".into()), 42).await.unwrap();
         assert_eq!(
             core.get_players(42).await.unwrap(),
@@ -851,7 +935,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "readme"))]
     async fn get_readme_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_readme(42).await.unwrap(),
             Readme { text: "third try".into() }
@@ -860,7 +947,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "readme"))]
     async fn get_readme_revision_ok(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_readme_revision(42, 2).await.unwrap(),
             Readme { text: "second try".into() }
@@ -869,7 +959,10 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "readme"))]
     async fn get_readme_revision_bad(pool: Pool) {
-        let core = ProdCore { db: pool };
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
         assert_eq!(
             core.get_readme_revision(42, 4).await.unwrap_err(),
             AppError::NotARevision
