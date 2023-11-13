@@ -194,7 +194,7 @@ LIMIT 1
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                owners: owners,
+                owners,
                 packages: Vec::new()
             }
         )
@@ -630,7 +630,7 @@ WHERE user_id = ?
     Ok(())
 }
 
-fn split_title_sort_key<'a>(title: &'a str) -> (&'a str, Option<&'a str>) {
+fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
     match title.split_once(' ') {
         // Probably Spanish or French, "A" is not an article
         Some(("A", rest)) if rest.starts_with("la") => (title, None),
