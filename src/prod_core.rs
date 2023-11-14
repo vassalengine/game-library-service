@@ -829,12 +829,26 @@ mod test {
 
     #[sqlx::test(fixtures("projects", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
-        let core = ProdCore {
-            db: pool,
-            now: fake_now
-        };
-
-        todo!();
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.get_project_revision(6, 1).await.unwrap(),
+            ProjectData {
+                name: "a_game".into(),
+                description: "Another game".into(),
+                revision: 1,
+                created_at: "2019-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2019-11-12T15:50:06.419538067+00:00".into(),
+                tags: Vec::new(),
+                game: GameData {
+                    title: "Some Otter Game".into(),
+                    title_sort_key: "Some Otter Game".into(),
+                    publisher: "Otters!".into(),
+                    year: "1993".into()
+                },
+                owners: vec!("alice".into(), "bob".into()),
+                packages: Vec::new()
+            }
+        );
     }
 
     #[sqlx::test(fixtures("projects", "users"))]
