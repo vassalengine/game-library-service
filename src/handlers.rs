@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owned, OwnedOrNew, Owner, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
+    model::{Owned, OwnedOrNew, PackageID, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
