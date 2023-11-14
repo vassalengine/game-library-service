@@ -1,6 +1,7 @@
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use semver::Version;
+use serde::Deserialize;
 use sqlx::Executor;
 
 use crate::{
@@ -26,6 +27,19 @@ pub struct ProdCore {
 
 // TODO: switch proj_id to proj_name; then we will always know if the project
 // exists because we have to look up the id
+
+#[derive(Deserialize)]
+struct ProjectRow {
+    name: String,
+    description: String,
+    revision: i64,
+    created_at: String,
+    modified_at: String,
+    game_title: String,
+    game_title_sort: String,
+    game_publisher: String,
+    game_year: String
+}
 
 #[async_trait]
 impl Core for ProdCore {
@@ -152,7 +166,8 @@ LIMIT 1
         proj_id: i64,
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = sqlx::query!(
+        let proj_row = sqlx::query_as!(
+            ProjectRow,
             "
 SELECT
     name,
@@ -316,7 +331,10 @@ WHERE id = ?
         revision: u32
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = sqlx::query!(
+// TODO: check if a single UNION query is faster
+        // check the revisions table
+        let proj_row = sqlx::query_as!(
+            ProjectRow,
             "
 SELECT
     name,
@@ -337,10 +355,37 @@ LIMIT 1
             revision
          )
         .fetch_one(&self.db)
-        .await?;
+        .await;
 
-// TODO: maybe check the project table if this fails, to see if they're
-// asking for the current revision?
+        let proj_row = match proj_row {
+            Ok(r) => r,
+            Err(_) => {
+                // check the current table
+                sqlx::query_as!(
+                    ProjectRow,
+                    "
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
+FROM projects
+WHERE id = ?
+    AND revision = ?
+LIMIT 1
+                    ",
+                    proj_id,
+                    revision
+                )
+                .fetch_one(&self.db)
+                .await?
+            }
+        };
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -752,6 +797,43 @@ mod test {
                 packages: Vec::new()
             }
         );
+    }
+
+    #[sqlx::test(fixtures("projects", "two_owners"))]
+    async fn get_project_revision_ok_current(pool: Pool) {
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
+        assert_eq!(
+            core.get_project_revision(42, 1).await.unwrap(),
+            ProjectData {
+                name: "test_game".into(),
+                description: "Brian's Trademarked Game of Being a Test Case".into(),
+                revision: 1,
+                created_at: NOW.into(),
+                modified_at: NOW.into(),
+                tags: Vec::new(),
+                game: GameData {
+                    title: "A Game of Tests".into(),
+                    title_sort_key: "Game of Tests, A".into(),
+                    publisher: "Test Game Company".into(),
+                    year: "1979".into()
+                },
+                owners: vec!("alice".into(), "bob".into()),
+                packages: Vec::new()
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "two_owners"))]
+    async fn get_project_revision_ok_old(pool: Pool) {
+        let core = ProdCore {
+            db: pool,
+            now: fake_now
+        };
+
+        todo!();
     }
 
     #[sqlx::test(fixtures("projects", "users"))]
