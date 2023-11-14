@@ -804,7 +804,7 @@ mod test {
         };
 
         let proj = Project("test_game".into());
-        let data = ProjectData {
+        let new_data = ProjectData {
             name: proj.0.clone(),
             description: "new description".into(),
             revision: 2,
@@ -822,19 +822,26 @@ mod test {
         };
 
         let cdata = ProjectDataPut {
-            description: data.description.clone(),
+            description: new_data.description.clone(),
             tags: vec!(),
             game: GameData {
-                title: data.game.title.clone(),
-                title_sort_key: data.game.title_sort_key.clone(),
-                publisher: data.game.publisher.clone(),
-                year: data.game.year.clone()
+                title: new_data.game.title.clone(),
+                title_sort_key: new_data.game.title_sort_key.clone(),
+                publisher: new_data.game.publisher.clone(),
+                year: new_data.game.year.clone()
             }
         };
 
-        core.update_project(42, &cdata).await.unwrap();
         let proj_id = core.get_project_id(&proj).await.unwrap();
-        assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
+        let old_data = core.get_project(proj_id.0).await.unwrap();
+        core.update_project(42, &cdata).await.unwrap();
+        // project has new data
+        assert_eq!(core.get_project(proj_id.0).await.unwrap(), new_data);
+        // old data is kept as a revision
+        assert_eq!(
+            core.get_project_revision(proj_id.0, 1).await.unwrap(),
+            old_data
+        );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
