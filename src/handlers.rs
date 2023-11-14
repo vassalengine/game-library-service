@@ -36,8 +36,12 @@ pub async fn project_put(
 ) -> Result<(), AppError>
 {
     match owned {
-        OwnedOrNew::Owned(owned) => core.update_project(owned.1.0, &proj_data).await,
-        OwnedOrNew::User(user) => core.create_project(&user, &proj, &proj_data).await
+        OwnedOrNew::Owned(owned) => {
+            core.update_project(owned.1.0, &proj_data).await
+        },
+        OwnedOrNew::User(user) => {
+            core.create_project(&user, &proj, &proj_data).await
+        }
     }
 }
 
