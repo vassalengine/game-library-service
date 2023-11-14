@@ -189,7 +189,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
+        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -331,6 +331,21 @@ mod test {
                 1 => self.get_project(proj_id).await,
                 _ => Err(AppError::NotARevision)
             }
+        }
+
+        async fn get_packages(
+            &self,
+            _proj_id: i64,
+        ) -> Result<Packages, AppError>
+        {
+            Ok(
+                Packages {
+                    packages: vec!(
+                        Package("a".into()),
+                        Package("b".into())
+                    )
+                }
+            )
         }
 
         async fn get_package(
@@ -700,6 +715,28 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotARevision)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_packages_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(body_as::<Packages>(response).await,
+            Packages {
+                packages: vec!(
+                    Package("a".into()),
+                    Package("b".into())
+                )
+            }
         );
     }
 
