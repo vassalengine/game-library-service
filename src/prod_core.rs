@@ -165,7 +165,7 @@ SELECT
     game_publisher,
     game_year
 FROM projects
-WHERE id == ?
+WHERE id = ?
 LIMIT 1
             ",
             proj_id
