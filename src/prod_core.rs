@@ -310,6 +310,65 @@ WHERE id = ?
         Ok(())
     }
 
+    async fn get_project_revision(
+        &self,
+        proj_id: i64,
+        revision: u32
+    ) -> Result<ProjectData, AppError>
+    {
+        let proj_row = sqlx::query!(
+            "
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
+FROM projects_revisions
+WHERE id = ?
+    AND revision = ?
+LIMIT 1
+            ",
+            proj_id,
+            revision
+         )
+        .fetch_one(&self.db)
+        .await?;
+
+// TODO: maybe check the project table if this fails, to see if they're
+// asking for the current revision?
+
+        let owners = self.get_owners(proj_id)
+            .await?
+            .users
+            .into_iter()
+            .map(|u| u.0)
+            .collect();
+
+        Ok(
+            ProjectData {
+                name: proj_row.name,
+                description: proj_row.description,
+                revision: proj_row.revision,
+                created_at: proj_row.created_at,
+                modified_at: proj_row.modified_at,
+                tags: Vec::new(),
+                game: GameData {
+                    title: proj_row.game_title,
+                    title_sort_key: proj_row.game_title_sort,
+                    publisher: proj_row.game_publisher,
+                    year: proj_row.game_year
+                },
+                owners,
+                packages: Vec::new()
+            }
+        )
+    }
+
     async fn get_package(
         &self,
         _proj_id: i64,
