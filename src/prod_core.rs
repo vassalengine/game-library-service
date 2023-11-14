@@ -1004,8 +1004,6 @@ mod test {
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
     }
 
-// TODO: add test for non-user owner
-
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
         let core = ProdCore {
