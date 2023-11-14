@@ -296,7 +296,7 @@ mod test {
                         publisher: "Avalon Hill".into(),
                         year: "1983".into()
                     },
-                    owners: vec!(),
+                    owners: vec!("alice".into(), "bob".into()),
                     packages: vec!()
                 }
             )
@@ -458,12 +458,25 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-/*
         assert_eq!(
             body_as::<ProjectData>(response).await,
-            ProjectData { }
+            ProjectData {
+                name: "eia".into(),
+                description: "A module for Empires in Arms".into(),
+                revision: 1,
+                created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
+                modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                tags: vec!(),
+                game: GameData {
+                    title: "Empires in Arms".into(),
+                    title_sort_key: "Empires in Arms".into(),
+                    publisher: "Avalon Hill".into(),
+                    year: "1983".into()
+                },
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!()
+            }
         );
-*/
     }
 
     #[tokio::test]
@@ -633,13 +646,25 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-// TODO
-/*
         assert_eq!(
             body_as::<ProjectData>(response).await,
-            ProjectData { }
+            ProjectData {
+                name: "eia".into(),
+                description: "A module for Empires in Arms".into(),
+                revision: 1,
+                created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
+                modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                tags: vec!(),
+                game: GameData {
+                    title: "Empires in Arms".into(),
+                    title_sort_key: "Empires in Arms".into(),
+                    publisher: "Avalon Hill".into(),
+                    year: "1983".into()
+                },
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!()
+            }
         );
-*/
     }
 
     #[tokio::test]
@@ -675,6 +700,24 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotARevision)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_packages_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
         );
     }
 

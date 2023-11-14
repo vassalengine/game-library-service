@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owned, OwnedOrNew, PackageID, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
+    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -107,11 +107,11 @@ pub async fn players_remove(
 }
 
 pub async fn packages_get(
-    _proj_id: ProjectID,
-    State(_core): State<CoreArc>
-) -> Result<(), AppError>
+    proj_id: ProjectID,
+    State(core): State<CoreArc>
+) -> Result<Json<Packages>, AppError>
 {
-    todo!();
+    Ok(Json(core.get_packages(proj_id.0).await?))
 }
 
 pub async fn package_get(
