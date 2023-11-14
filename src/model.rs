@@ -11,8 +11,13 @@ pub struct Users {
 #[derive(Debug, PartialEq)]
 pub struct UserID(pub i64);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Package(pub String);
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Packages {
+    pub packages: Vec<Package>
+}
 
 #[derive(Debug, PartialEq)]
 pub struct PackageID(pub i64);
