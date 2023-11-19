@@ -189,7 +189,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+        model::{GameData, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -286,7 +286,12 @@ mod test {
                     projects: vec!(
                         Project("project_a".into()),
                         Project("project_b".into())
-                    )
+                    ),
+                    meta: Pagination {
+                        next_page: "next".into(),
+                        prev_page: "prev".into(),
+                        total: 1234
+                    }
                 }
             )
         }
@@ -493,7 +498,12 @@ mod test {
                 projects: vec!(
                     Project("project_a".into()),
                     Project("project_b".into())
-                )
+                ),
+                meta: Pagination {
+                    next_page: "next".into(),
+                    prev_page: "prev".into(),
+                    total: 1234
+                }
             }
         );
     }

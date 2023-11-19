@@ -23,6 +23,13 @@ pub struct Packages {
 pub struct PackageID(pub i64);
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Pagination {
+    pub next_page: String,
+    pub prev_page: String,
+    pub total: u32
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Project(pub String);
 
 #[derive(Debug, PartialEq)]
@@ -30,7 +37,8 @@ pub struct ProjectID(pub i64);
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Projects {
-    pub projects: Vec<Project>
+    pub projects: Vec<Project>,
+    pub meta: Pagination
 }
 
 #[derive(Debug, PartialEq)]

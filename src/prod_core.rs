@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+    model::{GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -181,8 +181,13 @@ ORDER BY name
 
         Ok(
             Projects {
-                projects
-            }
+                projects,
+                meta: Pagination {
+                    next_page: "".into(),
+                    prev_page: "".into(),
+                    total: 0
+                }
+            },
         )
     }
 
@@ -837,7 +842,12 @@ mod test {
                 projects: vec!(
                     Project("a_game".into()),
                     Project("test_game".into())
-                )
+                ),
+                meta: Pagination {
+                    next_page: "".into(),
+                    prev_page: "".into(),
+                    total: 0
+                }
             }
         );
     }
