@@ -14,10 +14,11 @@ pub async fn root_get() -> &'static str {
 }
 
 pub async fn projects_get(
-    State(_core): State<CoreArc>
+    State(core): State<CoreArc>
 ) -> Result<Json<Projects>, AppError>
 {
-    todo!();
+// TODO: pagination
+    Ok(Json(core.get_projects().await?))
 }
 
 pub async fn project_get(

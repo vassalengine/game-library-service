@@ -69,8 +69,7 @@ pub trait Core {
     }
 
     async fn get_projects(
-        &self,
-        _proj_id: i64
+        &self
     ) -> Result<Projects, AppError>
     {
         unimplemented!();

@@ -22,14 +22,15 @@ pub struct Packages {
 #[derive(Debug, PartialEq)]
 pub struct PackageID(pub i64);
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Project(pub String);
 
 #[derive(Debug, PartialEq)]
 pub struct ProjectID(pub i64);
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Projects {
+    pub projects: Vec<Project>
 }
 
 #[derive(Debug, PartialEq)]

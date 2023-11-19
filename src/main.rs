@@ -189,7 +189,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
+        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -272,6 +272,20 @@ mod test {
                     users: vec!(
                         User("alice".into()),
                         User("bob".into())
+                    )
+                }
+            )
+        }
+
+        async fn get_projects(
+            &self
+        ) -> Result<Projects, AppError>
+        {
+            Ok(
+                Projects {
+                    projects: vec!(
+                        Project("project_a".into()),
+                        Project("project_b".into())
                     )
                 }
             )
@@ -459,6 +473,29 @@ mod test {
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(&body_bytes(response).await[..], b"hello world");
+    }
+
+    #[tokio::test]
+    async fn get_projects_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                )
+            }
+        );
     }
 
     #[tokio::test]
