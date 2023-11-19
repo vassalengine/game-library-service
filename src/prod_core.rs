@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Readme, User, Users}
+    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -158,6 +158,31 @@ LIMIT 1
             .fetch_optional(&self.db)
             .await?
             .is_some()
+        )
+    }
+
+    async fn get_projects(
+        &self
+    ) -> Result<Projects, AppError>
+    {
+        let projects = sqlx::query_scalar!(
+            "
+SELECT
+    name
+FROM projects
+ORDER BY name
+            "
+         )
+         .fetch_all(&self.db)
+         .await?
+         .into_iter()
+         .map(Project)
+         .collect();
+
+        Ok(
+            Projects {
+                projects
+            }
         )
     }
 
@@ -801,6 +826,20 @@ mod test {
             db: pool,
             now
         }
+    }
+
+    #[sqlx::test(fixtures("projects"))]
+    async fn get_projects_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.get_projects().await.unwrap(),
+            Projects {
+                projects: vec!(
+                    Project("a_game".into()),
+                    Project("test_game".into())
+                )
+            }
+        );
     }
 
     #[sqlx::test(fixtures("projects", "two_owners"))]
