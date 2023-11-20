@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Package, PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users}
+    model::{LimitPoint, Package, PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users}
 };
 
 #[async_trait]
@@ -69,7 +69,9 @@ pub trait Core {
     }
 
     async fn get_projects(
-        &self
+        &self,
+        _from: LimitPoint,
+        _limit: u32
     ) -> Result<Projects, AppError>
     {
         unimplemented!();

@@ -189,7 +189,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+        model::{GameData, LimitPoint, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
     };
 
     const API_V1: &str = "/api/v1";
@@ -278,7 +278,9 @@ mod test {
         }
 
         async fn get_projects(
-            &self
+            &self,
+            _from: LimitPoint,
+            _limit: u32
         ) -> Result<Projects, AppError>
         {
             Ok(
@@ -288,8 +290,8 @@ mod test {
                         Project("project_b".into())
                     ),
                     meta: Pagination {
-                        next_page: "next".into(),
-                        prev_page: "prev".into(),
+                        next_page: Some("next".into()),
+                        prev_page: Some("prev".into()),
                         total: 1234
                     }
                 }
@@ -500,8 +502,8 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: "next".into(),
-                    prev_page: "prev".into(),
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
                     total: 1234
                 }
             }

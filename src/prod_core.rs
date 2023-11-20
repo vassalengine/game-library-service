@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+    model::{LimitPoint, GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -161,31 +161,103 @@ LIMIT 1
         )
     }
 
+// TODO: Reqire limit > 0
+
     async fn get_projects(
-        &self
+        &self,
+        from: LimitPoint,
+        limit: u32
     ) -> Result<Projects, AppError>
     {
-        let projects = sqlx::query_scalar!(
-            "
-SELECT
-    name
+        let projects: Vec<Project> = match from {
+            LimitPoint::Start => {
+                sqlx::query_scalar!(
+                    "
+SELECT name
 FROM projects
-ORDER BY name
-            "
-         )
-         .fetch_all(&self.db)
-         .await?
-         .into_iter()
-         .map(Project)
-         .collect();
+ORDER BY name COLLATE NOCASE ASC
+LIMIT ?
+                    ",
+                    limit
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(Project)
+                .collect()
+            },
+            LimitPoint::Before(name) => {
+                sqlx::query_scalar!(
+                    "
+SELECT name
+FROM (
+    SELECT name
+    FROM projects
+    WHERE name < ?
+    ORDER BY name COLLATE NOCASE DESC
+    LIMIT ?
+)
+ORDER BY name COLLATE NOCASE ASC
+                    ",
+                    name,
+                    limit
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(Project)
+                .collect()
+            },
+            LimitPoint::After(name) => {
+                sqlx::query_scalar!(
+                    "
+SELECT name
+FROM projects
+WHERE name > ?
+ORDER BY name COLLATE NOCASE ASC
+LIMIT ?
+                    ",
+                    name,
+                    limit
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(Project)
+                .collect()
+            },
+            LimitPoint::End => {
+                sqlx::query_scalar!(
+                    "
+SELECT name
+FROM (
+    SELECT name
+    FROM projects
+    ORDER BY name COLLATE NOCASE DESC
+    LIMIT ?
+)
+ORDER BY name COLLATE NOCASE ASC
+                    ",
+                    limit
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(Project)
+                .collect()
+            }
+        };
+
+        let prev_page = projects.first().map(|p| p.0.clone());
+        let next_page = projects.last().map(|p| p.0.clone());
 
         Ok(
             Projects {
                 projects,
                 meta: Pagination {
-                    next_page: "".into(),
-                    prev_page: "".into(),
-                    total: 0
+                    prev_page,
+                    next_page,
+                    total: get_project_count(&self.db).await?
                 }
             },
         )
@@ -650,6 +722,22 @@ fn parse_version(version: &str) -> Result<(i64, i64, i64), AppError> {
         .and_then(try_vtup)
 }
 
+async fn get_project_count(
+    db: &Pool
+) -> Result<i32, sqlx::Error>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT COUNT(1)
+FROM projects
+            "
+        )
+        .fetch_one(db)
+        .await?
+    )
+}
+
 async fn get_user_id(
     user: &str,
     db: &Pool
@@ -833,20 +921,137 @@ mod test {
         }
     }
 
-    #[sqlx::test(fixtures("projects"))]
-    async fn get_projects_ok(pool: Pool) {
+    #[sqlx::test(fixtures("ten_projects"))]
+    async fn get_projects_start(pool: Pool) {
         let core = make_core(pool, fake_now);
+
+        let limit = 5;
+        let lp = LimitPoint::Start;
+
+        let projects = vec!(
+            Project("a".into()),
+            Project("b".into()),
+            Project("c".into()),
+            Project("d".into()),
+            Project("e".into())
+        );
+
+        let prev_page = Some("a".into());
+        let next_page = Some("e".into());
+
         assert_eq!(
-            core.get_projects().await.unwrap(),
+            core.get_projects(lp, limit).await.unwrap(),
             Projects {
-                projects: vec!(
-                    Project("a_game".into()),
-                    Project("test_game".into())
-                ),
-                meta: Pagination {
-                    next_page: "".into(),
-                    prev_page: "".into(),
-                    total: 0
+                projects,
+                 meta: Pagination {
+                    prev_page,
+                    next_page,
+                    total: 10
+                }
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("ten_projects"))]
+    async fn get_projects_after(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let all_projects: Vec<Project> = "abcdefghij".chars()
+            .map(|c| Project(c.into()))
+            .collect();
+
+        let limit = 5;
+
+        // walk the limit window across the projects
+        for (i, p) in all_projects.iter().enumerate() {
+            let lp = LimitPoint::After(p.0.clone());
+
+            let projects: Vec<Project> = all_projects.iter()
+                .skip(i + 1)
+                .take(limit as usize)
+                .cloned()
+                .collect();
+
+            let prev_page = projects.first().map(|p| p.0.clone());
+            let next_page = projects.last().map(|p| p.0.clone());
+
+            assert_eq!(
+                core.get_projects(lp, limit).await.unwrap(),
+                Projects {
+                    projects,
+                    meta: Pagination {
+                        prev_page,
+                        next_page,
+                        total: 10
+                    }
+                }
+            );
+        }
+    }
+
+    #[sqlx::test(fixtures("ten_projects"))]
+    async fn get_projects_before(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let all_projects: Vec<Project> = "abcdefghij".chars()
+            .map(|c| Project(c.into()))
+            .collect();
+
+        let limit = 5;
+
+        // walk the limit window across the projects
+        for (i, p) in all_projects.iter().enumerate() {
+            let lp = LimitPoint::Before(p.0.clone());
+
+            let projects: Vec<Project> = all_projects.iter()
+                .skip(i.saturating_sub(limit))
+                .take(i - i.saturating_sub(limit) as usize)
+                .cloned()
+                .collect();
+
+            let prev_page = projects.first().map(|p| p.0.clone());
+            let next_page = projects.last().map(|p| p.0.clone());
+
+            assert_eq!(
+                core.get_projects(lp, limit as u32).await.unwrap(),
+                Projects {
+                    projects,
+                    meta: Pagination {
+                        prev_page,
+                        next_page,
+                        total: 10
+                    }
+                }
+            );
+        }
+    }
+
+    #[sqlx::test(fixtures("ten_projects"))]
+    async fn get_projects_end(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let limit = 5;
+        let lp = LimitPoint::End;
+
+        let projects = vec!(
+            Project("f".into()),
+            Project("g".into()),
+            Project("h".into()),
+            Project("i".into()),
+            Project("j".into())
+        );
+
+        let prev_page = Some("f".into());
+        let next_page = Some("j".into());
+
+        assert_eq!(
+            core.get_projects(lp, limit).await.unwrap(),
+            Projects {
+                projects,
+                 meta: Pagination {
+                    prev_page,
+                    next_page,
+                    total: 10
                 }
             }
         );

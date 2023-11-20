@@ -6,7 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
+    model::{LimitPoint, Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
 };
 
 pub async fn root_get() -> &'static str {
@@ -18,7 +18,7 @@ pub async fn projects_get(
 ) -> Result<Json<Projects>, AppError>
 {
 // TODO: pagination
-    Ok(Json(core.get_projects().await?))
+    Ok(Json(core.get_projects(LimitPoint::Start, 10).await?))
 }
 
 pub async fn project_get(

@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+pub enum LimitPoint {
+    Start,
+    Before(String),
+    After(String),
+    End
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct User(pub String);
 
@@ -24,12 +31,12 @@ pub struct PackageID(pub i64);
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Pagination {
-    pub next_page: String,
-    pub prev_page: String,
-    pub total: u32
+    pub prev_page: Option<String>,
+    pub next_page: Option<String>,
+    pub total: i32
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Project(pub String);
 
 #[derive(Debug, PartialEq)]
