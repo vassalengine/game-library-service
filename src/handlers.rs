@@ -23,9 +23,7 @@ pub async fn projects_get(
         Json(
             core.get_projects(
                 params.seek.unwrap_or(Seek::Start),
-                params.limit.unwrap_or(
-                    Limit::new(10).expect("0 < 10 <= 100")
-                )
+                params.limit.unwrap_or(Limit::DEFAULT)
             ).await?
         )
     )
