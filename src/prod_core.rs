@@ -727,16 +727,14 @@ async fn get_project_count(
     db: &Pool
 ) -> Result<i32, sqlx::Error>
 {
-    Ok(
-        sqlx::query_scalar!(
-            "
+    sqlx::query_scalar!(
+        "
 SELECT COUNT(1)
 FROM projects
-            "
-        )
-        .fetch_one(db)
-        .await?
+        "
     )
+    .fetch_one(db)
+    .await
 }
 
 async fn get_user_id(
@@ -1005,7 +1003,7 @@ mod test {
 
             let projects: Vec<Project> = all_projects.iter()
                 .skip(i.saturating_sub(limit.clone().get() as usize))
-                .take(i - i.saturating_sub(limit.clone().get() as usize) as usize)
+                .take(i - i.saturating_sub(limit.clone().get() as usize))
                 .cloned()
                 .collect();
 
