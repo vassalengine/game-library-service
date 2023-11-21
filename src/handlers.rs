@@ -11,6 +11,11 @@ use crate::{
     pagination::PaginationParams
 };
 
+pub async fn not_found() -> Result<(), AppError>
+{
+    Err(AppError::NotFound)
+}
+
 pub async fn root_get() -> &'static str {
     "hello world"
 }
