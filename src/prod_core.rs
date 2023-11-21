@@ -7,7 +7,8 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{LimitPoint, GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+    model::{GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+    pagination::{Limit, Seek}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -161,16 +162,16 @@ LIMIT 1
         )
     }
 
-// TODO: Reqire limit > 0
-
     async fn get_projects(
         &self,
-        from: LimitPoint,
-        limit: u32
+        from: Seek,
+        limit: Limit
     ) -> Result<Projects, AppError>
     {
+        let limit = limit.get();
+
         let projects: Vec<Project> = match from {
-            LimitPoint::Start => {
+            Seek::Start => {
                 sqlx::query_scalar!(
                     "
 SELECT name
@@ -186,7 +187,7 @@ LIMIT ?
                 .map(Project)
                 .collect()
             },
-            LimitPoint::Before(name) => {
+            Seek::Before(name) => {
                 sqlx::query_scalar!(
                     "
 SELECT name
@@ -208,7 +209,7 @@ ORDER BY name COLLATE NOCASE ASC
                 .map(Project)
                 .collect()
             },
-            LimitPoint::After(name) => {
+            Seek::After(name) => {
                 sqlx::query_scalar!(
                     "
 SELECT name
@@ -226,7 +227,7 @@ LIMIT ?
                 .map(Project)
                 .collect()
             },
-            LimitPoint::End => {
+            Seek::End => {
                 sqlx::query_scalar!(
                     "
 SELECT name
@@ -925,8 +926,8 @@ mod test {
     async fn get_projects_start(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let limit = 5;
-        let lp = LimitPoint::Start;
+        let limit = Limit::new(5).unwrap();
+        let lp = Seek::Start;
 
         let projects = vec!(
             Project("a".into()),
@@ -960,15 +961,14 @@ mod test {
             .map(|c| Project(c.into()))
             .collect();
 
-        let limit = 5;
-
         // walk the limit window across the projects
         for (i, p) in all_projects.iter().enumerate() {
-            let lp = LimitPoint::After(p.0.clone());
+            let lp = Seek::After(p.0.clone());
+            let limit = Limit::new(5).unwrap();
 
             let projects: Vec<Project> = all_projects.iter()
                 .skip(i + 1)
-                .take(limit as usize)
+                .take(limit.clone().get() as usize)
                 .cloned()
                 .collect();
 
@@ -997,15 +997,15 @@ mod test {
             .map(|c| Project(c.into()))
             .collect();
 
-        let limit = 5;
 
         // walk the limit window across the projects
         for (i, p) in all_projects.iter().enumerate() {
-            let lp = LimitPoint::Before(p.0.clone());
+            let lp = Seek::Before(p.0.clone());
+            let limit = Limit::new(5).unwrap();
 
             let projects: Vec<Project> = all_projects.iter()
-                .skip(i.saturating_sub(limit))
-                .take(i - i.saturating_sub(limit) as usize)
+                .skip(i.saturating_sub(limit.clone().get() as usize))
+                .take(i - i.saturating_sub(limit.clone().get() as usize) as usize)
                 .cloned()
                 .collect();
 
@@ -1013,7 +1013,7 @@ mod test {
             let next_page = projects.last().map(|p| p.0.clone());
 
             assert_eq!(
-                core.get_projects(lp, limit as u32).await.unwrap(),
+                core.get_projects(lp, limit).await.unwrap(),
                 Projects {
                     projects,
                     meta: Pagination {
@@ -1030,8 +1030,8 @@ mod test {
     async fn get_projects_end(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let limit = 5;
-        let lp = LimitPoint::End;
+        let limit = Limit::new(5).unwrap();
+        let lp = Seek::End;
 
         let projects = vec!(
             Project("f".into()),

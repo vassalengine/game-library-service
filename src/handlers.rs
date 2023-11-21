@@ -1,12 +1,13 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{Json, Redirect}
 };
 
 use crate::{
     core::CoreArc,
     errors::AppError,
-    model::{LimitPoint, Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User}
+    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
+    pagination::{Limit, Seek, PaginationParams}
 };
 
 pub async fn root_get() -> &'static str {
@@ -14,11 +15,20 @@ pub async fn root_get() -> &'static str {
 }
 
 pub async fn projects_get(
+    Query(params): Query<PaginationParams>,
     State(core): State<CoreArc>
 ) -> Result<Json<Projects>, AppError>
 {
-// TODO: pagination
-    Ok(Json(core.get_projects(LimitPoint::Start, 10).await?))
+    Ok(
+        Json(
+            core.get_projects(
+                params.seek.unwrap_or(Seek::Start),
+                params.limit.unwrap_or(
+                    Limit::new(10).expect("0 < 10 <= 100")
+                )
+            ).await?
+        )
+    )
 }
 
 pub async fn project_get(

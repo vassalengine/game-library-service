@@ -1,12 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-pub enum LimitPoint {
-    Start,
-    Before(String),
-    After(String),
-    End
-}
-
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct User(pub String);
 

@@ -23,6 +23,7 @@ mod extractors;
 mod handlers;
 mod jwt;
 mod model;
+mod pagination;
 mod prod_core;
 
 use crate::{
@@ -191,7 +192,8 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, LimitPoint, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users}
+        model::{GameData, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+        pagination::{Limit, Seek}
     };
 
     const API_V1: &str = "/api/v1";
@@ -281,8 +283,8 @@ mod test {
 
         async fn get_projects(
             &self,
-            _from: LimitPoint,
-            _limit: u32
+            _from: Seek,
+            _limit: Limit
         ) -> Result<Projects, AppError>
         {
             Ok(
@@ -485,11 +487,204 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_ok() {
+    async fn get_projects_no_params_ok() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit=5"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_zero() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit=0"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::LimitOutOfRange)
+        );
+*/
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_too_large() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit=100000"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::LimitOutOfRange)
+        );
+*/
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_start_ok() {
+        let seek = String::from(Seek::Start);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={seek}"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_end_ok() {
+        let seek = String::from(Seek::End);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={seek}"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_before_ok() {
+
+        let seek = String::from(Seek::Before("xyz".into()));
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={seek}"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+// TODO: seek string too long
+// TODO: seek string bad base64  
+
+    #[tokio::test]
+    async fn get_projects_seek_after_ok() {
+
+        let seek = String::from(Seek::After("xyz".into()));
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={seek}"))
                 .body(Body::empty())
                 .unwrap()
         )
