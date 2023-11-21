@@ -517,6 +517,7 @@ LIMIT 1
         )
     }
 
+// TODO: pagination
     async fn get_packages(
         &self,
         proj_id: i64,
@@ -529,6 +530,7 @@ LIMIT 1
 SELECT name
 FROM packages
 WHERE project_id = ?
+ORDER BY name COLLATE NOCASE ASC
                     ",
                     proj_id
                 )
