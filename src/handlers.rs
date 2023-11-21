@@ -6,6 +6,7 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
+    extractors::Wrapper,
     model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
     pagination::PaginationParams
 };
@@ -15,7 +16,7 @@ pub async fn root_get() -> &'static str {
 }
 
 pub async fn projects_get(
-    Query(params): Query<PaginationParams>,
+    Wrapper(Query(params)): Wrapper<Query<PaginationParams>>,
     State(core): State<CoreArc>
 ) -> Result<Json<Projects>, AppError>
 {
@@ -41,7 +42,7 @@ pub async fn project_put(
     owned: OwnedOrNew,
     Path(proj): Path<String>,
     State(core): State<CoreArc>,
-    Json(proj_data): Json<ProjectDataPut>
+    Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPut>>
 ) -> Result<(), AppError>
 {
     match owned {
@@ -74,7 +75,7 @@ pub async fn owners_get(
 pub async fn owners_add(
     Owned(_, proj_id): Owned,
     State(core): State<CoreArc>,
-    Json(owners): Json<Users>
+    Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
     core.add_owners(&owners, proj_id.0).await
@@ -83,7 +84,7 @@ pub async fn owners_add(
 pub async fn owners_remove(
     Owned(_, proj_id): Owned,
     State(core): State<CoreArc>,
-    Json(owners): Json<Users>
+    Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
     core.remove_owners(&owners, proj_id.0).await

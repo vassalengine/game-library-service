@@ -37,9 +37,11 @@ use crate::{
 impl From<&AppError> for StatusCode {
     fn from(err: &AppError) -> Self {
         match err {
+            AppError::BadMimeType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             AppError::CannotRemoveLastOwner => StatusCode::BAD_REQUEST,
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::JsonError => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
             AppError::MalformedQuery => StatusCode::BAD_REQUEST,
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
@@ -553,12 +555,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::LimitOutOfRange)
         );
-*/
     }
 
     #[tokio::test]
@@ -573,12 +573,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::LimitOutOfRange)
         );
-*/
     }
 
     #[tokio::test]
@@ -593,12 +591,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::LimitOutOfRange)
         );
-*/
     }
 
     #[tokio::test]
@@ -613,12 +609,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::LimitOutOfRange)
         );
-*/
     }
 
     #[tokio::test]
@@ -753,12 +747,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::MalformedQuery)
         );
-*/
     }
 
     #[tokio::test]
@@ -773,12 +765,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-/*
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::MalformedQuery)
         );
-*/
     }
 
 // TODO: seek string too long?
@@ -994,7 +984,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
     }
 
     #[tokio::test]
@@ -1011,7 +1004,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]
@@ -1028,7 +1024,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]
@@ -1378,7 +1377,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
     }
 
     #[tokio::test]
@@ -1395,7 +1397,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]
@@ -1411,7 +1416,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]
@@ -1485,7 +1493,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
     }
 
     #[tokio::test]
@@ -1502,7 +1513,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]
@@ -1518,7 +1532,10 @@ mod test {
         .await;
 
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        // TODO: error body
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
     }
 
     #[tokio::test]

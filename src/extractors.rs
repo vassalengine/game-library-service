@@ -1,11 +1,17 @@
 use axum::{
     async_trait, RequestPartsExt, TypedHeader,
-    extract::{FromRequestParts, FromRef, Path, State},
+    extract::{
+        FromRequest, FromRequestParts, FromRef, Path, State,
+        rejection::{JsonRejection, QueryRejection}
+    },
     headers::{
         Authorization,
         authorization::Bearer
     },
-    http::request::Parts,
+    http::{
+        Request,
+        request::Parts
+    }
 };
 
 use crate::{
@@ -207,6 +213,52 @@ where
             Err(AppError::NotAProject) => Ok(OwnedOrNew::User(User(claims.sub))),
             Err(e) => Err(e)
         }
+    }
+}
+
+impl From<JsonRejection> for AppError {
+    fn from(err: JsonRejection) -> Self {
+        match err {
+            JsonRejection::MissingJsonContentType(_) => AppError::BadMimeType,
+            _ => AppError::JsonError
+        }
+    }
+}
+
+impl From<QueryRejection> for AppError {
+    fn from(_: QueryRejection) -> Self {
+       AppError::MalformedQuery
+    }
+}
+
+pub struct Wrapper<E>(pub E);
+
+#[async_trait]
+impl<S, T> FromRequestParts<S> for Wrapper<T>
+where
+    S: Send + Sync,
+    T: FromRequestParts<S>,
+    AppError: From<<T as FromRequestParts<S>>::Rejection>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Wrapper(T::from_request_parts(parts, state).await?))
+    }
+}
+
+#[async_trait]
+impl<S, B, T> FromRequest<S, B> for Wrapper<T>
+where
+    B: Send + 'static,
+    S: Send + Sync,
+    T: FromRequest<S, B>,
+    AppError: From<<T as FromRequest<S, B>>::Rejection>
+{
+    type Rejection = AppError;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Wrapper(T::from_request(req, state).await?))
     }
 }
 
