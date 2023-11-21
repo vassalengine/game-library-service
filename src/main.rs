@@ -40,6 +40,8 @@ impl From<&AppError> for StatusCode {
             AppError::CannotRemoveLastOwner => StatusCode::BAD_REQUEST,
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
+            AppError::MalformedQuery => StatusCode::BAD_REQUEST,
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
             AppError::NotAPackage => StatusCode::NOT_FOUND,
             AppError::NotAProject => StatusCode::NOT_FOUND,
