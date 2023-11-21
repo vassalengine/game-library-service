@@ -26,8 +26,12 @@ impl Limit {
     pub const fn get(self) -> u8 {
         self.0.get()
     }
+}
 
-    pub const DEFAULT: Limit = Limit::new(10).expect("0 < 10 <= 100");
+impl Default for Limit {
+    fn default() -> Self {
+        Limit::new(10).expect("0 < 10 <= 100")
+    }
 }
 
 impl TryFrom<String> for Limit {
@@ -48,6 +52,12 @@ pub enum Seek {
     Before(String),
     After(String),
     End
+}
+
+impl Default for Seek {
+    fn default() -> Self {
+        Seek::Start
+    }
 }
 
 impl From<Seek> for String {

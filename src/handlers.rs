@@ -7,7 +7,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
-    pagination::{Limit, Seek, PaginationParams}
+    pagination::PaginationParams
 };
 
 pub async fn root_get() -> &'static str {
@@ -22,8 +22,8 @@ pub async fn projects_get(
     Ok(
         Json(
             core.get_projects(
-                params.seek.unwrap_or(Seek::Start),
-                params.limit.unwrap_or(Limit::DEFAULT)
+                params.seek.unwrap_or_default(),
+                params.limit.unwrap_or_default()
             ).await?
         )
     )

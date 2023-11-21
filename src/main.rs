@@ -1,5 +1,4 @@
 #![feature(async_fn_in_trait)]
-#![feature(const_option)]
 
 use axum::{
     Router, Server,
