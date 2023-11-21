@@ -995,15 +995,15 @@ mod test {
             .map(|c| Project(c.into()))
             .collect();
 
-
         // walk the limit window across the projects
         for (i, p) in all_projects.iter().enumerate() {
             let lp = Seek::Before(p.0.clone());
             let limit = Limit::new(5).unwrap();
+            let lim = limit.clone().get() as usize;
 
             let projects: Vec<Project> = all_projects.iter()
-                .skip(i.saturating_sub(limit.clone().get() as usize))
-                .take(i - i.saturating_sub(limit.clone().get() as usize))
+                .skip(i.saturating_sub(lim))
+                .take(i - i.saturating_sub(lim))
                 .cloned()
                 .collect();
 
