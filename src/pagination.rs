@@ -90,3 +90,16 @@ pub struct PaginationParams {
     pub seek: Option<Seek>,
     pub limit: Option<Limit>
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn size_of_limit() {
+        assert_eq!(
+            std::mem::size_of::<Limit>(),
+            std::mem::size_of::<u8>()
+        );
+    }
+}

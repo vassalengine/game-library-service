@@ -583,6 +583,46 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_projects_limit_empty() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit="))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::LimitOutOfRange)
+        );
+*/
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_not_a_number() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit=eleventeen"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::LimitOutOfRange)
+        );
+*/
+    }
+
+    #[tokio::test]
     async fn get_projects_seek_start_ok() {
         let seek = String::from(Seek::Start);
 
@@ -644,7 +684,6 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_before_ok() {
-
         let seek = String::from(Seek::Before("xyz".into()));
 
         let response = try_request(
@@ -673,18 +712,116 @@ mod test {
         );
     }
 
-// TODO: seek string too long
-// TODO: seek string bad base64  
-
     #[tokio::test]
     async fn get_projects_seek_after_ok() {
-
         let seek = String::from(Seek::After("xyz".into()));
 
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?seek={seek}"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_empty() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek="))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::MalformedQuery)
+        );
+*/
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_bad() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek=%@$"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+/*
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::MalformedQuery)
+        );
+*/
+    }
+
+// TODO: seek string too long?
+
+    #[tokio::test]
+    async fn get_projects_seek_and_limit_ok() {
+        let seek = String::from(Seek::Start);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={seek}&limit=5"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec!(
+                    Project("project_a".into()),
+                    Project("project_b".into())
+                ),
+                meta: Pagination {
+                    next_page: Some("next".into()),
+                    prev_page: Some("prev".into()),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_and_seek_ok() {
+        let seek = String::from(Seek::Start);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?limit=5&seek={seek}"))
                 .body(Body::empty())
                 .unwrap()
         )
