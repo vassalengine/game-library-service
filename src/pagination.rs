@@ -45,19 +45,14 @@ impl TryFrom<String> for Limit {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(try_from = "String")]
 pub enum Seek {
+    #[default]
     Start,
     Before(String),
     After(String),
     End
-}
-
-impl Default for Seek {
-    fn default() -> Self {
-        Seek::Start
-    }
 }
 
 impl From<Seek> for String {
