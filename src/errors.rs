@@ -4,9 +4,8 @@ use std::fmt;
 pub enum AppError {
     BadMimeType,
     CannotRemoveLastOwner,
-    InternalError,
-    Unauthorized,
     DatabaseError(String),
+    InternalError,
     JsonError,
     LimitOutOfRange,
     MalformedQuery,
@@ -15,7 +14,9 @@ pub enum AppError {
     NotAProject,
     NotARevision,
     NotAVersion,
-    NotImplemented
+    NotFound,
+    NotImplemented,
+    Unauthorized
 }
 
 impl fmt::Display for AppError {
@@ -29,10 +30,11 @@ impl fmt::Display for AppError {
             AppError::JsonError => write!(f, "Unprocessable entity"),
             AppError::MalformedQuery => write!(f, "Bad request"),
             AppError::MalformedVersion => write!(f, "Bad request"),
-            AppError::NotAPackage => write!(f, "Bad request"),
-            AppError::NotAProject => write!(f, "Bad request"),
-            AppError::NotARevision => write!(f, "Bad request"),
-            AppError::NotAVersion => write!(f, "Bad request"),
+            AppError::NotAPackage => write!(f, "Not found"),
+            AppError::NotAProject => write!(f, "Not found"),
+            AppError::NotARevision => write!(f, "Not found"),
+            AppError::NotAVersion => write!(f, "Not found"),
+            AppError::NotFound => write!(f, "Not found"),
             AppError::NotImplemented => write!(f, "Not implemented"),
             AppError::Unauthorized => write!(f, "Unauthorized")
         }

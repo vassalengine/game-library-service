@@ -49,6 +49,7 @@ impl From<&AppError> for StatusCode {
             AppError::NotAProject => StatusCode::NOT_FOUND,
             AppError::NotARevision => StatusCode::NOT_FOUND,
             AppError::NotAVersion => StatusCode::NOT_FOUND,
+            AppError::NotFound => StatusCode::NOT_FOUND,
             AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
