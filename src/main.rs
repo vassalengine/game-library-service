@@ -497,7 +497,7 @@ mod test {
             .map(|v| v.as_ref())
             .collect::<Vec<_>>();
 
-        values.sort();
+        values.sort_unstable();
         values
     }
 
