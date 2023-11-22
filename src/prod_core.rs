@@ -7,8 +7,8 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
-    pagination::{Limit, Seek}
+    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+    pagination::{Limit, Pagination, Seek, SeekLink}
 };
 
 impl From<sqlx::Error> for AppError {
@@ -249,8 +249,13 @@ ORDER BY name COLLATE NOCASE ASC
             }
         };
 
-        let prev_page = projects.first().map(|p| p.0.clone());
-        let next_page = projects.last().map(|p| p.0.clone());
+        let prev_page = projects
+            .first()
+            .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+
+        let next_page = projects
+            .last()
+            .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
 
         Ok(
             Projects {
@@ -937,8 +942,8 @@ mod test {
             Project("e".into())
         );
 
-        let prev_page = Some("a".into());
-        let next_page = Some("e".into());
+        let prev_page = Some(SeekLink(Seek::Before("a".into()).into()));
+        let next_page = Some(SeekLink(Seek::After("e".into()).into()));
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),
@@ -972,8 +977,13 @@ mod test {
                 .cloned()
                 .collect();
 
-            let prev_page = projects.first().map(|p| p.0.clone());
-            let next_page = projects.last().map(|p| p.0.clone());
+            let prev_page = projects
+                .first()
+                .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+
+            let next_page = projects
+                .last()
+                .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1009,8 +1019,13 @@ mod test {
                 .cloned()
                 .collect();
 
-            let prev_page = projects.first().map(|p| p.0.clone());
-            let next_page = projects.last().map(|p| p.0.clone());
+            let prev_page = projects
+                .first()
+                .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+
+            let next_page = projects
+                .last()
+                .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1041,8 +1056,8 @@ mod test {
             Project("j".into())
         );
 
-        let prev_page = Some("f".into());
-        let next_page = Some("j".into());
+        let prev_page = Some(SeekLink(Seek::Before("f".into()).into()));
+        let next_page = Some(SeekLink(Seek::After("j".into()).into()));
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),

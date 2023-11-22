@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::pagination::Pagination;
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct User(pub String);
 
@@ -21,13 +23,6 @@ pub struct Packages {
 
 #[derive(Debug, PartialEq)]
 pub struct PackageID(pub i64);
-
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Pagination {
-    pub prev_page: Option<String>,
-    pub next_page: Option<String>,
-    pub total: i32
-}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Project(pub String);

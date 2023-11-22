@@ -195,8 +195,8 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Pagination, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
-        pagination::{Limit, Seek}
+        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+        pagination::{Limit, Pagination, Seek, SeekLink}
     };
 
     const API_V1: &str = "/api/v1";
@@ -297,8 +297,12 @@ mod test {
                         Project("project_b".into())
                     ),
                     meta: Pagination {
-                        next_page: Some("next".into()),
-                        prev_page: Some("prev".into()),
+                        prev_page: Some(
+                            SeekLink(Seek::Before("project_a".into()).into())
+                        ),
+                        next_page: Some(
+                            SeekLink(Seek::After("project_b".into()).into())
+                        ),
                         total: 1234
                     }
                 }
@@ -509,8 +513,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -537,8 +545,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -639,8 +651,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -669,8 +685,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -699,8 +719,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -729,8 +753,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -797,8 +825,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }
@@ -827,8 +859,12 @@ mod test {
                     Project("project_b".into())
                 ),
                 meta: Pagination {
-                    next_page: Some("next".into()),
-                    prev_page: Some("prev".into()),
+                    prev_page: Some(
+                        SeekLink(Seek::Before("project_a".into()).into())
+                    ),
+                    next_page: Some(
+                        SeekLink(Seek::After("project_b".into()).into())
+                    ),
                     total: 1234
                 }
             }

@@ -1,7 +1,9 @@
 use base64::{Engine as _};
 use serde::{Deserialize, Serialize};
-use std::str;
-use std::num::NonZeroU8;
+use std::{
+    str,
+    num::NonZeroU8
+};
 
 use crate::errors::AppError;
 
@@ -94,6 +96,22 @@ impl TryFrom<String> for Seek {
 pub struct PaginationParams {
     pub seek: Option<Seek>,
     pub limit: Option<Limit>
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct SeekLink(pub String);
+
+impl From<Seek> for SeekLink {
+    fn from(seek: Seek) -> Self {
+        SeekLink(format!("/?seek={}", String::from(seek)))
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Pagination {
+    pub prev_page: Option<SeekLink>,
+    pub next_page: Option<SeekLink>,
+    pub total: i32
 }
 
 #[cfg(test)]
