@@ -139,6 +139,10 @@ fn routes(api: &str) -> Router<AppState> {
             post(handlers::flag_post)
         )
         .fallback(handlers::not_found)
+        .layer(
+            ServiceBuilder::new()
+                .layer(CorsLayer::very_permissive())
+        )
 }
 
 #[tokio::main]
@@ -172,11 +176,7 @@ async fn main() {
     let api = &config.api_base_path;
 
     let app: Router = routes(api)
-        .with_state(state)
-        .layer(
-            ServiceBuilder::new()
-                .layer(CorsLayer::very_permissive())
-        );
+        .with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
     Server::bind(&addr)
@@ -483,6 +483,50 @@ mod test {
             .oneshot(request)
             .await
             .unwrap()
+    }
+
+    fn headers<'a>(
+        response: &'a Response,
+        header_name: &str
+    ) -> Vec<&'a [u8]>
+    {
+        let mut values = response
+            .headers()
+            .get_all(header_name)
+            .iter()
+            .map(|v| v.as_ref())
+            .collect::<Vec<_>>();
+
+        values.sort();
+        values
+    }
+
+    #[tokio::test]
+    async fn cors_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        assert_eq!(
+            headers(&response, "access-control-allow-credentials"),
+            ["true".as_bytes()]
+        );
+
+        assert_eq!(
+            headers(&response, "vary"),
+            [
+                "access-control-request-headers".as_bytes(),
+                "access-control-request-method".as_bytes(),
+                "origin".as_bytes()
+            ]
+        );
     }
 
     #[tokio::test]
