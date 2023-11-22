@@ -5,9 +5,9 @@ use std::num::NonZeroU8;
 
 use crate::errors::AppError;
 
-// FIXME: private fields various places
+// TODO: private fields various places
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "String")]
 #[repr(transparent)]
 pub struct Limit(NonZeroU8);
@@ -45,7 +45,7 @@ impl TryFrom<String> for Limit {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "String")]
 pub enum Seek {
     #[default]
@@ -106,5 +106,100 @@ mod test {
             std::mem::size_of::<Limit>(),
             std::mem::size_of::<u8>()
         );
+    }
+
+    #[test]
+    fn string_to_limit_zero_err() {
+        assert!(Limit::try_from("0".to_string()).is_err());
+    }
+
+    #[test]
+    fn string_to_limit_one_ok() {
+        assert_eq!(
+            Limit::try_from("1".to_string()).unwrap(),
+            Limit::new(1).unwrap()
+        );
+    }
+
+    #[test]
+    fn string_to_limit_one_hundred_ok() {
+        assert_eq!(
+            Limit::try_from("100".to_string()).unwrap(),
+            Limit::new(100).unwrap()
+        );
+    }
+
+    #[test]
+    fn string_to_limit_one_hundred_one_err() {
+        assert!(Limit::try_from("101".to_string()).is_err());
+    }
+
+    #[test]
+    fn seek_to_string_start() {
+        assert_eq!(
+            String::from(Seek::Start),
+            "czo".to_string()
+        );
+    }
+
+    #[test]
+    fn seek_to_string_end() {
+        assert_eq!(
+            String::from(Seek::End),
+            "ZTo".to_string()
+        );
+    }
+
+    #[test]
+    fn seek_to_string_before() {
+        assert_eq!(
+            String::from(Seek::Before("abc".into())),
+            "YjphYmM".to_string()
+        );
+    }
+
+    #[test]
+    fn seek_to_string_after() {
+        assert_eq!(
+            String::from(Seek::After("abc".into())),
+            "YTphYmM".to_string()
+        );
+    }
+
+    #[test]
+    fn string_to_seek_start() {
+        assert_eq!(
+            Seek::try_from("czo".to_string()).unwrap(),
+            Seek::Start
+        );
+    }
+
+    #[test]
+    fn string_to_seek_end() {
+        assert_eq!(
+            Seek::try_from("ZTo".to_string()).unwrap(),
+            Seek::End
+        );
+    }
+
+    #[test]
+    fn string_to_seek_before() {
+        assert_eq!(
+            Seek::try_from("YjphYmM".to_string()).unwrap(),
+            Seek::Before("abc".into())
+        );
+    }
+
+    #[test]
+    fn string_to_seek_after() {
+        assert_eq!(
+            Seek::try_from("YTphYmM".to_string()).unwrap(),
+            Seek::After("abc".into())
+        );
+    }
+
+    #[test]
+    fn string_to_seek_err() {
+        assert!(Seek::try_from("$$$".to_string()).is_err());
     }
 }
