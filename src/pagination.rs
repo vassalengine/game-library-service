@@ -48,7 +48,7 @@ impl TryFrom<&str> for Limit {
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
-#[serde(try_from = "String")]
+#[serde(try_from = "&str")]
 pub enum Seek {
     #[default]
     Start,
@@ -70,11 +70,10 @@ impl From<Seek> for String {
     }
 }
 
-// TODO: can we do this zero-copy?
-impl TryFrom<String> for Seek {
+impl TryFrom<&str> for Seek {
     type Error = AppError;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         let buf = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(s)
             .map_err(|_| AppError::MalformedQuery)?;
@@ -187,7 +186,7 @@ mod test {
     #[test]
     fn string_to_seek_start() {
         assert_eq!(
-            Seek::try_from("czo".to_string()).unwrap(),
+            Seek::try_from("czo").unwrap(),
             Seek::Start
         );
     }
@@ -195,7 +194,7 @@ mod test {
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            Seek::try_from("ZTo".to_string()).unwrap(),
+            Seek::try_from("ZTo").unwrap(),
             Seek::End
         );
     }
@@ -203,7 +202,7 @@ mod test {
     #[test]
     fn string_to_seek_before() {
         assert_eq!(
-            Seek::try_from("YjphYmM".to_string()).unwrap(),
+            Seek::try_from("YjphYmM").unwrap(),
             Seek::Before("abc".into())
         );
     }
@@ -211,13 +210,13 @@ mod test {
     #[test]
     fn string_to_seek_after() {
         assert_eq!(
-            Seek::try_from("YTphYmM".to_string()).unwrap(),
+            Seek::try_from("YTphYmM").unwrap(),
             Seek::After("abc".into())
         );
     }
 
     #[test]
     fn string_to_seek_err() {
-        assert!(Seek::try_from("$$$".to_string()).is_err());
+        assert!(Seek::try_from("$$$").is_err());
     }
 }
