@@ -13,6 +13,8 @@ use std::{
     net::SocketAddr,
     sync::Arc
 };
+use tower::ServiceBuilder;
+use tower_http::cors::CorsLayer;
 
 mod app;
 mod config;
@@ -169,7 +171,12 @@ async fn main() {
 
     let api = &config.api_base_path;
 
-    let app: Router = routes(api).with_state(state);
+    let app: Router = routes(api)
+        .with_state(state)
+        .layer(
+            ServiceBuilder::new()
+                .layer(CorsLayer::very_permissive())
+        );
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
     Server::bind(&addr)
