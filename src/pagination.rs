@@ -10,7 +10,7 @@ use crate::errors::AppError;
 // TODO: private fields various places
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(try_from = "String")]
+#[serde(try_from = "&str")]
 #[repr(transparent)]
 pub struct Limit(NonZeroU8);
 
@@ -36,10 +36,10 @@ impl Default for Limit {
     }
 }
 
-impl TryFrom<String> for Limit {
+impl TryFrom<&str> for Limit {
     type Error = AppError;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s.parse::<u8>() {
             Ok(n) => Limit::new(n).ok_or(AppError::LimitOutOfRange),
             Err(_) => Err(AppError::MalformedQuery)
@@ -128,13 +128,13 @@ mod test {
 
     #[test]
     fn string_to_limit_zero_err() {
-        assert!(Limit::try_from("0".to_string()).is_err());
+        assert!(Limit::try_from("0").is_err());
     }
 
     #[test]
     fn string_to_limit_one_ok() {
         assert_eq!(
-            Limit::try_from("1".to_string()).unwrap(),
+            Limit::try_from("1").unwrap(),
             Limit::new(1).unwrap()
         );
     }
@@ -142,14 +142,14 @@ mod test {
     #[test]
     fn string_to_limit_one_hundred_ok() {
         assert_eq!(
-            Limit::try_from("100".to_string()).unwrap(),
+            Limit::try_from("100").unwrap(),
             Limit::new(100).unwrap()
         );
     }
 
     #[test]
     fn string_to_limit_one_hundred_one_err() {
-        assert!(Limit::try_from("101".to_string()).is_err());
+        assert!(Limit::try_from("101").is_err());
     }
 
     #[test]
