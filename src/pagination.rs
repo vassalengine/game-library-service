@@ -98,7 +98,7 @@ pub struct PaginationParams {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct SeekLink(pub String);
+pub struct SeekLink(String);
 
 impl SeekLink {
     pub fn new(seek: Seek) -> SeekLink {
