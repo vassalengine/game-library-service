@@ -251,11 +251,11 @@ ORDER BY name COLLATE NOCASE ASC
 
         let prev_page = projects
             .first()
-            .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+            .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
 
         let next_page = projects
             .last()
-            .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
+            .map(|p| SeekLink::new(Seek::After(p.0.clone())));
 
         Ok(
             Projects {
@@ -942,8 +942,8 @@ mod test {
             Project("e".into())
         );
 
-        let prev_page = Some(SeekLink(Seek::Before("a".into()).into()));
-        let next_page = Some(SeekLink(Seek::After("e".into()).into()));
+        let prev_page = Some(SeekLink::new(Seek::Before("a".into())));
+        let next_page = Some(SeekLink::new(Seek::After("e".into())));
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),
@@ -979,11 +979,11 @@ mod test {
 
             let prev_page = projects
                 .first()
-                .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+                .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
 
             let next_page = projects
                 .last()
-                .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
+                .map(|p| SeekLink::new(Seek::After(p.0.clone())));
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1021,11 +1021,11 @@ mod test {
 
             let prev_page = projects
                 .first()
-                .map(|p| SeekLink(Seek::Before(p.0.clone()).into()));
+                .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
 
             let next_page = projects
                 .last()
-                .map(|p| SeekLink(Seek::After(p.0.clone()).into()));
+                .map(|p| SeekLink::new(Seek::After(p.0.clone())));
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1056,8 +1056,8 @@ mod test {
             Project("j".into())
         );
 
-        let prev_page = Some(SeekLink(Seek::Before("f".into()).into()));
-        let next_page = Some(SeekLink(Seek::After("j".into()).into()));
+        let prev_page = Some(SeekLink::new(Seek::Before("f".into())));
+        let next_page = Some(SeekLink::new(Seek::After("j".into())));
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),

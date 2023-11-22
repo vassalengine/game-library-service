@@ -305,10 +305,10 @@ mod test {
                     ),
                     meta: Pagination {
                         prev_page: Some(
-                            SeekLink(Seek::Before("project_a".into()).into())
+                            SeekLink::new(Seek::Before("project_a".into()))
                         ),
                         next_page: Some(
-                            SeekLink(Seek::After("project_b".into()).into())
+                            SeekLink::new(Seek::After("project_b".into()))
                         ),
                         total: 1234
                     }
@@ -565,10 +565,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -597,10 +597,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -703,10 +703,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -737,10 +737,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -771,10 +771,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -805,10 +805,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -877,10 +877,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }
@@ -911,10 +911,10 @@ mod test {
                 ),
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink(Seek::Before("project_a".into()).into())
+                        SeekLink::new(Seek::Before("project_a".into()))
                     ),
                     next_page: Some(
-                        SeekLink(Seek::After("project_b".into()).into())
+                        SeekLink::new(Seek::After("project_b".into()))
                     ),
                     total: 1234
                 }

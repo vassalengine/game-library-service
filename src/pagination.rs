@@ -100,9 +100,15 @@ pub struct PaginationParams {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct SeekLink(pub String);
 
+impl SeekLink {
+    pub fn new(seek: Seek) -> SeekLink {
+        SeekLink(format!("/?seek={}", String::from(seek)))
+    }
+}
+
 impl From<Seek> for SeekLink {
     fn from(seek: Seek) -> Self {
-        SeekLink(format!("/?seek={}", String::from(seek)))
+        SeekLink::new(seek)
     }
 }
 
