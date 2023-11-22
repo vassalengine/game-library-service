@@ -154,32 +154,32 @@ mod test {
     #[test]
     fn seek_to_string_start() {
         assert_eq!(
-            String::from(Seek::Start),
-            "czo".to_string()
+            &String::from(Seek::Start),
+            "czo"
         );
     }
 
     #[test]
     fn seek_to_string_end() {
         assert_eq!(
-            String::from(Seek::End),
-            "ZTo".to_string()
+            &String::from(Seek::End),
+            "ZTo"
         );
     }
 
     #[test]
     fn seek_to_string_before() {
         assert_eq!(
-            String::from(Seek::Before("abc".into())),
-            "YjphYmM".to_string()
+            &String::from(Seek::Before("abc".into())),
+            "YjphYmM"
         );
     }
 
     #[test]
     fn seek_to_string_after() {
         assert_eq!(
-            String::from(Seek::After("abc".into())),
-            "YTphYmM".to_string()
+            &String::from(Seek::After("abc".into())),
+            "YTphYmM"
         );
     }
 
