@@ -61,8 +61,8 @@ impl From<Seek> for String {
     fn from(value: Seek) -> Self {
         let s = match value {
             Seek::Start => "s:".to_string(),
-            Seek::Before(s) => format!("b:{s}"),
-            Seek::After(s) => format!("a:{s}"),
+            Seek::Before(s) => "b:".to_string() + &s,
+            Seek::After(s) => "a:".to_string() + &s,
             Seek::End => "e:".to_string()
         };
 
@@ -102,7 +102,7 @@ pub struct SeekLink(String);
 
 impl SeekLink {
     pub fn new(seek: Seek) -> SeekLink {
-        SeekLink(format!("/?seek={}", String::from(seek)))
+        SeekLink("/?seek=".to_string() + &String::from(seek))
     }
 }
 
