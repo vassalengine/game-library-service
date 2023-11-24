@@ -168,94 +168,14 @@ LIMIT 1
         limit: Limit
     ) -> Result<Projects, AppError>
     {
-        let limit = limit.get();
+        let limit = limit.get() as u32;
 
-        let projects: Vec<Project> = match from {
-            Seek::Start => {
-                sqlx::query_scalar!(
-                    "
-SELECT name
-FROM projects
-ORDER BY name COLLATE NOCASE ASC
-LIMIT ?
-                    ",
-                    limit
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(Project)
-                .collect()
-            },
-            Seek::Before(name) => {
-                sqlx::query_scalar!(
-                    "
-SELECT name
-FROM (
-    SELECT name
-    FROM projects
-    WHERE name < ?
-    ORDER BY name COLLATE NOCASE DESC
-    LIMIT ?
-)
-ORDER BY name COLLATE NOCASE ASC
-                    ",
-                    name,
-                    limit
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(Project)
-                .collect()
-            },
-            Seek::After(name) => {
-                sqlx::query_scalar!(
-                    "
-SELECT name
-FROM projects
-WHERE name > ?
-ORDER BY name COLLATE NOCASE ASC
-LIMIT ?
-                    ",
-                    name,
-                    limit
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(Project)
-                .collect()
-            },
-            Seek::End => {
-                sqlx::query_scalar!(
-                    "
-SELECT name
-FROM (
-    SELECT name
-    FROM projects
-    ORDER BY name COLLATE NOCASE DESC
-    LIMIT ?
-)
-ORDER BY name COLLATE NOCASE ASC
-                    ",
-                    limit
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(Project)
-                .collect()
-            }
+        let (prev_page, next_page, projects) = match from {
+            Seek::Start => get_projects_start(limit, &self.db).await?,
+            Seek::After(name) => get_projects_after(&name, limit, &self.db).await?,
+            Seek::Before(name) => get_projects_before(&name, limit, &self.db).await?,
+            Seek::End => get_projects_end(limit, &self.db).await?
         };
-
-        let prev_page = projects
-            .first()
-            .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
-
-        let next_page = projects
-            .last()
-            .map(|p| SeekLink::new(Seek::After(p.0.clone())));
 
         Ok(
             Projects {
@@ -882,6 +802,200 @@ WHERE user_id = ?
     Ok(())
 }
 
+async fn get_projects_start(
+    limit: u32,
+    db: &Pool
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+{
+    // try to get one extra so we can tell if we're at an endpoint
+    let limit_extra = limit + 1;
+
+    let mut projects: Vec<_> = sqlx::query_scalar!(
+        "
+SELECT name
+FROM projects
+ORDER BY name COLLATE NOCASE ASC
+LIMIT ?
+        ",
+        limit_extra
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(Project)
+    .collect();
+
+    Ok(
+        match projects.len() {
+            l if l == limit_extra as usize => {
+                projects.pop();
+                (
+                    None,
+                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                    projects
+                )
+            }
+            _ => {
+                (
+                    None,
+                    None,
+                    projects
+                )
+            }
+        }
+    )
+}
+
+async fn get_projects_end(
+    limit: u32,
+    db: &Pool
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+{
+    // try to get one extra so we can tell if we're at an endpoint
+    let limit_extra = limit + 1;
+
+    let mut projects: Vec<_> = sqlx::query_scalar!(
+        "
+SELECT name
+FROM projects
+ORDER BY name COLLATE NOCASE DESC
+LIMIT ?
+        ",
+        limit_extra
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(Project)
+    .collect();
+
+    Ok(
+        if projects.len() == limit_extra as usize {
+            projects.pop();
+            projects.reverse();
+            (
+                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                None,
+                projects
+            )
+        }
+        else {
+            projects.reverse();
+            (
+                None,
+                None,
+                projects
+            )
+        }
+    )
+}
+
+async fn get_projects_after(
+    name: &str,
+    limit: u32,
+    db: &Pool
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+{
+    // try to get one extra so we can tell if we're at an endpoint
+    let limit_extra = limit + 1;
+
+    let mut projects: Vec<_> = sqlx::query_scalar!(
+        "
+SELECT name
+FROM projects
+WHERE name > ?
+ORDER BY name COLLATE NOCASE ASC
+LIMIT ?
+        ",
+        name,
+        limit_extra
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(Project)
+    .collect();
+
+    Ok(
+        if projects.len() == limit_extra as usize {
+            projects.pop();
+            (
+                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                projects
+            )
+        }
+        else if projects.is_empty() {
+            (
+                Some(SeekLink::new(Seek::End)),
+                None,
+                projects
+            )
+        }
+        else {
+            (
+                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                None,
+                projects
+            )
+        }
+    )
+}
+
+async fn get_projects_before(
+    name: &str,
+    limit: u32,
+    db: &Pool
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+{
+    // try to get one extra so we can tell if we're at an endpoint
+    let limit_extra = limit + 1;
+
+    let mut projects: Vec<_> = sqlx::query_scalar!(
+        "
+SELECT name
+FROM projects
+WHERE name < ?
+ORDER BY name COLLATE NOCASE DESC
+LIMIT ?
+        ",
+        name,
+        limit_extra
+    )
+    .fetch_all(db)
+    .await?
+    .into_iter()
+    .map(Project)
+    .collect();
+
+    Ok(
+        if projects.len() == limit_extra as usize {
+            projects.pop();
+            projects.reverse();
+            (
+                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                projects
+            )
+        }
+        else if projects.is_empty() {
+            (
+                None,
+                Some(SeekLink::new(Seek::Start)),
+                projects
+            )
+        }
+        else {
+            projects.reverse();
+            (
+                None,
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                projects
+            )
+        }
+    )
+}
+
 fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
     match title.split_once(' ') {
         // Probably Spanish or French, "A" is not an article
@@ -928,22 +1042,18 @@ mod test {
     }
 
     #[sqlx::test(fixtures("ten_projects"))]
-    async fn get_projects_start(pool: Pool) {
+    async fn get_projects_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let limit = Limit::new(5).unwrap();
-        let lp = Seek::Start;
+        let projects: Vec<Project> = "abcde".chars()
+            .map(|c| Project(c.into()))
+            .collect();
 
-        let projects = vec!(
-            Project("a".into()),
-            Project("b".into()),
-            Project("c".into()),
-            Project("d".into()),
-            Project("e".into())
-        );
-
-        let prev_page = Some(SeekLink::new(Seek::Before("a".into())));
+        let prev_page = None;
         let next_page = Some(SeekLink::new(Seek::After("e".into())));
+
+        let lp = Seek::Start;
+        let limit = Limit::new(5).unwrap();
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),
@@ -959,31 +1069,43 @@ mod test {
     }
 
     #[sqlx::test(fixtures("ten_projects"))]
-    async fn get_projects_after(pool: Pool) {
+    async fn get_projects_after_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let all_projects: Vec<Project> = "abcdefghij".chars()
             .map(|c| Project(c.into()))
             .collect();
 
-        // walk the limit window across the projects
-        for (i, p) in all_projects.iter().enumerate() {
-            let lp = Seek::After(p.0.clone());
-            let limit = Limit::new(5).unwrap();
+        let lim = 5;
 
+        // walk the limit window across the projects
+        for i in 0..all_projects.len() {
             let projects: Vec<Project> = all_projects.iter()
                 .skip(i + 1)
-                .take(limit.clone().get() as usize)
+                .take(lim)
                 .cloned()
                 .collect();
 
-            let prev_page = projects
-                .first()
-                .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
+            let prev_page = if i == all_projects.len() - 1 {
+                Some(SeekLink::new(Seek::End))
+            }
+            else {
+                projects
+                    .first()
+                    .map(|p| SeekLink::new(Seek::Before(p.0.clone())))
+            };
 
-            let next_page = projects
-                .last()
-                .map(|p| SeekLink::new(Seek::After(p.0.clone())));
+            let next_page = if i + lim + 1 >= all_projects.len() {
+                None
+            }
+            else {
+                projects
+                    .last()
+                    .map(|p| SeekLink::new(Seek::After(p.0.clone())))
+            };
+
+            let lp = Seek::After(all_projects[i].0.clone());
+            let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1000,32 +1122,43 @@ mod test {
     }
 
     #[sqlx::test(fixtures("ten_projects"))]
-    async fn get_projects_before(pool: Pool) {
+    async fn get_projects_before_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let all_projects: Vec<Project> = "abcdefghij".chars()
             .map(|c| Project(c.into()))
             .collect();
 
-        // walk the limit window across the projects
-        for (i, p) in all_projects.iter().enumerate() {
-            let lp = Seek::Before(p.0.clone());
-            let limit = Limit::new(5).unwrap();
-            let lim = limit.clone().get() as usize;
+        let lim = 5;
 
+        // walk the limit window across the projects
+        for i in 0..all_projects.len() {
             let projects: Vec<Project> = all_projects.iter()
                 .skip(i.saturating_sub(lim))
                 .take(i - i.saturating_sub(lim))
                 .cloned()
                 .collect();
 
-            let prev_page = projects
-                .first()
-                .map(|p| SeekLink::new(Seek::Before(p.0.clone())));
+            let prev_page = if i < lim + 1 {
+                None
+            }
+            else {
+                projects
+                    .first()
+                    .map(|p| SeekLink::new(Seek::Before(p.0.clone())))
+            };
 
-            let next_page = projects
-                .last()
-                .map(|p| SeekLink::new(Seek::After(p.0.clone())));
+            let next_page = if i == 0 {
+                Some(SeekLink::new(Seek::Start))
+            }
+            else {
+                projects
+                    .last()
+                    .map(|p| SeekLink::new(Seek::After(p.0.clone())))
+            };
+
+            let lp = Seek::Before(all_projects[i].0.clone());
+            let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
                 core.get_projects(lp, limit).await.unwrap(),
@@ -1042,22 +1175,18 @@ mod test {
     }
 
     #[sqlx::test(fixtures("ten_projects"))]
-    async fn get_projects_end(pool: Pool) {
+    async fn get_projects_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let limit = Limit::new(5).unwrap();
-        let lp = Seek::End;
-
-        let projects = vec!(
-            Project("f".into()),
-            Project("g".into()),
-            Project("h".into()),
-            Project("i".into()),
-            Project("j".into())
-        );
+        let projects: Vec<Project> = "fghij".chars()
+            .map(|c| Project(c.into()))
+            .collect();
 
         let prev_page = Some(SeekLink::new(Seek::Before("f".into())));
-        let next_page = Some(SeekLink::new(Seek::After("j".into())));
+        let next_page = None;
+
+        let lp = Seek::End;
+        let limit = Limit::new(5).unwrap();
 
         assert_eq!(
             core.get_projects(lp, limit).await.unwrap(),
