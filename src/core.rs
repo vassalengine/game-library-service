@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Package, PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users},
+    model::{PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users},
     pagination::{Limit, Seek}
 };
 
@@ -20,7 +20,7 @@ pub trait Core {
     async fn get_package_id(
          &self,
         _proj_id: i64,
-        _pkg: &Package
+        _pkg: &str
     ) -> Result<PackageID, AppError>
     {
         unimplemented!();

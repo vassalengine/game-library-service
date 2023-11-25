@@ -275,10 +275,10 @@ mod test {
         async fn get_package_id(
             &self,
             _proj_id: i64,
-            pkg: &Package
+            pkg: &str
         ) -> Result<PackageID, AppError>
         {
-            match pkg.0.as_str() {
+            match pkg {
                 "a_package" => Ok(PackageID(1)),
                 _ => Err(AppError::NotAPackage)
             }

@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, OwnedOrNew, Owner, Package, PackageID, Project, ProjectID, User}
+    model::{Owned, OwnedOrNew, Owner, PackageID, Project, ProjectID, User}
 };
 
 #[async_trait]
@@ -146,7 +146,7 @@ where
             .map_err(|_| AppError::InternalError)?;
 
         // look up the package id
-        Ok(core.get_package_id(proj_id.0, &Package(pkg)).await?)
+        Ok(core.get_package_id(proj_id.0, &pkg).await?)
     }
 }
 
