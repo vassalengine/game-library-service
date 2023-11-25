@@ -102,7 +102,7 @@ pub struct SeekLink(String);
 
 impl SeekLink {
     pub fn new(seek: Seek) -> SeekLink {
-        SeekLink("/?seek=".to_string() + &String::from(seek))
+        SeekLink("?seek=".to_string() + &String::from(seek))
     }
 }
 
