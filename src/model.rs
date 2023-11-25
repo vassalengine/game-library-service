@@ -47,7 +47,7 @@ pub struct Readme {
     pub text: String
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
     pub title_sort_key: String,
