@@ -30,12 +30,6 @@ pub struct Project(pub String);
 #[derive(Debug, PartialEq)]
 pub struct ProjectID(pub i64);
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Projects {
-    pub projects: Vec<Project>,
-    pub meta: Pagination
-}
-
 #[derive(Debug, PartialEq)]
 pub struct Owner(pub String);
 
@@ -99,3 +93,24 @@ pub struct ProjectDataPut {
     pub tags: Vec<String>,
     pub game: GameData
 }
+
+// TODO: maybe use a date type for ctime, mtime?
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProjectSummary {
+    pub name: String,
+    pub description: String,
+    pub revision: i64,
+    pub created_at: String,
+    pub modified_at: String,
+    pub tags: Vec<String>,
+    pub game: GameData
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Projects {
+    pub projects: Vec<ProjectSummary>,
+    pub meta: Pagination
+}
+
+

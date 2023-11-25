@@ -197,12 +197,13 @@ mod test {
         }
     };
     use mime::{APPLICATION_JSON, TEXT_PLAIN};
+    use once_cell::sync::Lazy;
     use tower::ServiceExt; // for oneshot
 
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users},
         pagination::{Limit, Pagination, Seek, SeekLink}
     };
 
@@ -220,6 +221,40 @@ mod test {
     async fn body_empty(r: Response) -> bool {
         body_bytes(r).await.is_empty()
     }
+
+    static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(|| {
+        ProjectSummary {
+            name: "project_a".into(),
+            description: "".into(),
+            revision: 1,
+            created_at: "".into(),
+            modified_at: "".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "".into(),
+                title_sort_key: "".into(),
+                publisher: "".into(),
+                year: "".into()
+            }
+        }
+    });
+
+    static PROJECT_SUMMARY_B: Lazy<ProjectSummary> = Lazy::new(|| {
+        ProjectSummary {
+            name: "project_b".into(),
+            description: "".into(),
+            revision: 1,
+            created_at: "".into(),
+            modified_at: "".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "".into(),
+                title_sort_key: "".into(),
+                publisher: "".into(),
+                year: "".into()
+            }
+        }
+    });
 
     #[derive(Clone)]
     struct TestCore { }
@@ -300,8 +335,34 @@ mod test {
             Ok(
                 Projects {
                     projects: vec!(
-                        Project("project_a".into()),
-                        Project("project_b".into())
+                        ProjectSummary {
+                            name: "project_a".into(),
+                            description: "".into(),
+                            revision: 1,
+                            created_at: "".into(),
+                            modified_at: "".into(),
+                            tags: vec!(),
+                            game: GameData {
+                                title: "".into(),
+                                title_sort_key: "".into(),
+                                publisher: "".into(),
+                                year: "".into()
+                            }
+                        },
+                        ProjectSummary {
+                            name: "project_b".into(),
+                            description: "".into(),
+                            revision: 1,
+                            created_at: "".into(),
+                            modified_at: "".into(),
+                            tags: vec!(),
+                            game: GameData {
+                                title: "".into(),
+                                title_sort_key: "".into(),
+                                publisher: "".into(),
+                                year: "".into()
+                            }
+                        }
                     ),
                     meta: Pagination {
                         prev_page: Some(
@@ -560,8 +621,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -592,8 +653,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -698,8 +759,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -732,8 +793,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -766,8 +827,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -800,8 +861,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -872,8 +933,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(
@@ -906,8 +967,8 @@ mod test {
             body_as::<Projects>(response).await,
             Projects {
                 projects: vec!(
-                    Project("project_a".into()),
-                    Project("project_b".into())
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
                 ),
                 meta: Pagination {
                     prev_page: Some(

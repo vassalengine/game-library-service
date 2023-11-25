@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, User, Users},
+    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users},
     pagination::{Limit, Pagination, Seek, SeekLink}
 };
 
@@ -40,6 +40,25 @@ struct ProjectRow {
     game_title_sort: String,
     game_publisher: String,
     game_year: String
+}
+
+impl From<ProjectRow> for ProjectSummary {
+    fn from(r: ProjectRow) -> Self {
+        ProjectSummary {
+            name: r.name,
+            description: r.description,
+            revision: r.revision,
+            created_at: r.created_at,
+            modified_at: r.modified_at,
+            tags: vec!(),
+            game: GameData {
+                title: r.game_title,
+                title_sort_key: r.game_title_sort,
+                publisher: r.game_publisher,
+                year: r.game_year
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -805,14 +824,24 @@ WHERE user_id = ?
 async fn get_projects_start(
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_scalar!(
+    let mut projects: Vec<_> = sqlx::query_as!(
+        ProjectRow,
         "
-SELECT name
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
 ORDER BY name COLLATE NOCASE ASC
 LIMIT ?
@@ -822,7 +851,7 @@ LIMIT ?
     .fetch_all(db)
     .await?
     .into_iter()
-    .map(Project)
+    .map(ProjectSummary::from)
     .collect();
 
     Ok(
@@ -831,7 +860,7 @@ LIMIT ?
                 projects.pop();
                 (
                     None,
-                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
                     projects
                 )
             }
@@ -849,14 +878,24 @@ LIMIT ?
 async fn get_projects_end(
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_scalar!(
+    let mut projects: Vec<_> = sqlx::query_as!(
+        ProjectRow,
         "
-SELECT name
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
 ORDER BY name COLLATE NOCASE DESC
 LIMIT ?
@@ -866,7 +905,7 @@ LIMIT ?
     .fetch_all(db)
     .await?
     .into_iter()
-    .map(Project)
+    .map(ProjectSummary::from)
     .collect();
 
     Ok(
@@ -874,7 +913,7 @@ LIMIT ?
             projects.pop();
             projects.reverse();
             (
-                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
                 None,
                 projects
             )
@@ -894,14 +933,24 @@ async fn get_projects_after(
     name: &str,
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_scalar!(
+    let mut projects: Vec<_> = sqlx::query_as!(
+        ProjectRow,
         "
-SELECT name
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
 WHERE name > ?
 ORDER BY name COLLATE NOCASE ASC
@@ -913,15 +962,15 @@ LIMIT ?
     .fetch_all(db)
     .await?
     .into_iter()
-    .map(Project)
+    .map(ProjectSummary::from)
     .collect();
 
     Ok(
         if projects.len() == limit_extra as usize {
             projects.pop();
             (
-                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
                 projects
             )
         }
@@ -934,7 +983,7 @@ LIMIT ?
         }
         else {
             (
-                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
+                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
                 None,
                 projects
             )
@@ -946,14 +995,24 @@ async fn get_projects_before(
     name: &str,
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<Project>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_scalar!(
+    let mut projects: Vec<_> = sqlx::query_as!(
+        ProjectRow,
         "
-SELECT name
+SELECT
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
 WHERE name < ?
 ORDER BY name COLLATE NOCASE DESC
@@ -965,7 +1024,7 @@ LIMIT ?
     .fetch_all(db)
     .await?
     .into_iter()
-    .map(Project)
+    .map(ProjectSummary::from)
     .collect();
 
     Ok(
@@ -973,8 +1032,8 @@ LIMIT ?
             projects.pop();
             projects.reverse();
             (
-                Some(SeekLink::new(Seek::Before(projects[0].0.clone()))),
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
                 projects
             )
         }
@@ -989,7 +1048,7 @@ LIMIT ?
             projects.reverse();
             (
                 None,
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].0.clone()))),
+                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
                 projects
             )
         }
@@ -1041,12 +1100,29 @@ mod test {
         }
     }
 
+    fn fake_project_summary(name: String) -> ProjectSummary {
+        ProjectSummary {
+            name: name,
+            description: "".into(),
+            revision: 1,
+            created_at: "".into(),
+            modified_at: "".into(),
+            tags: vec!(),
+            game: GameData {
+                title: "".into(),
+                title_sort_key: "".into(),
+                publisher: "".into(),
+                year: "".into()
+            }
+        }
+    }
+
     #[sqlx::test(fixtures("ten_projects"))]
     async fn get_projects_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let projects: Vec<Project> = "abcde".chars()
-            .map(|c| Project(c.into()))
+        let projects: Vec<ProjectSummary> = "abcde".chars()
+            .map(|c| fake_project_summary(c.into()))
             .collect();
 
         let prev_page = None;
@@ -1059,7 +1135,7 @@ mod test {
             core.get_projects(lp, limit).await.unwrap(),
             Projects {
                 projects,
-                 meta: Pagination {
+                meta: Pagination {
                     prev_page,
                     next_page,
                     total: 10
@@ -1072,15 +1148,15 @@ mod test {
     async fn get_projects_after_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let all_projects: Vec<Project> = "abcdefghij".chars()
-            .map(|c| Project(c.into()))
+        let all_projects: Vec<ProjectSummary> = "abcdefghij".chars()
+            .map(|c| fake_project_summary(c.into()))
             .collect();
 
         let lim = 5;
 
         // walk the limit window across the projects
         for i in 0..all_projects.len() {
-            let projects: Vec<Project> = all_projects.iter()
+            let projects: Vec<ProjectSummary> = all_projects.iter()
                 .skip(i + 1)
                 .take(lim)
                 .cloned()
@@ -1092,7 +1168,7 @@ mod test {
             else {
                 projects
                     .first()
-                    .map(|p| SeekLink::new(Seek::Before(p.0.clone())))
+                    .map(|p| SeekLink::new(Seek::Before(p.name.clone())))
             };
 
             let next_page = if i + lim + 1 >= all_projects.len() {
@@ -1101,10 +1177,10 @@ mod test {
             else {
                 projects
                     .last()
-                    .map(|p| SeekLink::new(Seek::After(p.0.clone())))
+                    .map(|p| SeekLink::new(Seek::After(p.name.clone())))
             };
 
-            let lp = Seek::After(all_projects[i].0.clone());
+            let lp = Seek::After(all_projects[i].name.clone());
             let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
@@ -1125,15 +1201,15 @@ mod test {
     async fn get_projects_before_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let all_projects: Vec<Project> = "abcdefghij".chars()
-            .map(|c| Project(c.into()))
+        let all_projects: Vec<ProjectSummary> = "abcdefghij".chars()
+            .map(|c| fake_project_summary(c.into()))
             .collect();
 
         let lim = 5;
 
         // walk the limit window across the projects
         for i in 0..all_projects.len() {
-            let projects: Vec<Project> = all_projects.iter()
+            let projects: Vec<ProjectSummary> = all_projects.iter()
                 .skip(i.saturating_sub(lim))
                 .take(i - i.saturating_sub(lim))
                 .cloned()
@@ -1145,7 +1221,7 @@ mod test {
             else {
                 projects
                     .first()
-                    .map(|p| SeekLink::new(Seek::Before(p.0.clone())))
+                    .map(|p| SeekLink::new(Seek::Before(p.name.clone())))
             };
 
             let next_page = if i == 0 {
@@ -1154,10 +1230,10 @@ mod test {
             else {
                 projects
                     .last()
-                    .map(|p| SeekLink::new(Seek::After(p.0.clone())))
+                    .map(|p| SeekLink::new(Seek::After(p.name.clone())))
             };
 
-            let lp = Seek::Before(all_projects[i].0.clone());
+            let lp = Seek::Before(all_projects[i].name.clone());
             let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
@@ -1178,8 +1254,8 @@ mod test {
     async fn get_projects_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let projects: Vec<Project> = "fghij".chars()
-            .map(|c| Project(c.into()))
+        let projects: Vec<ProjectSummary> = "fghij".chars()
+            .map(|c| fake_project_summary(c.into()))
             .collect();
 
         let prev_page = Some(SeekLink::new(Seek::Before("f".into())));
