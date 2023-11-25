@@ -79,7 +79,7 @@ pub struct ProjectData {
     pub name: String,
     pub description: String,
     pub revision: i64,
-    pub created_at: String, // TOOD: type for timestamp?
+    pub created_at: String,
     pub modified_at: String,
     pub tags: Vec<String>,
     pub game: GameData,
