@@ -376,8 +376,7 @@ mod test {
                         publisher: "Avalon Hill".into(),
                         year: "1983".into()
                     },
-                    owners: vec!("alice".into(), "bob".into()),
-                    packages: vec!()
+                    owners: vec!("alice".into(), "bob".into())
                 }
             )
         }
@@ -1014,8 +1013,7 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!()
+                owners: vec!("alice".into(), "bob".into())
             }
         );
     }
@@ -1211,8 +1209,7 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!()
+                owners: vec!("alice".into(), "bob".into())
             }
         );
     }

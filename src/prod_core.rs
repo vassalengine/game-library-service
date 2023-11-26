@@ -268,8 +268,7 @@ LIMIT 1
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                owners,
-                packages: Vec::new()
+                owners
             }
         )
     }
@@ -467,8 +466,7 @@ LIMIT 1
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                owners,
-                packages: Vec::new()
+                owners
             }
         )
     }
@@ -1336,8 +1334,7 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: Vec::new()
+                owners: vec!("alice".into(), "bob".into())
             }
         );
     }
@@ -1360,8 +1357,7 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: Vec::new()
+                owners: vec!("alice".into(), "bob".into())
             }
         );
     }
@@ -1384,8 +1380,7 @@ mod test {
                     publisher: "Otters!".into(),
                     year: "1993".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: Vec::new()
+                owners: vec!("alice".into(), "bob".into())
             }
         );
     }
@@ -1409,8 +1404,7 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into()),
-            packages: Vec::new()
+            owners: vec!("bob".into())
         };
 
         let cdata = ProjectDataPut {
@@ -1447,8 +1441,7 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into()),
-            packages: Vec::new()
+            owners: vec!("bob".into())
         };
 
         let cdata = ProjectDataPut {

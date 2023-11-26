@@ -83,8 +83,7 @@ pub struct ProjectData {
     pub modified_at: String,
     pub tags: Vec<String>,
     pub game: GameData,
-    pub owners: Vec<String>,
-    pub packages: Vec<PackageData>
+    pub owners: Vec<String>
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
