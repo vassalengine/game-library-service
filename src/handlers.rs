@@ -7,7 +7,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::Wrapper,
-    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
+    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User, VersionData},
     pagination::PaginationParams
 };
 
@@ -143,13 +143,9 @@ pub async fn package_version_get(
     pkg_id: PackageID,
     Path((_, _, pkg_version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
-) -> Result<Redirect, AppError>
+) -> Result<Json<VersionData>, AppError>
 {
-    Ok(
-        Redirect::to(
-            &core.get_package_version(proj_id.0, pkg_id.0, &pkg_version).await?
-        )
-    )
+    Ok(Json(core.get_package_version(proj_id.0, pkg_id.0, &pkg_version).await?))
 }
 
 pub async fn package_version_put(
@@ -159,6 +155,40 @@ pub async fn package_version_put(
 ) -> Result<(), AppError>
 {
     todo!();
+}
+
+/*
+pub async fn package_version_put(
+    _: Owner,
+    proj_id: ProjectID,
+    pkg_id: PackageID,
+    Path((_, _, pkg_version): Path<(String, String, String)>,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
+{
+    // 307 preserves the original method and body, which is essential
+    // for a PUT uploading a file; we cannot use a 303 here
+    Ok(
+        Redirect:temporary(
+
+    core.pacakge_version_put(proj_id.0, pkg_id.0, &pkg_version, ).await
+}
+*/
+
+pub async fn package_version_download_get(
+    proj_id: ProjectID,
+    pkg_id: PackageID,
+    Path((_, _, pkg_version)): Path<(String, String, String)>,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
+{
+    Ok(
+        Redirect::to(
+            &core.get_package_version_url(
+                proj_id.0, pkg_id.0, &pkg_version
+            ).await?
+        )
+    )
 }
 
 pub async fn readme_get(

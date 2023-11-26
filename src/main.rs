@@ -122,6 +122,10 @@ fn routes(api: &str) -> Router<AppState> {
             .put(handlers::package_version_put)
         )
         .route(
+            &format!("{api}/projects/:proj/packages/:pkg_name/:version/download"),
+            get(handlers::package_version_download_get)
+        )
+        .route(
             &format!("{api}/projects/:proj/readme"),
             get(handlers::readme_get)
         )
@@ -203,7 +207,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users},
+        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
         pagination::{Limit, Pagination, Seek, SeekLink}
     };
 
@@ -462,11 +466,35 @@ mod test {
             _proj_id: i64,
             _pkg_id: i64,
             version: &str
+        ) -> Result<VersionData, AppError>
+        {
+            match version {
+                "1.2.3" => Ok(
+                    VersionData {
+                        version: "1.2.3".into(),
+                        url: "".into(),
+                        size: 0,
+                        checksum: "".into(),
+                        published_at: "".into(),
+                        published_by: "".into(),
+                        requires: "".into(),
+                        authors: vec!()
+                    }
+                ),
+                _ => Err(AppError::NotAVersion)
+            }
+        }
+
+        async fn get_package_version_url(
+            &self,
+            _proj_id: i64,
+            _pkg_id: i64,
+            version: &str
         ) -> Result<String, AppError>
         {
             match version {
                 "1.2.3" => Ok("https://example.com/package-1.2.3".into()),
-                _ => Err(AppError::NotAPackage)
+                _ => Err(AppError::NotAVersion)
             }
         }
 
@@ -1354,11 +1382,14 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(response.status(), StatusCode::OK);
+        todo!();
+/*
         assert_eq!(
             response.headers().get(LOCATION).unwrap(),
             "https://example.com/package-1.2.3"
         );
+*/
     }
 
     #[tokio::test]
@@ -1411,7 +1442,79 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAVersion)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_download_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/download"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers().get(LOCATION).unwrap(),
+            "https://example.com/package-1.2.3"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_download_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/download"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAProject)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_download_not_a_package() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/download"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAPackage)
+        );
+    }
+
+    #[tokio::test]
+    async fn get_package_version_download_not_a_version() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus/download"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotAVersion)
         );
     }
 

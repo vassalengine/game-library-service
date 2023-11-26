@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users},
+    model::{PackageID, Packages, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users, VersionData},
     pagination::{Limit, Seek}
 };
 
@@ -132,6 +132,16 @@ pub trait Core {
     }
 
     async fn get_package_version(
+        &self,
+        _proj_id: i64,
+        _pkg_id: i64,
+        _version: &str
+    ) -> Result<VersionData, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_package_version_url(
         &self,
         _proj_id: i64,
         _pkg_id: i64,

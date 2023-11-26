@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users},
+    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink}
 };
 
@@ -59,6 +59,18 @@ impl From<ProjectRow> for ProjectSummary {
             }
         }
     }
+}
+
+#[derive(Deserialize)]
+struct VersionRow {
+    url: String,
+/*
+    size: u64,
+    checksum: String,
+    published_at: String,
+    published_by: String,
+    requires: String
+*/
 }
 
 #[async_trait]
@@ -490,28 +502,57 @@ ORDER BY name COLLATE NOCASE ASC
     async fn get_package(
         &self,
         _proj_id: i64,
-        pkg_id: i64
+        _pkg_id: i64
     ) -> Result<String, AppError>
     {
-        sqlx::query_scalar!(
-            "
-SELECT url
-FROM package_versions
-WHERE package_id = ?
-ORDER BY
-    version_major DESC,
-    version_minor DESC,
-    version_patch DESC
-LIMIT 1
-            ",
-            pkg_id
-        )
-        .fetch_optional(&self.db)
-        .await?
-        .ok_or(AppError::NotAVersion)
+        todo!();
     }
 
     async fn get_package_version(
+        &self,
+        _proj_id: i64,
+        pkg_id: i64,
+        version: &str
+    ) -> Result<VersionData, AppError>
+    {
+        let v = parse_version(version)?;
+
+        let row = sqlx::query_as!(
+            VersionRow,
+            "
+SELECT
+    url
+FROM package_versions
+WHERE package_id = ?
+    AND version_major = ?
+    AND version_minor = ?
+    AND version_patch = ?
+LIMIT 1
+            ",
+            pkg_id,
+            v.0,
+            v.1,
+            v.2
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .ok_or(AppError::NotAVersion)?;
+
+        Ok(
+            VersionData {
+                version: version.into(),
+                url: row.url,
+                size: 0,
+                checksum: "".into(),
+                published_at: "".into(),
+                published_by: "".into(),
+                requires: "".into(),
+                authors: vec!()
+            }
+        )
+    }
+
+    async fn get_package_version_url(
         &self,
         _proj_id: i64,
         pkg_id: i64,
@@ -1457,28 +1498,28 @@ mod test {
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_ok(pool: Pool) {
+    async fn get_package_version_url_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version(42, 1, "1.2.3").await.unwrap(),
+            core.get_package_version_url(42, 1, "1.2.3").await.unwrap(),
             "https://example.com/a_package-1.2.3"
         );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_malformed(pool: Pool) {
+    async fn get_package_version_url_malformed(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version(42, 1, "xyzzy").await.unwrap_err(),
+            core.get_package_version_url(42, 1, "xyzzy").await.unwrap_err(),
             AppError::MalformedVersion
         );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_not_a_version(pool: Pool) {
+    async fn get_package_version_url_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version(42, 1, "1.0.0").await.unwrap_err(),
+            core.get_package_version_url(42, 1, "1.0.0").await.unwrap_err(),
             AppError::NotAVersion
         );
     }
