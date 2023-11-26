@@ -339,34 +339,8 @@ mod test {
             Ok(
                 Projects {
                     projects: vec!(
-                        ProjectSummary {
-                            name: "project_a".into(),
-                            description: "".into(),
-                            revision: 1,
-                            created_at: "".into(),
-                            modified_at: "".into(),
-                            tags: vec!(),
-                            game: GameData {
-                                title: "".into(),
-                                title_sort_key: "".into(),
-                                publisher: "".into(),
-                                year: "".into()
-                            }
-                        },
-                        ProjectSummary {
-                            name: "project_b".into(),
-                            description: "".into(),
-                            revision: 1,
-                            created_at: "".into(),
-                            modified_at: "".into(),
-                            tags: vec!(),
-                            game: GameData {
-                                title: "".into(),
-                                title_sort_key: "".into(),
-                                publisher: "".into(),
-                                year: "".into()
-                            }
-                        }
+                        PROJECT_SUMMARY_A.clone(),
+                        PROJECT_SUMMARY_B.clone()
                     ),
                     meta: Pagination {
                         prev_page: Some(
