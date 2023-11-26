@@ -36,9 +36,12 @@ CREATE TABLE packages (
 CREATE TABLE package_versions (
   id INTEGER PRIMARY KEY NOT NULL,
   package_id INTEGER NOT NULL,
-  version_major INT NOT NULL,
-  version_minor INT NOT NULL,
-  version_patch INT NOT NULL,
+  version TEXT NOT NULL,
+  version_major INTEGER NOT NULL,
+  version_minor INTEGER NOT NULL,
+  version_patch INTEGER NOT NULL,
+  version_pre TEXT,
+  version_build TEXT,
   url TEXT NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
   FOREIGN KEY(package_id) REFERENCES packages(id)

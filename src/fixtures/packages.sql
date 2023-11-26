@@ -4,7 +4,15 @@ VALUES
   (2, 42, "b_package")
 ;
 
-INSERT INTO package_versions (id, package_id, version_major, version_minor, version_patch, url)
+INSERT INTO package_versions (
+  id,
+  package_id,
+  version,
+  version_major,
+  version_minor,
+  version_patch,
+  url
+)
 VALUES
-  (1, 1, 1, 2, 3, "https://example.com/a_package-1.2.3"),
-  (2, 1, 1, 2, 4, "https://example.com/a_package-1.2.4");
+  (1, 1, "1.2.3", 1, 2, 3, "https://example.com/a_package-1.2.3"),
+  (2, 1, "1.2.4", 1, 2, 4, "https://example.com/a_package-1.2.4");
