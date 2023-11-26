@@ -7,7 +7,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::Wrapper,
-    model::{Owned, OwnedOrNew, PackageID, Packages, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User, VersionData},
+    model::{Owned, OwnedOrNew, PackageID, PackageDataPut, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
     pagination::PaginationParams
 };
 
@@ -121,12 +121,13 @@ pub async fn players_remove(
     core.remove_player(&requester, proj_id.0).await
 }
 
-pub async fn packages_get(
-    proj_id: ProjectID,
-    State(core): State<CoreArc>
-) -> Result<Json<Packages>, AppError>
+pub async fn packages_put(
+    _proj_id: ProjectID,
+    State(_core): State<CoreArc>,
+    Wrapper(Json(_pkg_data)): Wrapper<Json<PackageDataPut>>
+) -> Result<(), AppError>
 {
-    Ok(Json(core.get_packages(proj_id.0).await?))
+    todo!();
 }
 
 pub async fn package_get(
@@ -143,9 +144,15 @@ pub async fn package_version_get(
     pkg_id: PackageID,
     Path((_, _, pkg_version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
-) -> Result<Json<VersionData>, AppError>
+) -> Result<Redirect, AppError>
 {
-    Ok(Json(core.get_package_version(proj_id.0, pkg_id.0, &pkg_version).await?))
+    Ok(
+        Redirect::to(
+            &core.get_package_version(
+                proj_id.0, pkg_id.0, &pkg_version
+            ).await?
+        )
+    )
 }
 
 pub async fn package_version_put(
@@ -174,22 +181,6 @@ pub async fn package_version_put(
     core.pacakge_version_put(proj_id.0, pkg_id.0, &pkg_version, ).await
 }
 */
-
-pub async fn package_version_download_get(
-    proj_id: ProjectID,
-    pkg_id: PackageID,
-    Path((_, _, pkg_version)): Path<(String, String, String)>,
-    State(core): State<CoreArc>
-) -> Result<Redirect, AppError>
-{
-    Ok(
-        Redirect::to(
-            &core.get_package_version_url(
-                proj_id.0, pkg_id.0, &pkg_version
-            ).await?
-        )
-    )
-}
 
 pub async fn readme_get(
     proj_id: ProjectID,

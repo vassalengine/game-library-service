@@ -75,6 +75,10 @@ pub struct PackageData {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct PackageDataPut {
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ProjectData {
     pub name: String,
     pub description: String,
@@ -83,7 +87,8 @@ pub struct ProjectData {
     pub modified_at: String,
     pub tags: Vec<String>,
     pub game: GameData,
-    pub owners: Vec<String>
+    pub owners: Vec<String>,
+    pub packages: Vec<PackageData>
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]

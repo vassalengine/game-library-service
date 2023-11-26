@@ -7,7 +7,7 @@ use sqlx::Executor;
 use crate::{
     core::Core,
     errors::AppError,
-    model::{GameData, Package, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
+    model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink}
 };
 
@@ -62,7 +62,15 @@ impl From<ProjectRow> for ProjectSummary {
 }
 
 #[derive(Deserialize)]
+struct PackageRow {
+    id: i64,
+    name: String,
+//    description: String
+}
+
+#[derive(Deserialize)]
 struct VersionRow {
+    version: String,
     url: String,
 /*
     size: u64,
@@ -254,6 +262,37 @@ LIMIT 1
             .map(|u| u.0)
             .collect();
 
+// TODO: gross, is there a better way to do this?
+        let package_rows = get_packages(&self.db, proj_id)
+            .await?;
+
+        let mut packages = Vec::with_capacity(package_rows.len());
+
+        for pr in package_rows {
+            let versions = get_versions(&self.db, pr.id)
+                .await?
+                .into_iter()
+                .map(|vr| VersionData {
+                    version: vr.version,
+                    url: vr.url,
+                    size: 0,
+                    checksum: "".into(),
+                    published_at: "".into(),
+                    published_by: "".into(),
+                    requires: "".into(),
+                    authors: vec!()
+                })
+                .collect();
+
+            packages.push(
+                PackageData {
+                    name: pr.name,
+                    description: "".into(),
+                    versions
+                }
+            );
+        }
+
         Ok(
             ProjectData {
                 name: proj_row.name,
@@ -261,14 +300,15 @@ LIMIT 1
                 revision: proj_row.revision,
                 created_at: proj_row.created_at,
                 modified_at: proj_row.modified_at,
-                tags: Vec::new(),
+                tags: vec!(),
                 game: GameData {
                     title: proj_row.game_title,
                     title_sort_key: proj_row.game_title_sort,
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                owners
+                owners,
+                packages
             }
         )
     }
@@ -466,11 +506,14 @@ LIMIT 1
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                owners
+                owners,
+// TODO
+                packages: vec!() 
             }
         )
     }
 
+/*
 // TODO: pagination
     async fn get_packages(
         &self,
@@ -495,15 +538,6 @@ ORDER BY name COLLATE NOCASE ASC
                 .collect()
             }
         )
-    }
-
-    async fn get_package(
-        &self,
-        _proj_id: i64,
-        _pkg_id: i64
-    ) -> Result<String, AppError>
-    {
-        todo!();
     }
 
     async fn get_package_version(
@@ -549,8 +583,33 @@ LIMIT 1
             }
         )
     }
+*/
 
-    async fn get_package_version_url(
+    async fn get_package(
+        &self,
+        _proj_id: i64,
+        pkg_id: i64
+    ) -> Result<String, AppError>
+    {
+        sqlx::query_scalar!(
+            "
+SELECT url
+FROM package_versions
+WHERE package_id = ?
+ORDER BY
+    version_major DESC,
+    version_minor DESC,
+    version_patch DESC
+LIMIT 1
+            ",
+            pkg_id
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .ok_or(AppError::NotAVersion)
+    }
+
+    async fn get_package_version(
         &self,
         _proj_id: i64,
         pkg_id: i64,
@@ -858,6 +917,45 @@ WHERE user_id = ?
     .await?;
 
     Ok(())
+}
+
+async fn get_packages(
+    db: &Pool,
+    proj_id: i64
+) -> Result<Vec<PackageRow>, sqlx::Error> {
+    sqlx::query_as!(
+        PackageRow,
+        "
+SELECT
+    id,
+    name
+FROM packages
+WHERE project_id = ?
+ORDER BY name COLLATE NOCASE ASC
+        ",
+        proj_id
+    )
+   .fetch_all(db)
+   .await
+}
+
+async fn get_versions(
+    db: &Pool,
+    pkg_id: i64
+) -> Result<Vec<VersionRow>, sqlx::Error> {
+    sqlx::query_as!(
+        VersionRow,
+        "
+SELECT
+    version,
+    url
+FROM package_versions
+WHERE package_id = ?
+        ",
+        pkg_id
+    )
+    .fetch_all(db)
+    .await
 }
 
 async fn get_projects_start(
@@ -1334,7 +1432,8 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into())
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!()
             }
         );
     }
@@ -1357,7 +1456,8 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into())
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!()
             }
         );
     }
@@ -1380,7 +1480,8 @@ mod test {
                     publisher: "Otters!".into(),
                     year: "1993".into()
                 },
-                owners: vec!("alice".into(), "bob".into())
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!()
             }
         );
     }
@@ -1404,7 +1505,8 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into())
+            owners: vec!("bob".into()),
+            packages: vec!()
         };
 
         let cdata = ProjectDataPut {
@@ -1441,7 +1543,8 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into())
+            owners: vec!("bob".into()),
+            packages: vec!()
         };
 
         let cdata = ProjectDataPut {
@@ -1468,20 +1571,6 @@ mod test {
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_packages_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_packages(42).await.unwrap(),
-            Packages {
-                packages: vec!(
-                    Package("a_package".into()),
-                    Package("b_package".into())
-                )
-            }
-        );
-    }
-
-    #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -1491,28 +1580,28 @@ mod test {
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_url_ok(pool: Pool) {
+    async fn get_package_version_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version_url(42, 1, "1.2.3").await.unwrap(),
+            core.get_package_version(42, 1, "1.2.3").await.unwrap(),
             "https://example.com/a_package-1.2.3"
         );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_url_malformed(pool: Pool) {
+    async fn get_package_version_malformed(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version_url(42, 1, "xyzzy").await.unwrap_err(),
+            core.get_package_version(42, 1, "xyzzy").await.unwrap_err(),
             AppError::MalformedVersion
         );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_url_not_a_version(pool: Pool) {
+    async fn get_package_version_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package_version_url(42, 1, "1.0.0").await.unwrap_err(),
+            core.get_package_version(42, 1, "1.0.0").await.unwrap_err(),
             AppError::NotAVersion
         );
     }

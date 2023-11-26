@@ -4,7 +4,7 @@ use axum::{
     Router, Server,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing::{get, post}
+    routing::{get, post, put}
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,7 @@ fn routes(api: &str) -> Router<AppState> {
         )
         .route(
             &format!("{api}/projects/:proj/packages"),
-            get(handlers::packages_get)
+            put(handlers::packages_put)
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name"),
@@ -120,10 +120,6 @@ fn routes(api: &str) -> Router<AppState> {
             &format!("{api}/projects/:proj/packages/:pkg_name/:version"),
             get(handlers::package_version_get)
             .put(handlers::package_version_put)
-        )
-        .route(
-            &format!("{api}/projects/:proj/packages/:pkg_name/:version/download"),
-            get(handlers::package_version_download_get)
         )
         .route(
             &format!("{api}/projects/:proj/readme"),
@@ -208,7 +204,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Package, PackageID, Packages, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
+        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
         pagination::{Limit, Pagination, Seek, SeekLink}
     };
 
@@ -376,7 +372,25 @@ mod test {
                         publisher: "Avalon Hill".into(),
                         year: "1983".into()
                     },
-                    owners: vec!("alice".into(), "bob".into())
+                    owners: vec!("alice".into(), "bob".into()),
+                    packages: vec!(
+                        PackageData {
+                            name: "".into(),
+                            description: "".into(),
+                            versions: vec!(
+                                VersionData {
+                                    version: "".into(),
+                                    url: "".into(),
+                                    size: 0,
+                                    checksum: "".into(),
+                                    published_at: "".into(),
+                                    published_by: "".into(),
+                                    requires: "".into(),
+                                    authors: vec!()
+                                }
+                            )
+                        }
+                    )
                 }
             )
         }
@@ -412,6 +426,7 @@ mod test {
             }
         }
 
+/*
         async fn get_packages(
             &self,
             _proj_id: i64,
@@ -426,6 +441,7 @@ mod test {
                 }
             )
         }
+*/
 
         async fn get_package(
             &self,
@@ -436,6 +452,7 @@ mod test {
             Ok("https://example.com/package".into())
         }
 
+/*
         async fn get_package_version(
             &self,
             _proj_id: i64,
@@ -459,8 +476,9 @@ mod test {
                 _ => Err(AppError::NotAVersion)
             }
         }
+*/
 
-        async fn get_package_version_url(
+        async fn get_package_version(
             &self,
             _proj_id: i64,
             _pkg_id: i64,
@@ -1013,7 +1031,26 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into())
+                owners: vec!("alice".into(), "bob".into()),
+// TODO: fill in more
+                packages: vec!(
+                    PackageData {
+                        name: "".into(),
+                        description: "".into(),
+                        versions: vec!(
+                            VersionData {
+                                version: "".into(),
+                                url: "".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!()
+                            }
+                        )
+                    }
+                )
             }
         );
     }
@@ -1209,7 +1246,25 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into())
+                owners: vec!("alice".into(), "bob".into()),
+                packages: vec!(
+                    PackageData {
+                        name: "".into(),
+                        description: "".into(),
+                        versions: vec!(
+                            VersionData {
+                                version: "".into(),
+                                url: "".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!()
+                            }
+                        )
+                    }
+                )
             }
         );
     }
@@ -1247,46 +1302,6 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotARevision)
-        );
-    }
-
-    #[tokio::test]
-    async fn get_packages_ok() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(body_as::<Packages>(response).await,
-            Packages {
-                packages: vec!(
-                    Package("a".into()),
-                    Package("b".into())
-                )
-            }
-        );
-    }
-
-    #[tokio::test]
-    async fn get_packages_not_a_project() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
         );
     }
 
@@ -1355,14 +1370,11 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::OK);
-        todo!();
-/*
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
         assert_eq!(
             response.headers().get(LOCATION).unwrap(),
             "https://example.com/package-1.2.3"
         );
-*/
     }
 
     #[tokio::test]
@@ -1388,78 +1400,6 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAPackage)
-        );
-    }
-
-    #[tokio::test]
-    async fn get_package_version_not_a_version() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAVersion)
-        );
-    }
-
-    #[tokio::test]
-    async fn get_package_version_download_ok() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/download"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::SEE_OTHER);
-        assert_eq!(
-            response.headers().get(LOCATION).unwrap(),
-            "https://example.com/package-1.2.3"
-        );
-    }
-
-    #[tokio::test]
-    async fn get_package_version_download_not_a_project() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/download"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
-        );
-    }
-
-    #[tokio::test]
-    async fn get_package_version_download_not_a_package() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/download"))
                 .body(Body::empty())
                 .unwrap()
@@ -1474,7 +1414,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_package_version_download_not_a_version() {
+    async fn get_package_version_not_a_version() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
