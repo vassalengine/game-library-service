@@ -50,7 +50,7 @@ impl From<ProjectRow> for ProjectSummary {
             revision: r.revision,
             created_at: r.created_at,
             modified_at: r.modified_at,
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: r.game_title,
                 title_sort_key: r.game_title_sort,
@@ -280,7 +280,7 @@ LIMIT 1
                     published_at: "".into(),
                     published_by: "".into(),
                     requires: "".into(),
-                    authors: vec!()
+                    authors: vec![]
                 })
                 .collect();
 
@@ -300,7 +300,7 @@ LIMIT 1
                 revision: proj_row.revision,
                 created_at: proj_row.created_at,
                 modified_at: proj_row.modified_at,
-                tags: vec!(),
+                tags: vec![],
                 game: GameData {
                     title: proj_row.game_title,
                     title_sort_key: proj_row.game_title_sort,
@@ -508,7 +508,7 @@ LIMIT 1
                 },
                 owners,
 // TODO
-                packages: vec!() 
+                packages: vec![]
             }
         )
     }
@@ -579,7 +579,7 @@ LIMIT 1
                 published_at: "".into(),
                 published_by: "".into(),
                 requires: "".into(),
-                authors: vec!()
+                authors: vec![]
             }
         )
     }
@@ -1244,7 +1244,7 @@ mod test {
             revision: 1,
             created_at: "".into(),
             modified_at: "".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "".into(),
                 title_sort_key: "".into(),
@@ -1432,8 +1432,8 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!()
+                owners: vec!["alice".into(), "bob".into()],
+                packages: vec![]
             }
         );
     }
@@ -1456,8 +1456,8 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!()
+                owners: vec!["alice".into(), "bob".into()],
+                packages: vec![]
             }
         );
     }
@@ -1480,8 +1480,8 @@ mod test {
                     publisher: "Otters!".into(),
                     year: "1993".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!()
+                owners: vec!["alice".into(), "bob".into()],
+                packages: vec![]
             }
         );
     }
@@ -1505,13 +1505,13 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into()),
-            packages: vec!()
+            owners: vec!["bob".into()],
+            packages: vec![]
         };
 
         let cdata = ProjectDataPut {
             description: data.description.clone(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: data.game.title.clone(),
                 title_sort_key: data.game.title_sort_key.clone(),
@@ -1543,13 +1543,13 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            owners: vec!("bob".into()),
-            packages: vec!()
+            owners: vec!["bob".into()],
+            packages: vec![]
         };
 
         let cdata = ProjectDataPut {
             description: new_data.description.clone(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: new_data.game.title.clone(),
                 title_sort_key: new_data.game.title_sort_key.clone(),
@@ -1611,7 +1611,7 @@ mod test {
         let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_owners(42).await.unwrap(),
-            Users { users: vec!(User("bob".into())) }
+            Users { users: vec![User("bob".into())] }
         );
     }
 
@@ -1630,15 +1630,15 @@ mod test {
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec!(User("alice".into())) };
+        let users = Users { users: vec![User("alice".into())] };
         core.add_owners(&users, 42).await.unwrap();
         assert_eq!(
             core.get_owners(42).await.unwrap(),
             Users {
-                users: vec!(
+                users: vec![
                     User("alice".into()),
                     User("bob".into())
-                )
+                ]
             }
         );
     }
@@ -1646,18 +1646,18 @@ mod test {
     #[sqlx::test(fixtures("projects", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec!(User("bob".into())) };
+        let users = Users { users: vec![User("bob".into())] };
         core.remove_owners(&users, 42).await.unwrap();
         assert_eq!(
             core.get_owners(42).await.unwrap(),
-            Users { users: vec!(User("alice".into())) }
+            Users { users: vec![User("alice".into())] }
         );
     }
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec!(User("bob".into())) };
+        let users = Users { users: vec![User("bob".into())] };
         assert_eq!(
             core.remove_owners(&users, 1).await.unwrap_err(),
             AppError::CannotRemoveLastOwner
@@ -1670,10 +1670,10 @@ mod test {
         assert_eq!(
             core.get_players(42).await.unwrap(),
             Users {
-                users: vec!(
+                users: vec![
                     User("alice".into()),
                     User("bob".into())
-                )
+                ]
             }
         );
     }
@@ -1685,11 +1685,11 @@ mod test {
         assert_eq!(
             core.get_players(42).await.unwrap(),
             Users {
-                users: vec!(
+                users: vec![
                     User("alice".into()),
                     User("bob".into()),
                     User("chuck".into())
-                )
+                ]
             }
         );
     }
@@ -1700,7 +1700,7 @@ mod test {
         core.remove_player(&User("bob".into()), 42).await.unwrap();
         assert_eq!(
             core.get_players(42).await.unwrap(),
-            Users { users: vec!(User("alice".into())) }
+            Users { users: vec![User("alice".into())] }
         );
     }
 

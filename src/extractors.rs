@@ -613,9 +613,9 @@ mod test {
         {
             Ok(
                 Users {
-                    users: vec!(
+                    users: vec![
                         User("bob".into())
-                    )
+                    ]
                 }
             )
         }

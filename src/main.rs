@@ -231,7 +231,7 @@ mod test {
             revision: 1,
             created_at: "".into(),
             modified_at: "".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "".into(),
                 title_sort_key: "".into(),
@@ -248,7 +248,7 @@ mod test {
             revision: 1,
             created_at: "".into(),
             modified_at: "".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "".into(),
                 title_sort_key: "".into(),
@@ -320,10 +320,10 @@ mod test {
         {
             Ok(
                 Users {
-                    users: vec!(
+                    users: vec![
                         User("alice".into()),
                         User("bob".into())
-                    )
+                    ]
                 }
             )
         }
@@ -336,10 +336,10 @@ mod test {
         {
             Ok(
                 Projects {
-                    projects: vec!(
+                    projects: vec![
                         PROJECT_SUMMARY_A.clone(),
                         PROJECT_SUMMARY_B.clone()
-                    ),
+                    ],
                     meta: Pagination {
                         prev_page: Some(
                             SeekLink::new(Seek::Before("project_a".into()))
@@ -365,19 +365,19 @@ mod test {
                     revision: 1,
                     created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
                     modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                    tags: vec!(),
+                    tags: vec![],
                     game: GameData {
                         title: "Empires in Arms".into(),
                         title_sort_key: "Empires in Arms".into(),
                         publisher: "Avalon Hill".into(),
                         year: "1983".into()
                     },
-                    owners: vec!("alice".into(), "bob".into()),
-                    packages: vec!(
+                    owners: vec!["alice".into(), "bob".into()],
+                    packages: vec![
                         PackageData {
                             name: "".into(),
                             description: "".into(),
-                            versions: vec!(
+                            versions: vec![
                                 VersionData {
                                     version: "".into(),
                                     url: "".into(),
@@ -386,11 +386,11 @@ mod test {
                                     published_at: "".into(),
                                     published_by: "".into(),
                                     requires: "".into(),
-                                    authors: vec!()
+                                    authors: vec![]
                                 }
-                            )
+                            ]
                         }
-                    )
+                    ]
                 }
             )
         }
@@ -434,10 +434,10 @@ mod test {
         {
             Ok(
                 Packages {
-                    packages: vec!(
+                    packages: vec![
                         Package("a".into()),
                         Package("b".into())
-                    )
+                    ]
                 }
             )
         }
@@ -470,7 +470,7 @@ mod test {
                         published_at: "".into(),
                         published_by: "".into(),
                         requires: "".into(),
-                        authors: vec!()
+                        authors: vec![]
                     }
                 ),
                 _ => Err(AppError::NotAVersion)
@@ -498,10 +498,10 @@ mod test {
         {
             Ok(
                 Users {
-                    users: vec!(
+                    users: vec![
                         User("player 1".into()),
                         User("player 2".into())
-                    )
+                    ]
                 }
             )
         }
@@ -641,10 +641,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -673,10 +673,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -779,10 +779,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -813,10 +813,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -847,10 +847,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -881,10 +881,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -953,10 +953,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -987,10 +987,10 @@ mod test {
         assert_eq!(
             body_as::<Projects>(response).await,
             Projects {
-                projects: vec!(
+                projects: vec![
                     PROJECT_SUMMARY_A.clone(),
                     PROJECT_SUMMARY_B.clone()
-                ),
+                ],
                 meta: Pagination {
                     prev_page: Some(
                         SeekLink::new(Seek::Before("project_a".into()))
@@ -1024,20 +1024,20 @@ mod test {
                 revision: 1,
                 created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
                 modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                tags: vec!(),
+                tags: vec![],
                 game: GameData {
                     title: "Empires in Arms".into(),
                     title_sort_key: "Empires in Arms".into(),
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
+                owners: vec!["alice".into(), "bob".into()],
 // TODO: fill in more
-                packages: vec!(
+                packages: vec![
                     PackageData {
                         name: "".into(),
                         description: "".into(),
-                        versions: vec!(
+                        versions: vec![
                             VersionData {
                                 version: "".into(),
                                 url: "".into(),
@@ -1046,11 +1046,11 @@ mod test {
                                 published_at: "".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
-                                authors: vec!()
+                                authors: vec![]
                             }
-                        )
+                        ]
                     }
-                )
+                ]
             }
         );
     }
@@ -1077,7 +1077,7 @@ mod test {
     async fn put_project_create() {
         let proj_data = ProjectDataPut {
             description: "A module for Empires in Arms".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
@@ -1105,7 +1105,7 @@ mod test {
     async fn put_project_update() {
         let proj_data = ProjectDataPut {
             description: "A module for Empires in Arms".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
@@ -1133,7 +1133,7 @@ mod test {
     async fn put_project_unauth() {
         let proj_data = ProjectDataPut {
             description: "A module for Empires in Arms".into(),
-            tags: vec!(),
+            tags: vec![],
             game: GameData {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
@@ -1239,19 +1239,19 @@ mod test {
                 revision: 1,
                 created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
                 modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                tags: vec!(),
+                tags: vec![],
                 game: GameData {
                     title: "Empires in Arms".into(),
                     title_sort_key: "Empires in Arms".into(),
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                owners: vec!("alice".into(), "bob".into()),
-                packages: vec!(
+                owners: vec!["alice".into(), "bob".into()],
+                packages: vec![
                     PackageData {
                         name: "".into(),
                         description: "".into(),
-                        versions: vec!(
+                        versions: vec![
                             VersionData {
                                 version: "".into(),
                                 url: "".into(),
@@ -1260,11 +1260,11 @@ mod test {
                                 published_at: "".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
-                                authors: vec!()
+                                authors: vec![]
                             }
-                        )
+                        ]
                     }
-                )
+                ]
             }
         );
     }
@@ -1446,10 +1446,10 @@ mod test {
         assert_eq!(
             body_as::<Users>(response).await,
             Users {
-                users: vec!(
+                users: vec![
                     User("alice".into()),
                     User("bob".into())
-                )
+                ]
             }
         );
     }
@@ -1719,10 +1719,10 @@ mod test {
         assert_eq!(
             body_as::<Users>(response).await,
             Users {
-                users: vec!(
+                users: vec![
                     User("player 1".into()),
                     User("player 2".into())
-                )
+                ]
             }
         );
     }
