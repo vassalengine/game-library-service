@@ -200,6 +200,7 @@ mod test {
             header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
+//    use http_body_util::BodyExt;
     use mime::{APPLICATION_JSON, TEXT_PLAIN};
     use once_cell::sync::Lazy;
     use tower::ServiceExt; // for oneshot
@@ -216,6 +217,7 @@ mod test {
 
     async fn body_bytes(r: Response) -> Bytes {
         hyper::body::to_bytes(r.into_body()).await.unwrap()
+//        r.into_body().collect().await.unwrap().to_bytes()
     }
 
     async fn body_as<D: for<'a> Deserialize<'a>>(r: Response) -> D {
