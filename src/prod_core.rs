@@ -282,6 +282,7 @@ LIMIT 1
                     published_at: "".into(),
                     published_by: "".into(),
                     requires: "".into(),
+// TODO: get authors
                     authors: vec![]
                 })
                 .collect();
@@ -315,9 +316,11 @@ LIMIT 1
         )
     }
 
-// TODO: require project names to match [A-Za-z][A-Za-z0-9_-]{,63}?
+// TODO: require project names to match [A-Za-z0-9][A-Za-z0-9_-]{,63}?
 // TODO: maybe also compare case-insensitively and equate - and _?
 // TODO: length limits on strings
+// TODO: require package names to match [A-Za-z0-9][A-Za-z0-9_-]{,63}?
+// TODO: packages might need display names?
 
     async fn create_project(
         &self,
@@ -515,6 +518,7 @@ LIMIT 1
         )
     }
 
+// TODO: figure out how to order version_pre
     async fn get_package(
         &self,
         _proj_id: i64,
@@ -1397,6 +1401,7 @@ mod test {
         );
     }
 
+// TODO: need to show pacakges as they were?
     #[sqlx::test(fixtures("projects", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         let core = make_core(pool, fake_now);

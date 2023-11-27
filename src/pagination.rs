@@ -47,6 +47,8 @@ impl TryFrom<&str> for Limit {
     }
 }
 
+// TODO: add order by value for Seek?
+
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub enum Seek {

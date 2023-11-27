@@ -19,6 +19,7 @@ pub enum AppError {
     Unauthorized
 }
 
+// TODO: better error messsages
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

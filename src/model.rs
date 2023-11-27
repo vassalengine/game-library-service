@@ -2,6 +2,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::Pagination;
 
+// TODO: rationalize struct naming---names should reflect whether the
+// structs are input or ouptut
+
+// TODO: User should become a newtype so that you can't construct one
+// without having verified that the user exists
+//
+// TODO: Package should either become a newtype if we verify that it
+// the package exists, or become just a string if not
+//
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct User(pub String);
 
@@ -68,6 +78,7 @@ pub struct VersionData {
     pub authors: Vec<String>
 }
 
+// TODO: probably needs slug
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,

@@ -224,6 +224,8 @@ mod test {
         body_bytes(r).await.is_empty()
     }
 
+// TODO: fill in the fields
+// TODO: can these be declared some other way?
     static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(|| {
         ProjectSummary {
             name: "project_a".into(),
