@@ -1,7 +1,7 @@
 #![feature(async_fn_in_trait)]
 
 use axum::{
-    Router, Server,
+    Router, serve,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing::{get, post, put}
@@ -13,6 +13,7 @@ use std::{
     net::SocketAddr,
     sync::Arc
 };
+use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
@@ -179,8 +180,8 @@ async fn main() {
         .with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
-    Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = TcpListener::bind(addr).await.unwrap();
+    serve(listener, app)
         .await
         .unwrap();
 }
@@ -196,7 +197,7 @@ mod test {
             header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
-//    use http_body_util::BodyExt;
+    use http_body_util::BodyExt;
     use mime::{APPLICATION_JSON, TEXT_PLAIN};
     use once_cell::sync::Lazy;
     use tower::ServiceExt; // for oneshot
@@ -212,8 +213,7 @@ mod test {
     const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
 
     async fn body_bytes(r: Response) -> Bytes {
-        hyper::body::to_bytes(r.into_body()).await.unwrap()
-//        r.into_body().collect().await.unwrap().to_bytes()
+        r.into_body().collect().await.unwrap().to_bytes()
     }
 
     async fn body_as<D: for<'a> Deserialize<'a>>(r: Response) -> D {

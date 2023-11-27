@@ -1,16 +1,16 @@
 use axum::{
-    async_trait, RequestPartsExt, TypedHeader,
+    async_trait, RequestPartsExt,
     extract::{
-        FromRequest, FromRequestParts, FromRef, Path, State,
+        FromRequest, FromRequestParts, FromRef, Path, Request, State,
         rejection::{JsonRejection, QueryRejection}
     },
+    http::request::Parts
+};
+use axum_extra::{
+    TypedHeader,
     headers::{
         Authorization,
         authorization::Bearer
-    },
-    http::{
-        Request,
-        request::Parts
     }
 };
 
@@ -248,16 +248,15 @@ where
 }
 
 #[async_trait]
-impl<S, B, T> FromRequest<S, B> for Wrapper<T>
+impl<S, T> FromRequest<S> for Wrapper<T>
 where
-    B: Send + 'static,
     S: Send + Sync,
-    T: FromRequest<S, B>,
-    AppError: From<<T as FromRequest<S, B>>::Rejection>
+    T: FromRequest<S>,
+    AppError: From<<T as FromRequest<S>>::Rejection>
 {
     type Rejection = AppError;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         Ok(Wrapper(T::from_request(req, state).await?))
     }
 }
@@ -268,9 +267,9 @@ mod test {
 
     use axum::{
         Router,
-        body::{boxed, Empty},
+        body::Body,
         http::{
-            Method, Request, StatusCode,
+            Method, StatusCode,
             header::AUTHORIZATION
         },
         routing::get
@@ -549,7 +548,7 @@ mod test {
                 Request::builder()
                     .method(Method::GET)
                     .uri("/a_project")
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
             )
             .await
@@ -569,7 +568,7 @@ mod test {
                 Request::builder()
                     .method(Method::GET)
                     .uri("/not_a_project")
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
             )
             .await
@@ -651,7 +650,7 @@ mod test {
                     .method(Method::GET)
                     .uri("/a_project")
                     .header(AUTHORIZATION, token(KEY, &exp))
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
             )
             .await
@@ -678,7 +677,7 @@ mod test {
                     .method(Method::GET)
                     .uri("/a_project")
                     .header(AUTHORIZATION, token(KEY, &exp))
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
             )
             .await
@@ -701,7 +700,7 @@ mod test {
                     .method(Method::GET)
                     .uri("/a_project")
                     .header(AUTHORIZATION, token(KEY, &exp))
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
              )
              .await
@@ -724,7 +723,7 @@ mod test {
                     .method(Method::GET)
                     .uri("/a_project")
                     .header(AUTHORIZATION, token(b"wrong key", &exp))
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
              )
              .await
@@ -745,7 +744,7 @@ mod test {
                     .method(Method::GET)
                     .uri("/a_project")
                     .header(AUTHORIZATION, "")
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
              )
              .await
@@ -765,7 +764,7 @@ mod test {
                 Request::builder()
                     .method(Method::GET)
                     .uri("/a_project")
-                    .body(boxed(Empty::new()))
+                    .body(Body::empty())
                     .unwrap()
              )
              .await
