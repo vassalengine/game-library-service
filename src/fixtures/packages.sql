@@ -11,8 +11,9 @@ INSERT INTO package_versions (
   version_major,
   version_minor,
   version_patch,
-  url
+  url,
+  filename
 )
 VALUES
-  (1, 1, "1.2.3", 1, 2, 3, "https://example.com/a_package-1.2.3"),
-  (2, 1, "1.2.4", 1, 2, 4, "https://example.com/a_package-1.2.4");
+  (1, 1, "1.2.3", 1, 2, 3, "https://example.com/a_package-1.2.3", "a_package-1.2.3"),
+  (2, 1, "1.2.4", 1, 2, 4, "https://example.com/a_package-1.2.4", "a_package-1.2.4");

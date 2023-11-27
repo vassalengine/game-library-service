@@ -380,6 +380,7 @@ mod test {
                             versions: vec![
                                 VersionData {
                                     version: "".into(),
+                                    filename: "".into(),
                                     url: "".into(),
                                     size: 0,
                                     checksum: "".into(),
@@ -464,6 +465,7 @@ mod test {
                 "1.2.3" => Ok(
                     VersionData {
                         version: "1.2.3".into(),
+                        filename: "".into(),
                         url: "".into(),
                         size: 0,
                         checksum: "".into(),
@@ -1040,6 +1042,7 @@ mod test {
                         versions: vec![
                             VersionData {
                                 version: "".into(),
+                                filename: "".into(),
                                 url: "".into(),
                                 size: 0,
                                 checksum: "".into(),
@@ -1254,6 +1257,7 @@ mod test {
                         versions: vec![
                             VersionData {
                                 version: "".into(),
+                                filename: "".into(),
                                 url: "".into(),
                                 size: 0,
                                 checksum: "".into(),

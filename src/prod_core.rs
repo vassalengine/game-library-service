@@ -71,6 +71,7 @@ struct PackageRow {
 #[derive(Deserialize)]
 struct VersionRow {
     version: String,
+    filename: String,
     url: String,
 /*
     size: u64,
@@ -274,6 +275,7 @@ LIMIT 1
                 .into_iter()
                 .map(|vr| VersionData {
                     version: vr.version,
+                    filename: vr.filename,
                     url: vr.url,
                     size: 0,
                     checksum: "".into(),
@@ -876,6 +878,7 @@ async fn get_versions(
         "
 SELECT
     version,
+    filename,
     url
 FROM package_versions
 WHERE package_id = ?

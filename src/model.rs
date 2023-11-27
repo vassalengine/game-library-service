@@ -58,6 +58,7 @@ pub struct GameData {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct VersionData {
     pub version: String,
+    pub filename: String,
     pub url: String,
     pub size: u64,
     pub checksum: String,
