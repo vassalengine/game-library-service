@@ -1178,7 +1178,7 @@ mod test {
 
     fn fake_project_summary(name: String) -> ProjectSummary {
         ProjectSummary {
-            name: name,
+            name,
             description: "".into(),
             revision: 1,
             created_at: "".into(),
