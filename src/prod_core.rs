@@ -951,6 +951,10 @@ SELECT
     url
 FROM package_versions
 WHERE package_id = ?
+ORDER BY
+    version_major DESC,
+    version_minor DESC,
+    version_patch DESC
         ",
         pkg_id
     )
