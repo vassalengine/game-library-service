@@ -15,10 +15,12 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
-pub async fn get_project_id(
-    db: &Pool,
+pub async fn get_project_id<'e, E>(
+    ex: E,
     project: &str
 ) -> Result<ProjectID, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     sqlx::query_scalar!(
         "
@@ -28,15 +30,17 @@ WHERE name = ?
         ",
         project
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .map(ProjectID)
     .ok_or(AppError::NotAProject)
 }
 
-pub async fn get_project_count(
-    db: &Pool
+pub async fn get_project_count<'e, E>(
+    ex: E
 ) -> Result<i32, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query_scalar!(
@@ -45,15 +49,18 @@ SELECT COUNT(1)
 FROM projects
             "
         )
-        .fetch_one(db)
+        .fetch_one(ex)
         .await?
     )
 }
 
-pub async fn get_user_id(
-    db: &Pool,
+pub async fn get_user_id<'e, E>(
+    ex: E,
     user: &str
-) -> Result<i64, AppError> {
+) -> Result<i64, AppError>
+where
+    E: Executor<'e, Database = Database>
+{
     sqlx::query_scalar!(
         "
 SELECT id
@@ -63,15 +70,17 @@ LIMIT 1
         ",
         user
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotAUser)
 }
 
-pub async fn get_owners(
-    db: &Pool,
+pub async fn get_owners<'e, E>(
+    ex: E,
     proj_id: i64
 ) -> Result<Users, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         Users {
@@ -88,7 +97,7 @@ ORDER BY users.username
                 ",
                 proj_id
             )
-            .fetch_all(db)
+            .fetch_all(ex)
             .await?
             .into_iter()
             .map(User)
@@ -97,11 +106,13 @@ ORDER BY users.username
     )
 }
 
-pub async fn user_is_owner(
-    db: &Pool,
+pub async fn user_is_owner<'e, E>(
+    ex: E,
     user: &User,
     proj_id: i64
 ) -> Result<bool, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query!(
@@ -116,7 +127,7 @@ LIMIT 1
             user.0,
             proj_id
         )
-        .fetch_optional(db)
+        .fetch_optional(ex)
         .await?
         .is_some()
     )
@@ -225,10 +236,12 @@ impl From<ProjectRow> for ProjectSummary {
     }
 }
 
-pub async fn get_projects_start_window(
-    db: &Pool,
+pub async fn get_projects_start_window<'e, E>(
+    ex: E,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query_as!(
@@ -250,7 +263,7 @@ pub async fn get_projects_start_window(
             ",
             limit
         )
-        .fetch_all(db)
+        .fetch_all(ex)
         .await?
         .into_iter()
         .map(ProjectSummary::from)
@@ -258,10 +271,12 @@ pub async fn get_projects_start_window(
     )
 }
 
-pub async fn get_projects_end_window(
-    db: &Pool,
+pub async fn get_projects_end_window<'e, E>(
+    ex: E,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query_as!(
@@ -283,7 +298,7 @@ LIMIT ?
             ",
             limit
         )
-        .fetch_all(db)
+        .fetch_all(ex)
         .await?
         .into_iter()
         .map(ProjectSummary::from)
@@ -291,11 +306,13 @@ LIMIT ?
     )
 }
 
-pub async fn get_projects_after_window(
-    db: &Pool,
+pub async fn get_projects_after_window<'e, E>(
+    ex: E,
     name: &str,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query_as!(
@@ -319,7 +336,7 @@ LIMIT ?
             name,
             limit
         )
-        .fetch_all(db)
+        .fetch_all(ex)
         .await?
         .into_iter()
         .map(ProjectSummary::from)
@@ -327,11 +344,13 @@ LIMIT ?
     )
 }
 
-pub async fn get_projects_before_window(
-    db: &Pool,
+pub async fn get_projects_before_window<'e, E>(
+    ex: E,
     name: &str,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         sqlx::query_as!(
@@ -355,7 +374,7 @@ LIMIT ?
             name,
             limit
         )
-        .fetch_all(db)
+        .fetch_all(ex)
         .await?
         .into_iter()
         .map(ProjectSummary::from)
@@ -465,10 +484,12 @@ WHERE id = ?
     Ok(())
 }
 
-pub async fn get_project_row(
-    db: &Pool,
-    proj_id: i64,
+pub async fn get_project_row<'e, E>(
+    ex: E,
+    proj_id: i64
 ) -> Result<ProjectRow, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     sqlx::query_as!(
         ProjectRow,
@@ -489,7 +510,7 @@ LIMIT 1
         ",
         proj_id
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotAProject)
 }
@@ -566,10 +587,13 @@ pub struct PackageRow {
 //    description: String
 }
 
-pub async fn get_packages(
-    db: &Pool,
+pub async fn get_packages<'e, E>(
+    ex: E,
     proj_id: i64
-) -> Result<Vec<PackageRow>, AppError> {
+) -> Result<Vec<PackageRow>, AppError>
+where
+    E: Executor<'e, Database = Database>
+{
     Ok(
         sqlx::query_as!(
             PackageRow,
@@ -583,7 +607,7 @@ ORDER BY name COLLATE NOCASE ASC
             ",
             proj_id
         )
-       .fetch_all(db)
+       .fetch_all(ex)
        .await?
     )
 }
@@ -602,10 +626,13 @@ pub struct VersionRow {
 */
 }
 
-pub async fn get_versions(
-    db: &Pool,
+pub async fn get_versions<'e, E>(
+    ex: E,
     pkg_id: i64
-) -> Result<Vec<VersionRow>, AppError> {
+) -> Result<Vec<VersionRow>, AppError>
+where
+    E: Executor<'e, Database = Database>
+{
     Ok(
         sqlx::query_as!(
             VersionRow,
@@ -623,16 +650,18 @@ ORDER BY
             ",
             pkg_id
         )
-        .fetch_all(db)
+        .fetch_all(ex)
         .await?
     )
 }
 
 // TODO: figure out how to order version_pre
-pub async fn get_package_url(
-    db: &Pool,
+pub async fn get_package_url<'e, E>(
+    ex: E,
     pkg_id: i64
 ) -> Result<String, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     sqlx::query_scalar!(
         "
@@ -647,15 +676,17 @@ LIMIT 1
         ",
         pkg_id
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotAPackage)
 }
 
-pub async fn get_players(
-    db: &Pool,
+pub async fn get_players<'e, E>(
+    ex: E,
     proj_id: i64
 ) -> Result<Users, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     Ok(
         Users {
@@ -672,7 +703,7 @@ ORDER BY users.username
                 ",
                 proj_id
             )
-            .fetch_all(db)
+            .fetch_all(ex)
             .await?
             .into_iter()
             .map(User)
@@ -729,10 +760,12 @@ WHERE user_id = ?
     Ok(())
 }
 
-pub async fn get_readme(
-    db: &Pool,
+pub async fn get_readme<'e, E>(
+    ex: E,
     proj_id: i64
 ) -> Result<Readme, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     sqlx::query_as!(
         Readme,
@@ -745,16 +778,18 @@ LIMIT 1
         ",
         proj_id
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotAProject)
 }
 
-pub async fn get_readme_revision(
-    db: &Pool,
+pub async fn get_readme_revision<'e, E>(
+    ex: E,
     proj_id: i64,
     revision: u32
 ) -> Result<Readme, AppError>
+where
+    E: Executor<'e, Database = Database>
 {
     sqlx::query_as!(
         Readme,
@@ -768,7 +803,7 @@ LIMIT 1
         proj_id,
         revision
     )
-    .fetch_optional(db)
+    .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotARevision)
 }
@@ -947,7 +982,7 @@ mod test {
                     id: 2,
                     name: "b_package".into()
                 }
-            ]  
+            ]
         );
     }
 
@@ -991,16 +1026,16 @@ mod test {
                     filename: "a_package-1.2.3".into(),
                     url: "https://example.com/a_package-1.2.3".into()
                 }
-            ]  
+            ]
         );
     }
-    
+
 // TODO: can we tell when the package doesn't exist?
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_versions_not_a_package(pool: Pool) {
         assert_eq!(
             get_versions(&pool, 0).await.unwrap(),
-            vec![]  
+            vec![]
         );
     }
 
