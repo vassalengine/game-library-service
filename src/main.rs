@@ -27,6 +27,7 @@ mod jwt;
 mod model;
 mod pagination;
 mod prod_core;
+mod sql;
 
 use crate::{
     app::AppState,
@@ -51,6 +52,7 @@ impl From<&AppError> for StatusCode {
             AppError::NotAPackage => StatusCode::NOT_FOUND,
             AppError::NotAProject => StatusCode::NOT_FOUND,
             AppError::NotARevision => StatusCode::NOT_FOUND,
+            AppError::NotAUser => StatusCode::NOT_FOUND,
             AppError::NotAVersion => StatusCode::NOT_FOUND,
             AppError::NotFound => StatusCode::NOT_FOUND,
             AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,

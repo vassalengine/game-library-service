@@ -1,24 +1,14 @@
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use semver::Version;
-use serde::Deserialize;
-use sqlx::Executor;
 
 use crate::{
     core::Core,
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
-    pagination::{Limit, Pagination, Seek, SeekLink}
+    pagination::{Limit, Pagination, Seek, SeekLink},
+    sql::{self, Pool}
 };
-
-impl From<sqlx::Error> for AppError {
-    fn from(e: sqlx::Error) -> Self {
-        AppError::DatabaseError(e.to_string())
-    }
-}
-
-type Database = sqlx::sqlite::Sqlite;
-type Pool = sqlx::Pool<Database>;
 
 #[derive(Clone)]
 pub struct ProdCore {
@@ -29,59 +19,6 @@ pub struct ProdCore {
 // TODO: switch proj_id to proj_name; then we will always know if the project
 // exists because we have to look up the id
 
-#[derive(Deserialize)]
-struct ProjectRow {
-    name: String,
-    description: String,
-    revision: i64,
-    created_at: String,
-    modified_at: String,
-    game_title: String,
-    game_title_sort: String,
-    game_publisher: String,
-    game_year: String
-}
-
-impl From<ProjectRow> for ProjectSummary {
-    fn from(r: ProjectRow) -> Self {
-        ProjectSummary {
-            name: r.name,
-            description: r.description,
-            revision: r.revision,
-            created_at: r.created_at,
-            modified_at: r.modified_at,
-            tags: vec![],
-            game: GameData {
-                title: r.game_title,
-                title_sort_key: r.game_title_sort,
-                publisher: r.game_publisher,
-                year: r.game_year
-            }
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct PackageRow {
-    id: i64,
-    name: String,
-//    description: String
-}
-
-#[derive(Deserialize)]
-struct VersionRow {
-    version: String,
-    filename: String,
-    url: String,
-/*
-    size: u64,
-    checksum: String,
-    published_at: String,
-    published_by: String,
-    requires: String
-*/
-}
-
 #[async_trait]
 impl Core for ProdCore {
     async fn get_project_id(
@@ -89,18 +26,7 @@ impl Core for ProdCore {
         proj: &Project
     ) -> Result<ProjectID, AppError>
     {
-        sqlx::query_scalar!(
-            "
-SELECT id
-FROM projects
-WHERE name = ?
-            ",
-            proj.0
-        )
-        .fetch_optional(&self.db)
-        .await?
-        .map(ProjectID)
-        .ok_or(AppError::NotAProject)
+        sql::get_project_id(&self.db, &proj.0).await
     }
 
     async fn get_owners(
@@ -108,28 +34,7 @@ WHERE name = ?
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        Ok(
-            Users {
-                users: sqlx::query_scalar!(
-                    "
-SELECT users.username
-FROM users
-JOIN owners
-ON users.id = owners.user_id
-JOIN projects
-ON owners.project_id = projects.id
-WHERE projects.id = ?
-ORDER BY users.username
-                    ",
-                    proj_id
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(User)
-                .collect()
-            }
-        )
+        sql::get_owners(&self.db, proj_id).await
     }
 
     async fn add_owners(
@@ -142,9 +47,9 @@ ORDER BY users.username
 
         for owner in &owners.users {
             // get user id of new owner
-            let owner_id = get_user_id(&owner.0, &self.db).await?;
+            let owner_id = sql::get_user_id(&self.db, &owner.0).await?;
             // associate new owner with the project
-            add_owner(owner_id, proj_id, &mut *tx).await?;
+            sql::add_owner(&mut *tx, owner_id, proj_id).await?;
         }
 
         tx.commit().await?;
@@ -162,13 +67,13 @@ ORDER BY users.username
 
         for owner in &owners.users {
             // get user id of owner
-            let owner_id = get_user_id(&owner.0, &self.db).await?;
+            let owner_id = sql::get_user_id(&self.db, &owner.0).await?;
             // remove old owner from the project
-            remove_owner(owner_id, proj_id, &mut *tx).await?;
+            sql::remove_owner(&mut *tx, owner_id, proj_id).await?;
         }
 
         // prevent removal of last owner
-        if !has_owner(proj_id, &mut *tx).await? {
+        if !sql::has_owner(&mut *tx, proj_id).await? {
             return Err(AppError::CannotRemoveLastOwner);
         }
 
@@ -183,23 +88,7 @@ ORDER BY users.username
         proj_id: i64
     ) -> Result<bool, AppError>
     {
-        Ok(
-            sqlx::query!(
-                "
-SELECT 1 AS present
-FROM owners
-JOIN users
-ON users.id = owners.user_id
-WHERE users.username = ? AND owners.project_id = ?
-LIMIT 1
-                ",
-                user.0,
-                proj_id
-            )
-            .fetch_optional(&self.db)
-            .await?
-            .is_some()
-        )
+        sql::user_is_owner(&self.db, user, proj_id).await
     }
 
     async fn get_projects(
@@ -223,7 +112,7 @@ LIMIT 1
                 meta: Pagination {
                     prev_page,
                     next_page,
-                    total: get_project_count(&self.db).await?
+                    total: sql::get_project_count(&self.db).await?
                 }
             },
         )
@@ -234,27 +123,7 @@ LIMIT 1
         proj_id: i64,
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = sqlx::query_as!(
-            ProjectRow,
-            "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-WHERE id = ?
-LIMIT 1
-            ",
-            proj_id
-         )
-        .fetch_one(&self.db)
-        .await?;
+        let proj_row = sql::get_project_row(&self.db, proj_id).await?;
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -264,13 +133,12 @@ LIMIT 1
             .collect();
 
 // TODO: gross, is there a better way to do this?
-        let package_rows = get_packages(&self.db, proj_id)
-            .await?;
+        let package_rows = sql::get_packages(&self.db, proj_id).await?;
 
         let mut packages = Vec::with_capacity(package_rows.len());
 
         for pr in package_rows {
-            let versions = get_versions(&self.db, pr.id)
+            let versions = sql::get_versions(&self.db, pr.id)
                 .await?
                 .into_iter()
                 .map(|vr| VersionData {
@@ -334,39 +202,19 @@ LIMIT 1
 
         let mut tx = self.db.begin().await?;
 
-        let proj_id = sqlx::query_scalar!(
-            "
-INSERT INTO projects (
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-)
-VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
-RETURNING id
-            ",
+        let proj_id = sql::create_project(
+            &mut *tx,
             proj,
-            proj_data.description,
-            now,
-            now,
-            proj_data.game.title,
-            game_title_sort_key,
-            proj_data.game.publisher,
-            proj_data.game.year
-        )
-        .fetch_one(&mut *tx)
-        .await?;
+            proj_data,
+            &game_title_sort_key,
+            &now
+        ).await?;
 
         // get user id of new owner
-        let owner_id = get_user_id(&user.0, &self.db).await?;
+        let owner_id = sql::get_user_id(&self.db, &user.0).await?;
 
         // associate new owner with the project
-        add_owner(owner_id, proj_id, &mut *tx).await?;
+        sql::add_owner(&mut *tx, owner_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -384,44 +232,10 @@ RETURNING id
         let mut tx = self.db.begin().await?;
 
         // archive the previous revision
-        let revision = 1 + sqlx::query_scalar!(
-            "
-INSERT INTO projects_revisions
-SELECT *
-FROM projects
-WHERE projects.id = ?
-RETURNING revision
-            ",
-            proj_id
-         )
-        .fetch_one(&mut *tx)
-        .await?;
+        let revision = 1 + sql::copy_project_revision(&mut *tx, proj_id).await?;
 
         // update to the current revision
-        sqlx::query!(
-            "
-UPDATE projects
-SET
-    description = ?,
-    revision = ?,
-    modified_at = ?,
-    game_title = ?,
-    game_title_sort = ?,
-    game_publisher = ?,
-    game_year = ?
-WHERE id = ?
-            ",
-            proj_data.description,
-            revision,
-            now,
-            proj_data.game.title,
-            proj_data.game.title_sort_key,
-            proj_data.game.publisher,
-            proj_data.game.year,
-            proj_id
-        )
-        .execute(&mut *tx)
-        .await?;
+        sql::update_project(&mut *tx, proj_id, revision, proj_data, &now).await?;
 
         tx.commit().await?;
 
@@ -434,61 +248,9 @@ WHERE id = ?
         revision: u32
     ) -> Result<ProjectData, AppError>
     {
-// TODO: check if a single UNION query is faster
-        // check the revisions table
-        let proj_row = sqlx::query_as!(
-            ProjectRow,
-            "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects_revisions
-WHERE id = ?
-    AND revision = ?
-LIMIT 1
-            ",
-            proj_id,
-            revision
-         )
-        .fetch_one(&self.db)
-        .await;
-
-        let proj_row = match proj_row {
-            Ok(r) => r,
-            Err(_) => {
-                // check the current table
-                sqlx::query_as!(
-                    ProjectRow,
-                    "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-WHERE id = ?
-    AND revision = ?
-LIMIT 1
-                    ",
-                    proj_id,
-                    revision
-                )
-                .fetch_one(&self.db)
-                .await?
-            }
-        };
+        let proj_row = sql::get_project_row_revision(
+            &self.db, proj_id, revision
+        ).await?;
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -518,29 +280,13 @@ LIMIT 1
         )
     }
 
-// TODO: figure out how to order version_pre
     async fn get_package(
         &self,
         _proj_id: i64,
         pkg_id: i64
     ) -> Result<String, AppError>
     {
-        sqlx::query_scalar!(
-            "
-SELECT url
-FROM package_versions
-WHERE package_id = ?
-ORDER BY
-    version_major DESC,
-    version_minor DESC,
-    version_patch DESC
-LIMIT 1
-            ",
-            pkg_id
-        )
-        .fetch_optional(&self.db)
-        .await?
-        .ok_or(AppError::NotAVersion)
+        sql::get_package_url(&self.db, pkg_id).await
     }
 
     async fn get_package_version(
@@ -577,28 +323,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        Ok(
-            Users {
-                users: sqlx::query_scalar!(
-                    "
-SELECT users.username
-FROM users
-JOIN players
-ON users.id = players.user_id
-JOIN projects
-ON players.project_id = projects.id
-WHERE projects.id = ?
-ORDER BY users.username
-                    ",
-                    proj_id
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(User)
-                .collect()
-            }
-        )
+        sql::get_players(&self.db, proj_id).await
     }
 
     async fn add_player(
@@ -610,9 +335,9 @@ ORDER BY users.username
         let mut tx = self.db.begin().await?;
 
         // get user id of new player
-        let player_id = get_user_id(&player.0, &self.db).await?;
+        let player_id = sql::get_user_id(&self.db, &player.0).await?;
         // associate new player with the project
-        add_player(player_id, proj_id, &mut *tx).await?;
+        sql::add_player(&mut *tx, player_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -628,9 +353,9 @@ ORDER BY users.username
         let mut tx = self.db.begin().await?;
 
         // get user id of player
-        let player_id = get_user_id(&player.0, &self.db).await?;
+        let player_id = sql::get_user_id(&self.db, &player.0).await?;
         // remove player from the project
-        remove_player(player_id, proj_id, &mut *tx).await?;
+        sql::remove_player(&mut *tx, player_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -642,21 +367,7 @@ ORDER BY users.username
         proj_id: i64
     ) -> Result<Readme, AppError>
     {
-        Ok(
-            sqlx::query_as!(
-                Readme,
-                "
-SELECT text
-FROM readmes
-WHERE project_id = ?
-ORDER BY revision DESC
-LIMIT 1
-                ",
-                proj_id
-            )
-            .fetch_one(&self.db)
-            .await?
-        )
+        sql::get_readme(&self.db, proj_id).await
     }
 
     async fn get_readme_revision(
@@ -665,21 +376,7 @@ LIMIT 1
         revision: u32
     ) -> Result<Readme, AppError>
     {
-        sqlx::query_as!(
-            Readme,
-            "
-SELECT text
-FROM readmes
-WHERE project_id = ?
-AND revision = ?
-LIMIT 1
-            ",
-            proj_id,
-            revision
-        )
-        .fetch_optional(&self.db)
-        .await?
-        .ok_or(AppError::NotARevision)
+        sql::get_readme_revision(&self.db, proj_id, revision).await
     }
 }
 
@@ -701,234 +398,43 @@ fn parse_version(version: &str) -> Result<(i64, i64, i64), AppError> {
         .and_then(try_vtup)
 }
 
-async fn get_project_count(
-    db: &Pool
-) -> Result<i32, sqlx::Error>
-{
-    sqlx::query_scalar!(
-        "
-SELECT COUNT(1)
-FROM projects
-        "
-    )
-    .fetch_one(db)
-    .await
-}
-
-async fn get_user_id(
-    user: &str,
-    db: &Pool
-) -> Result<i64, sqlx::Error> {
-    Ok(
-        sqlx::query!(
-            "
-SELECT id
-FROM users
-WHERE username = ?
-            ",
-            user
-        )
-        .fetch_one(db)
-        .await?
-        .id
-    )
-}
-
-async fn add_owner<'e, E>(
-    user_id: i64,
-    proj_id: i64,
-    ex: E
-) -> Result<(), AppError>
-where
-    E: Executor<'e, Database = Database>
-{
-    sqlx::query!(
-        "
-INSERT OR IGNORE INTO owners (
-    user_id,
-    project_id
-)
-VALUES (?, ?)
-        ",
-        user_id,
-        proj_id
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
-}
-
-async fn remove_owner<'e, E>(
-    user_id: i64,
-    proj_id: i64,
-    ex: E
-) -> Result<(), sqlx::Error>
-where
-    E: Executor<'e, Database = Database>
-{
-    sqlx::query!(
-        "
-DELETE FROM owners
-WHERE user_id = ?
-    AND project_id = ?
-        ",
-        user_id,
-        proj_id
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
-}
-
-async fn has_owner<'e, E>(
-    proj_id: i64,
-    ex: E
-) -> Result<bool, sqlx::Error>
-where
-    E: Executor<'e, Database = Database>
-{
-    Ok(
-        sqlx::query!(
-            "
-SELECT 1 AS present
-FROM owners
-WHERE project_id = ?
-LIMIT 1
-            ",
-            proj_id
-        )
-        .fetch_optional(ex)
-        .await?
-        .is_some()
-    )
-}
-
-async fn add_player<'e, E>(
-    user_id: i64,
-    proj_id: i64,
-    ex: E
-) -> Result<(), AppError>
-where
-    E: Executor<'e, Database = Database>
-{
-    sqlx::query!(
-        "
-INSERT OR IGNORE INTO players (
-    user_id,
-    project_id
-)
-VALUES (?, ?)
-        ",
-        user_id,
-        proj_id
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
-}
-
-async fn remove_player<'e, E>(
-    user_id: i64,
-    proj_id: i64,
-    ex: E
-) -> Result<(), sqlx::Error>
-where
-    E: Executor<'e, Database = Database>
-{
-    sqlx::query!(
-        "
-DELETE FROM players
-WHERE user_id = ?
-    AND project_id = ?
-        ",
-        user_id,
-        proj_id
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
-}
-
-async fn get_packages(
-    db: &Pool,
-    proj_id: i64
-) -> Result<Vec<PackageRow>, sqlx::Error> {
-    sqlx::query_as!(
-        PackageRow,
-        "
-SELECT
-    id,
-    name
-FROM packages
-WHERE project_id = ?
-ORDER BY name COLLATE NOCASE ASC
-        ",
-        proj_id
-    )
-   .fetch_all(db)
-   .await
-}
-
-async fn get_versions(
+/*
+async fn get_authors(
     db: &Pool,
     pkg_id: i64
-) -> Result<Vec<VersionRow>, sqlx::Error> {
-    sqlx::query_as!(
-        VersionRow,
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_scalar!(
         "
-SELECT
-    version,
-    filename,
-    url
-FROM package_versions
-WHERE package_id = ?
-ORDER BY
-    version_major DESC,
-    version_minor DESC,
-    version_patch DESC
-        ",
-        pkg_id
-    )
-    .fetch_all(db)
-    .await
-}
+SELECT users.username
+FROM users
+JOIN owners
+ON users.id = owners.user_id
+JOIN projects
+ON owners.project_id = projects.id
+WHERE projects.id = ?
+ORDER BY users.username
+                    ",
+                    proj_id
+                )
+                .fetch_all(&self.db)
+                .await?
+                .into_iter()
+                .map(User)
+                .collect()
+            }
+        )
+    }
+*/
 
 async fn get_projects_start(
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_as!(
-        ProjectRow,
-        "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-ORDER BY name COLLATE NOCASE ASC
-LIMIT ?
-        ",
-        limit_extra
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(ProjectSummary::from)
-    .collect();
+    let mut projects = sql::get_projects_start_window(db, limit_extra).await?;
 
     Ok(
         match projects.len() {
@@ -954,35 +460,12 @@ LIMIT ?
 async fn get_projects_end(
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_as!(
-        ProjectRow,
-        "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-ORDER BY name COLLATE NOCASE DESC
-LIMIT ?
-        ",
-        limit_extra
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(ProjectSummary::from)
-    .collect();
+    let mut projects = sql::get_projects_end_window(db, limit_extra).await?;
 
     Ok(
         if projects.len() == limit_extra as usize {
@@ -1009,37 +492,13 @@ async fn get_projects_after(
     name: &str,
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_as!(
-        ProjectRow,
-        "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-WHERE name > ?
-ORDER BY name COLLATE NOCASE ASC
-LIMIT ?
-        ",
-        name,
-        limit_extra
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(ProjectSummary::from)
-    .collect();
+    let mut projects = sql::get_projects_after_window(db, name, limit_extra)
+        .await?;
 
     Ok(
         if projects.len() == limit_extra as usize {
@@ -1071,37 +530,13 @@ async fn get_projects_before(
     name: &str,
     limit: u32,
     db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), sqlx::Error>
+) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
 {
     // try to get one extra so we can tell if we're at an endpoint
     let limit_extra = limit + 1;
 
-    let mut projects: Vec<_> = sqlx::query_as!(
-        ProjectRow,
-        "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year
-FROM projects
-WHERE name < ?
-ORDER BY name COLLATE NOCASE DESC
-LIMIT ?
-        ",
-        name,
-        limit_extra
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(ProjectSummary::from)
-    .collect();
+    let mut projects = sql::get_projects_before_window(db, name, limit_extra)
+        .await?;
 
     Ok(
         if projects.len() == limit_extra as usize {
