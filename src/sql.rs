@@ -877,9 +877,78 @@ mod test {
         assert!(!user_is_owner(&pool, &User("alice".into()), 42).await.unwrap());
     }
 
-// TODO: add tests for add_owner
-// TODO: add tests for remove_owner
-// TODO: add tests for has_owner
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn add_owner_new_ok(pool: Pool) {
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+        add_owner(&pool, 2, 42).await.unwrap();
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into())
+                ]
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn add_owner_existing_ok(pool: Pool) {
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+        add_owner(&pool, 1, 42).await.unwrap();
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+    }
+
+// TODO: add test for add_owner not a project
+// TODO: add test for add_owner not a user
+
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn remove_owner_ok(pool: Pool) {
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+        remove_owner(&pool, 1, 42).await.unwrap();
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![] }
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn remove_owner_not_an_owner(pool: Pool) {
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+        remove_owner(&pool, 2, 42).await.unwrap();
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+    }
+
+// TODO: add test for remove_owner not a project
+
+// TODO: can we tell when the project doesn't exist?
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn has_owner_yes(pool: Pool) {
+        assert!(has_owner(&pool, 42).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("projects"))]
+    async fn has_owner_no(pool: Pool) {
+        assert!(!has_owner(&pool, 42).await.unwrap());
+    }
 
 // TODO: add tests for create_project
 // TODO: add tests for copy_project_revsion
