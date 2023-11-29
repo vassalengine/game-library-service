@@ -16,7 +16,8 @@ CREATE TABLE players(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id),
-  FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  UNIQUE(user_id, project_id)
 );
 
 CREATE TABLE readmes (
