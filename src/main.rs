@@ -20,6 +20,7 @@ use tower_http::cors::CorsLayer;
 mod app;
 mod config;
 mod core;
+mod db;
 mod errors;
 mod extractors;
 mod handlers;
@@ -28,6 +29,7 @@ mod model;
 mod pagination;
 mod prod_core;
 mod sql;
+mod sqlite;
 
 use crate::{
     app::AppState,
@@ -36,6 +38,7 @@ use crate::{
     prod_core::ProdCore,
     errors::AppError,
     jwt::DecodingKey,
+    sqlite::SqliteDatabaseOperations
 };
 
 impl From<&AppError> for StatusCode {
@@ -168,6 +171,7 @@ async fn main() {
 
     let core = ProdCore {
         db: db_pool,
+        dbop: SqliteDatabaseOperations {},
         now: Utc::now
     };
 

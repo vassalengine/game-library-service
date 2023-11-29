@@ -4,15 +4,17 @@ use semver::Version;
 
 use crate::{
     core::Core,
+    db::DatabaseOperations,
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink},
-    sql::{self, Pool}
+    sqlite::{self, SqliteDatabaseOperations, Pool}
 };
 
 #[derive(Clone)]
 pub struct ProdCore {
     pub db: Pool,
+    pub dbop: SqliteDatabaseOperations,
     pub now: fn() -> DateTime<Utc>
 }
 
@@ -26,7 +28,7 @@ impl Core for ProdCore {
         proj: &Project
     ) -> Result<ProjectID, AppError>
     {
-        sql::get_project_id(&self.db, &proj.0).await
+        self.dbop.get_project_id(&self.db, &proj.0).await
     }
 
     async fn get_owners(
@@ -34,7 +36,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        sql::get_owners(&self.db, proj_id).await
+        self.dbop.get_owners(&self.db, proj_id).await
     }
 
     async fn add_owners(
@@ -47,9 +49,9 @@ impl Core for ProdCore {
 
         for owner in &owners.users {
             // get user id of new owner
-            let owner_id = sql::get_user_id(&self.db, &owner.0).await?;
+            let owner_id = self.dbop.get_user_id(&self.db, &owner.0).await?;
             // associate new owner with the project
-            sql::add_owner(&mut *tx, owner_id, proj_id).await?;
+            self.dbop.add_owner(&mut *tx, owner_id, proj_id).await?;
         }
 
         tx.commit().await?;
@@ -67,13 +69,13 @@ impl Core for ProdCore {
 
         for owner in &owners.users {
             // get user id of owner
-            let owner_id = sql::get_user_id(&self.db, &owner.0).await?;
+            let owner_id = self.dbop.get_user_id(&self.db, &owner.0).await?;
             // remove old owner from the project
-            sql::remove_owner(&mut *tx, owner_id, proj_id).await?;
+            self.dbop.remove_owner(&mut *tx, owner_id, proj_id).await?;
         }
 
         // prevent removal of last owner
-        if !sql::has_owner(&mut *tx, proj_id).await? {
+        if !self.dbop.has_owner(&mut *tx, proj_id).await? {
             return Err(AppError::CannotRemoveLastOwner);
         }
 
@@ -88,7 +90,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<bool, AppError>
     {
-        sql::user_is_owner(&self.db, user, proj_id).await
+        self.dbop.user_is_owner(&self.db, user, proj_id).await
     }
 
     async fn get_projects(
@@ -100,10 +102,10 @@ impl Core for ProdCore {
         let limit = limit.get() as u32;
 
         let (prev_page, next_page, projects) = match from {
-            Seek::Start => get_projects_start(limit, &self.db).await?,
-            Seek::After(name) => get_projects_after(&name, limit, &self.db).await?,
-            Seek::Before(name) => get_projects_before(&name, limit, &self.db).await?,
-            Seek::End => get_projects_end(limit, &self.db).await?
+            Seek::Start => self.get_projects_start(limit, &self.db).await?,
+            Seek::After(name) => self.get_projects_after(&name, limit, &self.db).await?,
+            Seek::Before(name) => self.get_projects_before(&name, limit, &self.db).await?,
+            Seek::End => self.get_projects_end(limit, &self.db).await?
         };
 
         Ok(
@@ -112,7 +114,7 @@ impl Core for ProdCore {
                 meta: Pagination {
                     prev_page,
                     next_page,
-                    total: sql::get_project_count(&self.db).await?
+                    total: self.dbop.get_project_count(&self.db).await?
                 }
             },
         )
@@ -123,7 +125,7 @@ impl Core for ProdCore {
         proj_id: i64,
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = sql::get_project_row(&self.db, proj_id).await?;
+        let proj_row = self.dbop.get_project_row(&self.db, proj_id).await?;
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -133,12 +135,12 @@ impl Core for ProdCore {
             .collect();
 
 // TODO: gross, is there a better way to do this?
-        let package_rows = sql::get_packages(&self.db, proj_id).await?;
+        let package_rows = self.dbop.get_packages(&self.db, proj_id).await?;
 
         let mut packages = Vec::with_capacity(package_rows.len());
 
         for pr in package_rows {
-            let versions = sql::get_versions(&self.db, pr.id)
+            let versions = self.dbop.get_versions(&self.db, pr.id)
                 .await?
                 .into_iter()
                 .map(|vr| VersionData {
@@ -202,7 +204,7 @@ impl Core for ProdCore {
 
         let mut tx = self.db.begin().await?;
 
-        let proj_id = sql::create_project(
+        let proj_id = self.dbop.create_project(
             &mut *tx,
             proj,
             proj_data,
@@ -211,10 +213,10 @@ impl Core for ProdCore {
         ).await?;
 
         // get user id of new owner
-        let owner_id = sql::get_user_id(&self.db, &user.0).await?;
+        let owner_id = self.dbop.get_user_id(&self.db, &user.0).await?;
 
         // associate new owner with the project
-        sql::add_owner(&mut *tx, owner_id, proj_id).await?;
+        self.dbop.add_owner(&mut *tx, owner_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -232,10 +234,10 @@ impl Core for ProdCore {
         let mut tx = self.db.begin().await?;
 
         // archive the previous revision
-        let revision = 1 + sql::copy_project_revision(&mut *tx, proj_id).await?;
+        let revision = 1 + self.dbop.copy_project_revision(&mut *tx, proj_id).await?;
 
         // update to the current revision
-        sql::update_project(&mut *tx, proj_id, revision, proj_data, &now).await?;
+        self.dbop.update_project(&mut *tx, proj_id, revision, proj_data, &now).await?;
 
         tx.commit().await?;
 
@@ -248,7 +250,7 @@ impl Core for ProdCore {
         revision: u32
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = sql::get_project_row_revision(
+        let proj_row = self.dbop.get_project_row_revision(
             &self.db, proj_id, revision
         ).await?;
 
@@ -286,7 +288,7 @@ impl Core for ProdCore {
         pkg_id: i64
     ) -> Result<String, AppError>
     {
-        sql::get_package_url(&self.db, pkg_id).await
+        self.dbop.get_package_url(&self.db, pkg_id).await
     }
 
     async fn get_package_version(
@@ -323,7 +325,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        sql::get_players(&self.db, proj_id).await
+        self.dbop.get_players(&self.db, proj_id).await
     }
 
     async fn add_player(
@@ -335,9 +337,9 @@ LIMIT 1
         let mut tx = self.db.begin().await?;
 
         // get user id of new player
-        let player_id = sql::get_user_id(&self.db, &player.0).await?;
+        let player_id = self.dbop.get_user_id(&self.db, &player.0).await?;
         // associate new player with the project
-        sql::add_player(&mut *tx, player_id, proj_id).await?;
+        self.dbop.add_player(&mut *tx, player_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -353,9 +355,9 @@ LIMIT 1
         let mut tx = self.db.begin().await?;
 
         // get user id of player
-        let player_id = sql::get_user_id(&self.db, &player.0).await?;
+        let player_id = self.dbop.get_user_id(&self.db, &player.0).await?;
         // remove player from the project
-        sql::remove_player(&mut *tx, player_id, proj_id).await?;
+        self.dbop.remove_player(&mut *tx, player_id, proj_id).await?;
 
         tx.commit().await?;
 
@@ -367,7 +369,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<Readme, AppError>
     {
-        sql::get_readme(&self.db, proj_id).await
+        self.dbop.get_readme(&self.db, proj_id).await
     }
 
     async fn get_readme_revision(
@@ -376,7 +378,7 @@ LIMIT 1
         revision: u32
     ) -> Result<Readme, AppError>
     {
-        sql::get_readme_revision(&self.db, proj_id, revision).await
+        self.dbop.get_readme_revision(&self.db, proj_id, revision).await
     }
 }
 
@@ -426,144 +428,150 @@ ORDER BY users.username
     }
 */
 
-async fn get_projects_start(
-    limit: u32,
-    db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-{
-    // try to get one extra so we can tell if we're at an endpoint
-    let limit_extra = limit + 1;
+impl ProdCore {
+    async fn get_projects_start(
+        &self,
+        limit: u32,
+        db: &Pool
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        // try to get one extra so we can tell if we're at an endpoint
+        let limit_extra = limit + 1;
 
-    let mut projects = sql::get_projects_start_window(db, limit_extra).await?;
+        let mut projects = self.dbop.get_projects_start_window(db, limit_extra).await?;
 
-    Ok(
-        match projects.len() {
-            l if l == limit_extra as usize => {
+        Ok(
+            match projects.len() {
+                l if l == limit_extra as usize => {
+                    projects.pop();
+                    (
+                        None,
+                        Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
+                        projects
+                    )
+                }
+                _ => {
+                    (
+                        None,
+                        None,
+                        projects
+                    )
+                }
+            }
+        )
+    }
+
+    async fn get_projects_end(
+        &self,
+        limit: u32,
+        db: &Pool
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        // try to get one extra so we can tell if we're at an endpoint
+        let limit_extra = limit + 1;
+
+        let mut projects = self.dbop.get_projects_end_window(db, limit_extra).await?;
+
+        Ok(
+            if projects.len() == limit_extra as usize {
                 projects.pop();
+                projects.reverse();
+                (
+                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    None,
+                    projects
+                )
+            }
+            else {
+                projects.reverse();
+                (
+                    None,
+                    None,
+                    projects
+                )
+            }
+        )
+    }
+
+    async fn get_projects_after(
+        &self,
+        name: &str,
+        limit: u32,
+        db: &Pool
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        // try to get one extra so we can tell if we're at an endpoint
+        let limit_extra = limit + 1;
+
+        let mut projects = self.dbop.get_projects_after_window(db, name, limit_extra)
+            .await?;
+
+        Ok(
+            if projects.len() == limit_extra as usize {
+                projects.pop();
+                (
+                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
+                    projects
+                )
+            }
+            else if projects.is_empty() {
+                (
+                    Some(SeekLink::new(Seek::End)),
+                    None,
+                    projects
+                )
+            }
+            else {
+                (
+                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    None,
+                    projects
+                )
+            }
+        )
+    }
+
+    async fn get_projects_before(
+        &self,
+        name: &str,
+        limit: u32,
+        db: &Pool
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        // try to get one extra so we can tell if we're at an endpoint
+        let limit_extra = limit + 1;
+
+        let mut projects = self.dbop.get_projects_before_window(db, name, limit_extra)
+            .await?;
+
+        Ok(
+            if projects.len() == limit_extra as usize {
+                projects.pop();
+                projects.reverse();
+                (
+                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
+                    projects
+                )
+            }
+            else if projects.is_empty() {
+                (
+                    None,
+                    Some(SeekLink::new(Seek::Start)),
+                    projects
+                )
+            }
+            else {
+                projects.reverse();
                 (
                     None,
                     Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
                     projects
                 )
             }
-            _ => {
-                (
-                    None,
-                    None,
-                    projects
-                )
-            }
-        }
-    )
-}
-
-async fn get_projects_end(
-    limit: u32,
-    db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-{
-    // try to get one extra so we can tell if we're at an endpoint
-    let limit_extra = limit + 1;
-
-    let mut projects = sql::get_projects_end_window(db, limit_extra).await?;
-
-    Ok(
-        if projects.len() == limit_extra as usize {
-            projects.pop();
-            projects.reverse();
-            (
-                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                None,
-                projects
-            )
-        }
-        else {
-            projects.reverse();
-            (
-                None,
-                None,
-                projects
-            )
-        }
-    )
-}
-
-async fn get_projects_after(
-    name: &str,
-    limit: u32,
-    db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-{
-    // try to get one extra so we can tell if we're at an endpoint
-    let limit_extra = limit + 1;
-
-    let mut projects = sql::get_projects_after_window(db, name, limit_extra)
-        .await?;
-
-    Ok(
-        if projects.len() == limit_extra as usize {
-            projects.pop();
-            (
-                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                projects
-            )
-        }
-        else if projects.is_empty() {
-            (
-                Some(SeekLink::new(Seek::End)),
-                None,
-                projects
-            )
-        }
-        else {
-            (
-                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                None,
-                projects
-            )
-        }
-    )
-}
-
-async fn get_projects_before(
-    name: &str,
-    limit: u32,
-    db: &Pool
-) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-{
-    // try to get one extra so we can tell if we're at an endpoint
-    let limit_extra = limit + 1;
-
-    let mut projects = sql::get_projects_before_window(db, name, limit_extra)
-        .await?;
-
-    Ok(
-        if projects.len() == limit_extra as usize {
-            projects.pop();
-            projects.reverse();
-            (
-                Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                projects
-            )
-        }
-        else if projects.is_empty() {
-            (
-                None,
-                Some(SeekLink::new(Seek::Start)),
-                projects
-            )
-        }
-        else {
-            projects.reverse();
-            (
-                None,
-                Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                projects
-            )
-        }
-    )
+        )
+    }
 }
 
 fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
@@ -607,6 +615,7 @@ mod test {
     fn make_core(pool: Pool, now: fn() -> DateTime<Utc>) -> ProdCore {
         ProdCore {
             db: pool,
+            dbop: SqliteDatabaseOperations {},
             now
         }
     }
