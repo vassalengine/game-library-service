@@ -878,7 +878,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
-    async fn add_owner_new_ok(pool: Pool) {
+    async fn add_owner_new(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
             Users { users: vec![User("bob".into())] }
@@ -896,7 +896,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("projects", "one_owner"))]
-    async fn add_owner_existing_ok(pool: Pool) {
+    async fn add_owner_existing(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
             Users { users: vec![User("bob".into())] }
@@ -1130,8 +1130,92 @@ mod test {
         );
     }
 
-// TODO: add tests for add_owner
-// TODO: add tests for remove_owner
+    #[sqlx::test(fixtures("projects", "players"))]
+    async fn add_player_new(pool: Pool) {
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
+        );
+        add_player(&pool, 3, 42).await.unwrap();
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                    User("chuck".into())
+                ]
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "players"))]
+    async fn add_player_existing(pool: Pool) {
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
+        );
+        add_player(&pool, 2, 42).await.unwrap();
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
+        );
+    }
+
+// TODO: add test for add_player not a project
+// TODO: add test for add_player not a user
+
+    #[sqlx::test(fixtures("projects", "players"))]
+    async fn remove_player_existing(pool: Pool) {
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
+        );
+        remove_player(&pool, 2, 42).await.unwrap();
+        assert_eq!(
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("bob".into()),
+                ]
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "one_owner"))]
+    async fn remove_player_not_a_player(pool: Pool) {
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+        remove_owner(&pool, 2, 42).await.unwrap();
+        assert_eq!(
+            get_owners(&pool, 42).await.unwrap(),
+            Users { users: vec![User("bob".into())] }
+        );
+    }
+
+// TODO: add test for remove_player not a project
 
     #[sqlx::test(fixtures("projects", "readme"))]
     async fn get_readme_ok(pool: Pool) {
