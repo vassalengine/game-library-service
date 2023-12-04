@@ -1,45 +1,39 @@
-use std::fmt;
-
-#[derive(Debug, PartialEq)]
-pub enum AppError {
-    BadMimeType,
-    CannotRemoveLastOwner,
-    DatabaseError(String),
-    InternalError,
-    JsonError,
-    LimitOutOfRange,
-    MalformedQuery,
-    MalformedVersion,
-    NotAPackage,
-    NotAProject,
-    NotARevision,
-    NotAUser,
-    NotAVersion,
-    NotFound,
-    NotImplemented,
-    Unauthorized
-}
+use thiserror::Error;
 
 // TODO: better error messsages
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AppError::BadMimeType => write!(f, "Unsupported media type"),
-            AppError::CannotRemoveLastOwner => write!(f, "Bad request"),
-            AppError::DatabaseError(e) => write!(f, "{}", e),
-            AppError::InternalError => write!(f, "Internal error"),
-            AppError::LimitOutOfRange => write!(f, "Bad request"),
-            AppError::JsonError => write!(f, "Unprocessable entity"),
-            AppError::MalformedQuery => write!(f, "Bad request"),
-            AppError::MalformedVersion => write!(f, "Bad request"),
-            AppError::NotAPackage => write!(f, "Not found"),
-            AppError::NotAProject => write!(f, "Not found"),
-            AppError::NotARevision => write!(f, "Not found"),
-            AppError::NotAUser => write!(f, "Not found"),
-            AppError::NotAVersion => write!(f, "Not found"),
-            AppError::NotFound => write!(f, "Not found"),
-            AppError::NotImplemented => write!(f, "Not implemented"),
-            AppError::Unauthorized => write!(f, "Unauthorized")
-        }
-    }
+#[derive(Debug, Error, PartialEq)]
+pub enum AppError {
+    #[error("Unsupported media type")]
+    BadMimeType,
+//    #[error("Cannot remove last project owner")]
+    #[error("Bad request")]
+    CannotRemoveLastOwner,
+    #[error("{0}")]
+    DatabaseError(String),
+    #[error("Internal error")]
+    InternalError,
+    #[error("Unprocessable entity")]
+    JsonError,
+    #[error("Bad request")]
+    LimitOutOfRange,
+    #[error("Bad request")]
+    MalformedQuery,
+    #[error("Bad request")]
+    MalformedVersion,
+    #[error("Not found")]
+    NotAPackage,
+    #[error("Not found")]
+    NotAProject,
+    #[error("Not found")]
+    NotARevision,
+    #[error("Not found")]
+    NotAUser,
+    #[error("Not found")]
+    NotAVersion,
+    #[error("Not found")]
+    NotFound,
+    #[error("Not implemented")]
+    NotImplemented,
+    #[error("Unauthorized")]
+    Unauthorized
 }
