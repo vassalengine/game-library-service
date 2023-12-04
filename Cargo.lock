@@ -565,7 +565,6 @@ dependencies = [
  "axum-extra",
  "base64",
  "chrono",
- "http-body-util",
  "jsonwebtoken",
  "mime",
  "once_cell",

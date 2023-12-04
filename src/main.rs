@@ -196,13 +196,12 @@ mod test {
     use super::*;
 
     use axum::{
-        body::{Body, Bytes},
+        body::{self, Body, Bytes},
         http::{
             Method, Request,
             header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
-    use http_body_util::BodyExt;
     use mime::{APPLICATION_JSON, TEXT_PLAIN};
     use once_cell::sync::Lazy;
     use tower::ServiceExt; // for oneshot
@@ -219,7 +218,7 @@ mod test {
     const KEY: &[u8] = b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z";
 
     async fn body_bytes(r: Response) -> Bytes {
-        r.into_body().collect().await.unwrap().to_bytes()
+        body::to_bytes(r.into_body(), usize::MAX).await.unwrap()
     }
 
     async fn body_as<D: for<'a> Deserialize<'a>>(r: Response) -> D {
