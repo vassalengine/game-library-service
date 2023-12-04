@@ -4,7 +4,8 @@ use std::sync::Arc;
 use crate::{
     errors::AppError,
     model::{PackageID, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users},
-    pagination::{Limit, Seek}
+    pagination::{Limit, Seek},
+    version::Version
 };
 
 #[async_trait]
@@ -127,7 +128,7 @@ pub trait Core {
         &self,
         _proj_id: i64,
         _pkg_id: i64,
-        _version: &str
+        _version: &Version
     ) -> Result<String, AppError>
     {
         unimplemented!();

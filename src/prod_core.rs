@@ -1,20 +1,19 @@
 use axum::async_trait;
 use chrono::{DateTime, Utc};
-use semver::Version;
 
 use crate::{
     core::Core,
-    db::DatabaseOperations,
+    db::DatabaseClient,
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink},
-    sqlite::{self, SqliteDatabaseOperations, Pool}
+    sqlite::{Pool, SqlxDatabaseClient},
+    version::Version
 };
 
 #[derive(Clone)]
-pub struct ProdCore {
-    pub db: Pool,
-    pub dbop: SqliteDatabaseOperations,
+pub struct ProdCore<C: DatabaseClient> {
+    pub db: C,
     pub now: fn() -> DateTime<Utc>
 }
 
@@ -22,13 +21,13 @@ pub struct ProdCore {
 // exists because we have to look up the id
 
 #[async_trait]
-impl Core for ProdCore {
+impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     async fn get_project_id(
          &self,
         proj: &Project
     ) -> Result<ProjectID, AppError>
     {
-        self.dbop.get_project_id(&self.db, &proj.0).await
+        self.db.get_project_id(&proj.0).await
     }
 
     async fn get_owners(
@@ -36,7 +35,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        self.dbop.get_owners(&self.db, proj_id).await
+        self.db.get_owners(proj_id).await
     }
 
     async fn add_owners(
@@ -45,18 +44,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<(), AppError>
     {
-        let mut tx = self.db.begin().await?;
-
-        for owner in &owners.users {
-            // get user id of new owner
-            let owner_id = self.dbop.get_user_id(&self.db, &owner.0).await?;
-            // associate new owner with the project
-            self.dbop.add_owner(&mut *tx, owner_id, proj_id).await?;
-        }
-
-        tx.commit().await?;
-
-        Ok(())
+        self.db.add_owners(owners, proj_id).await
     }
 
     async fn remove_owners(
@@ -65,23 +53,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<(), AppError>
     {
-        let mut tx = self.db.begin().await?;
-
-        for owner in &owners.users {
-            // get user id of owner
-            let owner_id = self.dbop.get_user_id(&self.db, &owner.0).await?;
-            // remove old owner from the project
-            self.dbop.remove_owner(&mut *tx, owner_id, proj_id).await?;
-        }
-
-        // prevent removal of last owner
-        if !self.dbop.has_owner(&mut *tx, proj_id).await? {
-            return Err(AppError::CannotRemoveLastOwner);
-        }
-
-        tx.commit().await?;
-
-        Ok(())
+        self.db.remove_owners(owners, proj_id).await
     }
 
     async fn user_is_owner(
@@ -90,7 +62,7 @@ impl Core for ProdCore {
         proj_id: i64
     ) -> Result<bool, AppError>
     {
-        self.dbop.user_is_owner(&self.db, user, proj_id).await
+        self.db.user_is_owner(user, proj_id).await
     }
 
     async fn get_projects(
@@ -102,10 +74,10 @@ impl Core for ProdCore {
         let limit = limit.get() as u32;
 
         let (prev_page, next_page, projects) = match from {
-            Seek::Start => self.get_projects_start(limit, &self.db).await?,
-            Seek::After(name) => self.get_projects_after(&name, limit, &self.db).await?,
-            Seek::Before(name) => self.get_projects_before(&name, limit, &self.db).await?,
-            Seek::End => self.get_projects_end(limit, &self.db).await?
+            Seek::Start => self.get_projects_start(limit).await?,
+            Seek::After(name) => self.get_projects_after(&name, limit).await?,
+            Seek::Before(name) => self.get_projects_before(&name, limit).await?,
+            Seek::End => self.get_projects_end(limit).await?
         };
 
         Ok(
@@ -114,7 +86,7 @@ impl Core for ProdCore {
                 meta: Pagination {
                     prev_page,
                     next_page,
-                    total: self.dbop.get_project_count(&self.db).await?
+                    total: self.db.get_project_count().await?
                 }
             },
         )
@@ -125,7 +97,7 @@ impl Core for ProdCore {
         proj_id: i64,
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = self.dbop.get_project_row(&self.db, proj_id).await?;
+        let proj_row = self.db.get_project_row(proj_id).await?;
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -135,12 +107,12 @@ impl Core for ProdCore {
             .collect();
 
 // TODO: gross, is there a better way to do this?
-        let package_rows = self.dbop.get_packages(&self.db, proj_id).await?;
+        let package_rows = self.db.get_packages(proj_id).await?;
 
         let mut packages = Vec::with_capacity(package_rows.len());
 
         for pr in package_rows {
-            let versions = self.dbop.get_versions(&self.db, pr.id)
+            let versions = self.db.get_versions(pr.id)
                 .await?
                 .into_iter()
                 .map(|vr| VersionData {
@@ -200,27 +172,10 @@ impl Core for ProdCore {
     ) -> Result<(), AppError>
     {
         let now = (self.now)().to_rfc3339();
-        let game_title_sort_key = title_sort_key(&proj_data.game.title);
-
-        let mut tx = self.db.begin().await?;
-
-        let proj_id = self.dbop.create_project(
-            &mut *tx,
-            proj,
-            proj_data,
-            &game_title_sort_key,
-            &now
-        ).await?;
-
-        // get user id of new owner
-        let owner_id = self.dbop.get_user_id(&self.db, &user.0).await?;
-
-        // associate new owner with the project
-        self.dbop.add_owner(&mut *tx, owner_id, proj_id).await?;
-
-        tx.commit().await?;
-
-        Ok(())
+// FIXME:
+//        let mut proj_data = proj_data;
+//        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
+        self.db.create_project(user, proj, proj_data, &now).await
     }
 
     async fn update_project(
@@ -231,17 +186,7 @@ impl Core for ProdCore {
     {
         let now = (self.now)().to_rfc3339();
 
-        let mut tx = self.db.begin().await?;
-
-        // archive the previous revision
-        let revision = 1 + self.dbop.copy_project_revision(&mut *tx, proj_id).await?;
-
-        // update to the current revision
-        self.dbop.update_project(&mut *tx, proj_id, revision, proj_data, &now).await?;
-
-        tx.commit().await?;
-
-        Ok(())
+        self.db.update_project(proj_id, proj_data, &now).await
     }
 
     async fn get_project_revision(
@@ -250,9 +195,8 @@ impl Core for ProdCore {
         revision: u32
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = self.dbop.get_project_row_revision(
-            &self.db, proj_id, revision
-        ).await?;
+        let proj_row = self.db.get_project_row_revision(proj_id, revision)
+            .await?;
 
         let owners = self.get_owners(proj_id)
             .await?
@@ -288,36 +232,17 @@ impl Core for ProdCore {
         pkg_id: i64
     ) -> Result<String, AppError>
     {
-        self.dbop.get_package_url(&self.db, pkg_id).await
+        self.db.get_package_url(pkg_id).await
     }
 
     async fn get_package_version(
         &self,
         _proj_id: i64,
         pkg_id: i64,
-        version: &str
+        version: &Version
     ) -> Result<String, AppError>
     {
-        let version = parse_version(version)?;
-
-        sqlx::query_scalar!(
-            "
-SELECT url
-FROM package_versions
-WHERE package_id = ?
-    AND version_major = ?
-    AND version_minor = ?
-    AND version_patch = ?
-LIMIT 1
-            ",
-            pkg_id,
-            version.0,
-            version.1,
-            version.2
-        )
-        .fetch_optional(&self.db)
-        .await?
-        .ok_or(AppError::NotAVersion)
+        self.db.get_package_version_url(pkg_id, version).await
     }
 
     async fn get_players(
@@ -325,7 +250,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<Users, AppError>
     {
-        self.dbop.get_players(&self.db, proj_id).await
+        self.db.get_players(proj_id).await
     }
 
     async fn add_player(
@@ -334,16 +259,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<(), AppError>
     {
-        let mut tx = self.db.begin().await?;
-
-        // get user id of new player
-        let player_id = self.dbop.get_user_id(&self.db, &player.0).await?;
-        // associate new player with the project
-        self.dbop.add_player(&mut *tx, player_id, proj_id).await?;
-
-        tx.commit().await?;
-
-        Ok(())
+        self.db.add_player(player, proj_id).await
     }
 
     async fn remove_player(
@@ -352,16 +268,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<(), AppError>
     {
-        let mut tx = self.db.begin().await?;
-
-        // get user id of player
-        let player_id = self.dbop.get_user_id(&self.db, &player.0).await?;
-        // remove player from the project
-        self.dbop.remove_player(&mut *tx, player_id, proj_id).await?;
-
-        tx.commit().await?;
-
-        Ok(())
+        self.db.remove_player(player, proj_id).await
     }
 
     async fn get_readme(
@@ -369,7 +276,7 @@ LIMIT 1
         proj_id: i64
     ) -> Result<Readme, AppError>
     {
-        self.dbop.get_readme(&self.db, proj_id).await
+        self.db.get_readme(proj_id).await
     }
 
     async fn get_readme_revision(
@@ -378,26 +285,8 @@ LIMIT 1
         revision: u32
     ) -> Result<Readme, AppError>
     {
-        self.dbop.get_readme_revision(&self.db, proj_id, revision).await
+        self.db.get_readme_revision(proj_id, revision).await
     }
-}
-
-// TODO: check pre and build fields of Version
-
-fn try_vtup(v: Version) -> Result<(i64, i64, i64), AppError>  {
-    Ok(
-        (
-            i64::try_from(v.major).or(Err(AppError::MalformedVersion))?,
-            i64::try_from(v.minor).or(Err(AppError::MalformedVersion))?,
-            i64::try_from(v.patch).or(Err(AppError::MalformedVersion))?
-        )
-    )
-}
-
-fn parse_version(version: &str) -> Result<(i64, i64, i64), AppError> {
-    Version::parse(version)
-        .or(Err(AppError::MalformedVersion))
-        .and_then(try_vtup)
 }
 
 /*
@@ -428,17 +317,16 @@ ORDER BY users.username
     }
 */
 
-impl ProdCore {
+impl<C: DatabaseClient + Sync> ProdCore<C>  {
     async fn get_projects_start(
         &self,
-        limit: u32,
-        db: &Pool
+        limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.dbop.get_projects_start_window(db, limit_extra).await?;
+        let mut projects = self.db.get_projects_start_window(limit_extra).await?;
 
         Ok(
             match projects.len() {
@@ -463,14 +351,13 @@ impl ProdCore {
 
     async fn get_projects_end(
         &self,
-        limit: u32,
-        db: &Pool
+        limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.dbop.get_projects_end_window(db, limit_extra).await?;
+        let mut projects = self.db.get_projects_end_window(limit_extra).await?;
 
         Ok(
             if projects.len() == limit_extra as usize {
@@ -496,14 +383,13 @@ impl ProdCore {
     async fn get_projects_after(
         &self,
         name: &str,
-        limit: u32,
-        db: &Pool
+        limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.dbop.get_projects_after_window(db, name, limit_extra)
+        let mut projects = self.db.get_projects_after_window(name, limit_extra)
             .await?;
 
         Ok(
@@ -535,14 +421,13 @@ impl ProdCore {
     async fn get_projects_before(
         &self,
         name: &str,
-        limit: u32,
-        db: &Pool
+        limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.dbop.get_projects_before_window(db, name, limit_extra)
+        let mut projects = self.db.get_projects_before_window(name, limit_extra)
             .await?;
 
         Ok(
@@ -612,10 +497,13 @@ mod test {
         *NOW_DT
     }
 
-    fn make_core(pool: Pool, now: fn() -> DateTime<Utc>) -> ProdCore {
+    fn make_core(
+        pool: Pool,
+        now: fn() -> DateTime<Utc>
+    ) -> ProdCore<SqlxDatabaseClient<sqlx::sqlite::Sqlite>>
+    {
         ProdCore {
-            db: pool,
-            dbop: SqliteDatabaseOperations {},
+            db: SqlxDatabaseClient(pool),
             now
         }
     }
@@ -966,26 +854,19 @@ mod test {
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_version_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
+        let version = "1.2.3".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_package_version(42, 1, "1.2.3").await.unwrap(),
+            core.get_package_version(42, 1, &version).await.unwrap(),
             "https://example.com/a_package-1.2.3"
-        );
-    }
-
-    #[sqlx::test(fixtures("projects", "packages"))]
-    async fn get_package_version_malformed(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_package_version(42, 1, "xyzzy").await.unwrap_err(),
-            AppError::MalformedVersion
         );
     }
 
     #[sqlx::test(fixtures("projects", "packages"))]
     async fn get_package_version_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
+        let version = "1.0.0".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_package_version(42, 1, "1.0.0").await.unwrap_err(),
+            core.get_package_version(42, 1, &version).await.unwrap_err(),
             AppError::NotAVersion
         );
     }

@@ -1,13 +1,14 @@
 use axum::async_trait;
 use sqlx::{
-    Acquire, Executor,
+    Acquire, Database, Executor,
     sqlite::Sqlite
 };
 
 use crate::{
-    db::{DatabaseOperations, PackageRow, ProjectRow, VersionRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, VersionRow},
     errors::AppError,
-    model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    model::{ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    version::Version
 };
 
 pub type Pool = sqlx::Pool<Sqlite>;
@@ -18,318 +19,249 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
-impl From<ProjectRow> for ProjectSummary {
-    fn from(r: ProjectRow) -> Self {
-        ProjectSummary {
-            name: r.name,
-            description: r.description,
-            revision: r.revision,
-            created_at: r.created_at,
-            modified_at: r.modified_at,
-            tags: vec![],
-            game: GameData {
-                title: r.game_title,
-                title_sort_key: r.game_title_sort,
-                publisher: r.game_publisher,
-                year: r.game_year
-            }
-        }
-    }
-}
-
 #[derive(Clone)]
-pub struct SqliteDatabaseOperations {
-}
+pub struct SqlxDatabaseClient<DB: Database>(pub sqlx::Pool<DB>);
 
 #[async_trait]
-impl DatabaseOperations<Sqlite> for SqliteDatabaseOperations {
-    async fn get_project_id<'e, E>(
+impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
+    async fn get_project_id(
         &self,
-        ex: E,
         project: &str
     ) -> Result<ProjectID, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_project_id(ex, project).await
+        get_project_id(&self.0, project).await
     }
 
-    async fn get_project_count<'e, E>(
+    async fn get_project_count(
         &self,
-        ex: E
     ) -> Result<i32, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_project_count(ex).await 
+        get_project_count(&self.0).await
     }
 
-    async fn get_user_id<'e, E>(
+    async fn get_user_id(
         &self,
-        ex: E,
         user: &str
     ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_user_id(ex, user).await
+        get_user_id(&self.0, user).await
     }
 
-    async fn get_owners<'e, E>(
+    async fn get_owners(
         &self,
-        ex: E,
         proj_id: i64
     ) -> Result<Users, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_owners(ex, proj_id).await
+        get_owners(&self.0, proj_id).await
     }
 
-    async fn user_is_owner<'e, E>(
+    async fn user_is_owner(
         &self,
-        ex: E,
         user: &User,
         proj_id: i64
     ) -> Result<bool, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        user_is_owner(ex, user, proj_id).await
+        user_is_owner(&self.0, user, proj_id).await
     }
 
-    async fn add_owner<'e, E>(
+    async fn add_owner(
         &self,
-        ex: E,
         user_id: i64,
         proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        add_owner(ex, user_id, proj_id).await
+        add_owner(&self.0, user_id, proj_id).await
     }
 
-    async fn remove_owner<'e, E>(
+    async fn add_owners(
         &self,
-        ex: E,
+        owners: &Users,
+        proj_id: i64
+    ) -> Result<(), AppError>
+    {
+        add_owners(&self.0, owners, proj_id).await
+    }
+
+    async fn remove_owner(
+        &self,
         user_id: i64,
         proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        remove_owner(ex, user_id, proj_id).await
+        remove_owner(&self.0, user_id, proj_id).await
     }
 
-    async fn has_owner<'e, E>(
+    async fn remove_owners(
         &self,
-        ex: E,
+        owners: &Users,
+        proj_id: i64
+    ) -> Result<(), AppError>
+    {
+        remove_owners(&self.0, owners, proj_id).await
+    }
+
+    async fn has_owner(
+        &self,
         proj_id: i64,
     ) -> Result<bool, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        has_owner(ex, proj_id).await
+        has_owner(&self.0, proj_id).await
     }
 
-    async fn get_projects_start_window<'e, E>(
+    async fn get_projects_start_window(
         &self,
-        ex: E,
         limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_projects_start_window(ex, limit).await
+        get_projects_start_window(&self.0, limit).await
     }
 
-    async fn get_projects_end_window<'e, E>(
+    async fn get_projects_end_window(
         &self,
-        ex: E,
         limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_projects_end_window(ex, limit).await
+        get_projects_end_window(&self.0, limit).await
     }
 
-    async fn get_projects_after_window<'e, E>(
+    async fn get_projects_after_window(
         &self,
-        ex: E,
         name: &str,
         limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_projects_after_window(ex, name, limit).await
+        get_projects_after_window(&self.0, name, limit).await
     }
 
-    async fn get_projects_before_window<'e, E>(
+    async fn get_projects_before_window(
         &self,
-        ex: E,
         name: &str,
         limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_projects_before_window(ex, name, limit).await
+        get_projects_before_window(&self.0, name, limit).await
     }
 
-    async fn create_project<'e, E>(
+    async fn create_project(
         &self,
-        ex: E,
+        user: &User,
         proj: &str,
         proj_data: &ProjectDataPut,
-        game_title_sort_key: &str,
         now: &str
-    ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
+    ) -> Result<(), AppError>
     {
-        create_project(ex, proj, proj_data, game_title_sort_key, now).await
+        create_project(&self.0, user, proj, proj_data, now).await
     }
 
-    async fn copy_project_revision<'e, E>(
+    async fn copy_project_revision(
         &self,
-        ex: E,
         proj_id: i64
     ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        copy_project_revision(ex, proj_id).await
+        copy_project_revision(&self.0, proj_id).await
     }
 
-    async fn update_project<'e, E>(
+    async fn update_project(
         &self,
-        ex: E,
         proj_id: i64,
-        revision: i64,
         proj_data: &ProjectDataPut,
         now: &str
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        update_project(ex, proj_id, revision, proj_data, now).await
+        update_project(&self.0, proj_id, proj_data, now).await
     }
 
-    async fn get_project_row<'e, E>(
+    async fn get_project_row(
         &self,
-        ex: E,
         proj_id: i64
     ) -> Result<ProjectRow, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_project_row(ex, proj_id).await
+        get_project_row(&self.0, proj_id).await
     }
 
-    async fn get_project_row_revision<'a, A>(
+    async fn get_project_row_revision(
         &self,
-        conn: A,
         proj_id: i64,
         revision: u32
     ) -> Result<ProjectRow, AppError>
-    where
-        A: Acquire<'a, Database = Sqlite> + Send
     {
-        get_project_row_revision(conn, proj_id, revision).await
+        get_project_row_revision(&self.0, proj_id, revision).await
     }
 
-    async fn get_packages<'e, E>(
+    async fn get_packages(
         &self,
-        ex: E,
         proj_id: i64
     ) -> Result<Vec<PackageRow>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_packages(ex, proj_id).await
+        get_packages(&self.0, proj_id).await
     }
 
-    async fn get_versions<'e, E>(
+    async fn get_versions(
         &self,
-        ex: E,
         pkg_id: i64
     ) -> Result<Vec<VersionRow>, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_versions(ex, pkg_id).await
-    } 
+        get_versions(&self.0, pkg_id).await
+    }
 
-    async fn get_package_url<'e, E>(
+    async fn get_package_url(
         &self,
-        ex: E,
         pkg_id: i64
     ) -> Result<String, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_package_url(ex, pkg_id).await
+        get_package_url(&self.0, pkg_id).await
     }
 
-    async fn get_players<'e, E>(
+     async fn get_package_version_url(
         &self,
-        ex: E,
+        pkg_id: i64,
+        version: &Version
+    ) -> Result<String, AppError>
+    {
+        get_package_version_url(&self.0, pkg_id, version).await
+    }
+
+    async fn get_players(
+        &self,
         proj_id: i64
     ) -> Result<Users, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_players(ex, proj_id).await
+        get_players(&self.0, proj_id).await
     }
 
-    async fn add_player<'e, E>(
+    async fn add_player(
         &self,
-        ex: E,
-        user_id: i64,
+        player: &User,
         proj_id: i64,
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        add_player(ex, user_id, proj_id).await
+        add_player(&self.0, player, proj_id).await
     }
 
-    async fn remove_player<'e, E>(
+    async fn remove_player(
         &self,
-        ex: E,
-        user_id: i64,
+        player: &User,
         proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        remove_player(ex, user_id, proj_id).await
+        remove_player(&self.0, player, proj_id).await
     }
 
-    async fn get_readme<'e, E>(
+    async fn get_readme(
         &self,
-        ex: E,
         proj_id: i64
     ) -> Result<Readme, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_readme(ex, proj_id).await
+        get_readme(&self.0, proj_id).await
     }
 
-    async fn get_readme_revision<'e, E>(
+    async fn get_readme_revision(
         &self,
-        ex: E,
         proj_id: i64,
         revision: u32
     ) -> Result<Readme, AppError>
-    where
-        E: Executor<'e, Database = Sqlite>
     {
-        get_readme_revision(ex, proj_id, revision).await
+        get_readme_revision(&self.0, proj_id, revision).await
     }
 }
 
@@ -338,7 +270,7 @@ pub async fn get_project_id<'e, E>(
     project: &str
 ) -> Result<ProjectID, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -358,7 +290,7 @@ pub async fn get_project_count<'e, E>(
     ex: E
 ) -> Result<i32, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_scalar!(
@@ -377,7 +309,7 @@ pub async fn get_user_id<'e, E>(
     user: &str
 ) -> Result<i64, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -398,7 +330,7 @@ pub async fn get_owners<'e, E>(
     proj_id: i64
 ) -> Result<Users, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         Users {
@@ -430,7 +362,7 @@ pub async fn user_is_owner<'e, E>(
     proj_id: i64
 ) -> Result<bool, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query!(
@@ -457,7 +389,7 @@ pub async fn add_owner<'e, E>(
     proj_id: i64
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -476,13 +408,35 @@ VALUES (?, ?)
     Ok(())
 }
 
+pub async fn add_owners<'a, A>(
+    conn: A,
+    owners: &Users,
+    proj_id: i64
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    for owner in &owners.users {
+        // get user id of new owner
+        let owner_id = get_user_id(&mut *tx, &owner.0).await?;
+        // associate new owner with the project
+        add_owner(&mut *tx, owner_id, proj_id).await?;
+    }
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn remove_owner<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -499,12 +453,39 @@ WHERE user_id = ?
     Ok(())
 }
 
+pub async fn remove_owners<'a, A>(
+    conn: A,
+    owners: &Users,
+    proj_id: i64
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    for owner in &owners.users {
+        // get user id of owner
+        let owner_id = get_user_id(&mut *tx, &owner.0).await?;
+        // remove old owner from the project
+        remove_owner(&mut *tx, owner_id, proj_id).await?;
+    }
+
+    // prevent removal of last owner
+    if !has_owner(&mut *tx, proj_id).await? {
+        return Err(AppError::CannotRemoveLastOwner);
+    }
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn has_owner<'e, E>(
     ex: E,
     proj_id: i64,
 ) -> Result<bool, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query!(
@@ -527,7 +508,7 @@ pub async fn get_projects_start_window<'e, E>(
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -562,7 +543,7 @@ pub async fn get_projects_end_window<'e, E>(
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -598,7 +579,7 @@ pub async fn get_projects_after_window<'e, E>(
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -636,7 +617,7 @@ pub async fn get_projects_before_window<'e, E>(
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -668,15 +649,14 @@ LIMIT ?
     )
 }
 
-pub async fn create_project<'e, E>(
+pub async fn create_project_row<'e, E>(
     ex: E,
     proj: &str,
     proj_data: &ProjectDataPut,
-    game_title_sort_key: &str,
     now: &str
 ) -> Result<i64, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_scalar!(
@@ -700,7 +680,7 @@ RETURNING id
             now,
             now,
             proj_data.game.title,
-            game_title_sort_key,
+            proj_data.game.title_sort_key,
             proj_data.game.publisher,
             proj_data.game.year
         )
@@ -709,12 +689,42 @@ RETURNING id
     )
 }
 
+pub async fn create_project<'a, A>(
+    conn: A,
+    user: &User,
+    proj: &str,
+    proj_data: &ProjectDataPut,
+    now: &str
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    let proj_id = create_project_row(
+        &mut *tx,
+        proj,
+        proj_data,
+        &now
+    ).await?;
+
+    // get user id of new owner
+    let owner_id = get_user_id(&mut *tx, &user.0).await?;
+
+    // associate new owner with the project
+    add_owner(&mut *tx, owner_id, proj_id).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn copy_project_revision<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<i64, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_scalar!(
@@ -732,7 +742,7 @@ RETURNING revision
     )
 }
 
-pub async fn update_project<'e, E>(
+pub async fn update_project_row<'e, E>(
     ex: E,
     proj_id: i64,
     revision: i64,
@@ -740,7 +750,7 @@ pub async fn update_project<'e, E>(
     now: &str
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -770,12 +780,34 @@ WHERE id = ?
     Ok(())
 }
 
+pub async fn update_project<'a, A>(
+    conn: A,
+    proj_id: i64,
+    proj_data: &ProjectDataPut,
+    now: &str
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // archive the previous revision
+    let revision = 1 + copy_project_revision(&mut *tx, proj_id).await?;
+
+    // update to the current revision
+    update_project_row(&mut *tx, proj_id, revision, proj_data, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn get_project_row<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<ProjectRow, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_as!(
         ProjectRow,
@@ -807,7 +839,7 @@ pub async fn get_project_row_revision<'a, A>(
     revision: u32
 ) -> Result<ProjectRow, AppError>
 where
-    A: Acquire<'a, Database = sqlx::sqlite::Sqlite>
+    A: Acquire<'a, Database = Sqlite>
 {
     let mut conn = conn.acquire().await?;
 
@@ -875,7 +907,7 @@ pub async fn get_packages<'e, E>(
     proj_id: i64
 ) -> Result<Vec<PackageRow>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -900,7 +932,7 @@ pub async fn get_versions<'e, E>(
     pkg_id: i64
 ) -> Result<Vec<VersionRow>, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
@@ -930,7 +962,7 @@ pub async fn get_package_url<'e, E>(
     pkg_id: i64
 ) -> Result<String, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -938,9 +970,9 @@ SELECT url
 FROM package_versions
 WHERE package_id = ?
 ORDER BY
-version_major DESC,
-version_minor DESC,
-version_patch DESC
+    version_major DESC,
+    version_minor DESC,
+    version_patch DESC
 LIMIT 1
         ",
         pkg_id
@@ -950,12 +982,47 @@ LIMIT 1
     .ok_or(AppError::NotAPackage)
 }
 
+pub async fn get_package_version_url<'e, E>(
+    ex: E,
+    pkg_id: i64,
+    version: &Version
+) -> Result<String, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let pre = version.pre.as_deref().unwrap_or("");
+    let build = version.build.as_deref().unwrap_or("");
+
+    sqlx::query_scalar!(
+        "
+SELECT url
+FROM package_versions
+WHERE package_id = ?
+    AND version_major = ?
+    AND version_minor = ?
+    AND version_patch = ?
+    AND version_pre = ?
+    AND version_build = ?
+LIMIT 1
+        ",
+        pkg_id,
+        version.major,
+        version.minor,
+        version.patch,
+        pre,
+        build
+    )
+    .fetch_optional(ex)
+    .await?
+    .ok_or(AppError::NotAVersion)
+}
+
 pub async fn get_players<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Users, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     Ok(
         Users {
@@ -981,13 +1048,13 @@ ORDER BY users.username
     )
 }
 
-pub async fn add_player<'e, E>(
+pub async fn add_player_id<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64,
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -1006,13 +1073,33 @@ VALUES (?, ?)
     Ok(())
 }
 
-pub async fn remove_player<'e, E>(
+pub async fn add_player<'a, A>(
+    conn: A,
+    player: &User,
+    proj_id: i64
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // get user id of new player
+    let player_id = get_user_id(&mut *tx, &player.0).await?;
+    // associate new player with the project
+    add_player_id(&mut *tx, player_id, proj_id).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
+pub async fn remove_player_id<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -1029,12 +1116,32 @@ WHERE user_id = ?
     Ok(())
 }
 
+async fn remove_player<'a, A>(
+    conn: A,
+    player: &User,
+    proj_id: i64
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // get user id of player
+    let player_id = get_user_id(&mut *tx, &player.0).await?;
+    // remove player from the project
+    remove_player_id(&mut *tx, player_id, proj_id).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn get_readme<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Readme, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_as!(
         Readme,
@@ -1058,7 +1165,7 @@ pub async fn get_readme_revision<'e, E>(
     revision: u32
 ) -> Result<Readme, AppError>
 where
-    E: Executor<'e, Database = sqlx::sqlite::Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_as!(
         Readme,
@@ -1411,7 +1518,7 @@ mod test {
                 ]
             }
         );
-        add_player(&pool, 3, 42).await.unwrap();
+        add_player(&pool, &User("chuck".into()), 42).await.unwrap();
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
             Users {
@@ -1435,7 +1542,7 @@ mod test {
                 ]
             }
         );
-        add_player(&pool, 2, 42).await.unwrap();
+        add_player(&pool, &User("alice".into()), 42).await.unwrap();
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
             Users {
@@ -1461,7 +1568,7 @@ mod test {
                 ]
             }
         );
-        remove_player(&pool, 2, 42).await.unwrap();
+        remove_player(&pool, &User("alice".into()), 42).await.unwrap();
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
             Users {
@@ -1472,16 +1579,26 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "players"))]
     async fn remove_player_not_a_player(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
         );
-        remove_owner(&pool, 2, 42).await.unwrap();
+        remove_player(&pool, &User("chuck".into()), 42).await.unwrap();
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_players(&pool, 42).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into()),
+                ]
+            }
         );
     }
 

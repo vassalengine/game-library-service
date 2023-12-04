@@ -28,8 +28,8 @@ mod jwt;
 mod model;
 mod pagination;
 mod prod_core;
-mod sql;
 mod sqlite;
+mod version;
 
 use crate::{
     app::AppState,
@@ -38,7 +38,7 @@ use crate::{
     prod_core::ProdCore,
     errors::AppError,
     jwt::DecodingKey,
-    sqlite::SqliteDatabaseOperations
+    sqlite::SqlxDatabaseClient
 };
 
 impl From<&AppError> for StatusCode {
@@ -170,8 +170,7 @@ async fn main() {
         .unwrap();
 
     let core = ProdCore {
-        db: db_pool,
-        dbop: SqliteDatabaseOperations {},
+        db: SqlxDatabaseClient(db_pool),
         now: Utc::now
     };
 
@@ -212,7 +211,8 @@ mod test {
         core::Core,
         jwt::{self, EncodingKey},
         model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
-        pagination::{Limit, Pagination, Seek, SeekLink}
+        pagination::{Limit, Pagination, Seek, SeekLink},
+        version::Version
     };
 
     const API_V1: &str = "/api/v1";
@@ -492,11 +492,13 @@ mod test {
             &self,
             _proj_id: i64,
             _pkg_id: i64,
-            version: &str
+            version: &Version
         ) -> Result<String, AppError>
         {
             match version {
-                "1.2.3" => Ok("https://example.com/package-1.2.3".into()),
+                Version { major: 1, minor: 2, patch: 3, .. } => {
+                    Ok("https://example.com/package-1.2.3".into())
+                },
                 _ => Err(AppError::NotAVersion)
             }
         }
@@ -1412,7 +1414,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/download"))
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1430,7 +1432,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus/download"))
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus"))
                 .body(Body::empty())
                 .unwrap()
         )

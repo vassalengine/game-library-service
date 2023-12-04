@@ -1,10 +1,10 @@
 use axum::async_trait;
 use serde::Deserialize;
-use sqlx::{Acquire, Executor};
 
 use crate::{
     errors::AppError,
-    model::{ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    version::Version
 };
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -18,6 +18,25 @@ pub struct ProjectRow {
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String
+}
+
+impl From<ProjectRow> for ProjectSummary {
+    fn from(r: ProjectRow) -> Self {
+        ProjectSummary {
+            name: r.name,
+            description: r.description,
+            revision: r.revision,
+            created_at: r.created_at,
+            modified_at: r.modified_at,
+            tags: vec![],
+            game: GameData {
+                title: r.game_title,
+                title_sort_key: r.game_title_sort,
+                publisher: r.game_publisher,
+                year: r.game_year
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -42,292 +61,243 @@ pub struct VersionRow {
 }
 
 #[async_trait]
-pub trait DatabaseOperations<DB> {
-    async fn get_project_id<'e, E>(
+pub trait DatabaseClient {
+    async fn get_project_id(
         &self,
-        _ex: E,
         _project: &str
     ) -> Result<ProjectID, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_project_count<'e, E>(
+    async fn get_project_count(
         &self,
-        _ex: E
     ) -> Result<i32, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_user_id<'e, E>(
+    async fn get_user_id(
         &self,
-        _ex: E,
         _user: &str
     ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_owners<'e, E>(
+    async fn get_owners(
         &self,
-        _ex: E,
         _proj_id: i64
     ) -> Result<Users, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn user_is_owner<'e, E>(
+    async fn user_is_owner(
         &self,
-        _ex: E,
         _user: &User,
         _proj_id: i64
     ) -> Result<bool, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn add_owner<'e, E>(
+    async fn add_owner(
         &self,
-        _ex: E,
         _user_id: i64,
         _proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn remove_owner<'e, E>(
+    async fn add_owners(
         &self,
-        _ex: E,
+        _owners: &Users,
+        _proj_id: i64
+    ) -> Result<(), AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn remove_owner(
+        &self,
         _user_id: i64,
         _proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn has_owner<'e, E>(
+    async fn remove_owners(
         &self,
-        _ex: E,
+        _owners: &Users,
+        _proj_id: i64
+    ) -> Result<(), AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn has_owner(
+        &self,
         _proj_id: i64,
     ) -> Result<bool, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_projects_start_window<'e, E>(
+    async fn get_projects_start_window(
         &self,
-        _ex: E,
         _limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_projects_end_window<'e, E>(
+    async fn get_projects_end_window(
         &self,
-        _ex: E,
         _limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_projects_after_window<'e, E>(
+    async fn get_projects_after_window(
         &self,
-        _ex: E,
         _name: &str,
         _limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_projects_before_window<'e, E>(
+    async fn get_projects_before_window(
         &self,
-        _ex: E,
         _name: &str,
         _limit: u32
     ) -> Result<Vec<ProjectSummary>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn create_project<'e, E>(
+    async fn create_project(
         &self,
-        _ex: E,
+        _user: &User,
         _proj: &str,
         _proj_data: &ProjectDataPut,
-        _game_title_sort_key: &str,
         _now: &str
-    ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = DB>
+    ) -> Result<(), AppError>
     {
         unimplemented!();
     }
 
-    async fn copy_project_revision<'e, E>(
+    async fn copy_project_revision(
         &self,
-        _ex: E,
         _proj_id: i64
     ) -> Result<i64, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn update_project<'e, E>(
+    async fn update_project(
         &self,
-        _ex: E,
         _proj_id: i64,
-        _revision: i64,
         _proj_data: &ProjectDataPut,
         _now: &str
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_project_row<'e, E>(
+    async fn get_project_row(
         &self,
-        _ex: E,
         _proj_id: i64
     ) -> Result<ProjectRow, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_project_row_revision<'a, A>(
+    async fn get_project_row_revision(
         &self,
-        _conn: A,
         _proj_id: i64,
         _revision: u32
     ) -> Result<ProjectRow, AppError>
-    where
-        A: Acquire<'a, Database = DB> + Send
     {
         unimplemented!();
     }
 
-    async fn get_packages<'e, E>(
+    async fn get_packages(
         &self,
-        _ex: E,
         _proj_id: i64
     ) -> Result<Vec<PackageRow>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_versions<'e, E>(
+    async fn get_versions(
         &self,
-        _ex: E,
         _pkg_id: i64
     ) -> Result<Vec<VersionRow>, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
-    } 
+    }
 
-    async fn get_package_url<'e, E>(
+    async fn get_package_url(
         &self,
-        _ex: E,
         _pkg_id: i64
     ) -> Result<String, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_players<'e, E>(
+    async fn get_package_version_url(
         &self,
-        _ex: E,
+        _pkg_id: i64,
+        _version: &Version
+    ) -> Result<String, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_players(
+        &self,
         _proj_id: i64
     ) -> Result<Users, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn add_player<'e, E>(
+    async fn add_player(
         &self,
-        _ex: E,
-        _user_id: i64,
+        _player: &User,
         _proj_id: i64,
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn remove_player<'e, E>(
+    async fn remove_player(
         &self,
-        _ex: E,
-        _user_id: i64,
+        _player: &User,
         _proj_id: i64
     ) -> Result<(), AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_readme<'e, E>(
+    async fn get_readme(
         &self,
-        _ex: E,
         _proj_id: i64
     ) -> Result<Readme, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }
 
-    async fn get_readme_revision<'e, E>(
+    async fn get_readme_revision(
         &self,
-        _ex: E,
         _proj_id: i64,
         _revision: u32
     ) -> Result<Readme, AppError>
-    where
-        E: Executor<'e, Database = DB>
     {
         unimplemented!();
     }

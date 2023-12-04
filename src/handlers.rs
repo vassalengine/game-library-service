@@ -8,7 +8,8 @@ use crate::{
     errors::AppError,
     extractors::Wrapper,
     model::{Owned, OwnedOrNew, PackageID, PackageDataPut, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
-    pagination::PaginationParams
+    pagination::PaginationParams,
+    version::Version
 };
 
 pub async fn not_found() -> Result<(), AppError>
@@ -142,7 +143,7 @@ pub async fn package_get(
 pub async fn package_version_get(
     proj_id: ProjectID,
     pkg_id: PackageID,
-    Path((_, _, pkg_version)): Path<(String, String, String)>,
+    Path((_, _, pkg_version)): Path<(String, String, Version)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
@@ -157,7 +158,7 @@ pub async fn package_version_get(
 
 pub async fn package_version_put(
     _proj_id: ProjectID,
-    Path((_pkg_name, _pkg_version)): Path<(String, String)>,
+    Path((_pkg_name, _pkg_version)): Path<(String, Version)>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
