@@ -1375,10 +1375,60 @@ mod test {
     }
 
 // TODO: add tests for create_project
+/*
+    #[sqlx::test(fixtures("users"))]
+    async fn create_project_bad(pool: Pool) {
+    }
+*/
+
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
-// TODO: add tests for get_projects_start_window
+    fn fake_project_summary(name: String) -> ProjectSummary {
+        ProjectSummary {
+            name,
+            description: "".into(),
+            revision: 1,
+            created_at: "".into(),
+            modified_at: "".into(),
+            tags: vec![],
+            game: GameData {
+                title: "".into(),
+                title_sort_key: "".into(),
+                publisher: "".into(),
+                year: "".into()
+            }
+        }
+    }
+
+    #[sqlx::test]
+    async fn get_projects_start_window_empty(pool: Pool) {
+        assert_eq!(
+            get_projects_start_window(&pool, 3).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_start_window_not_all(pool: Pool) {
+        assert_eq!(
+            get_projects_start_window(&pool, 3).await.unwrap(),
+            "abc".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_start_window_past_end(pool: Pool) {
+        assert_eq!(
+            get_projects_start_window(&pool, 5).await.unwrap(),
+            "abcd".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
 // TODO: add tests for get_projects_end_window
 // TODO: add tests for get_projects_after_window
 // TODO: add tests for get_projects_before_window
