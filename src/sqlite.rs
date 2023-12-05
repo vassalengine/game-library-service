@@ -7,7 +7,7 @@ use sqlx::{
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, VersionRow},
     errors::AppError,
-    model::{ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
     version::Version
 };
 
@@ -1325,6 +1325,53 @@ mod test {
     #[sqlx::test(fixtures("projects"))]
     async fn has_owner_no(pool: Pool) {
         assert!(!has_owner(&pool, 42).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users"))]
+    async fn create_project_ok(pool: Pool) {
+        let user = User("bob".into());
+        let row = ProjectRow {
+            name: "test_game".into(),
+            description: "Brian's Trademarked Game of Being a Test Case".into(),
+            revision: 1,
+            created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+            modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+            game_title: "A Game of Tests".into(),
+            game_title_sort: "Game of Tests, A".into(),
+            game_publisher: "Test Game Company".into(),
+            game_year: "1979".into()
+        };
+
+        let cdata = ProjectDataPut {
+            description: row.description.clone(),
+            tags: vec![],
+            game: GameData {
+                title: row.game_title.clone(),
+                title_sort_key: row.game_title_sort.clone(),
+                publisher: row.game_publisher.clone(),
+                year: row.game_year.clone()
+            }
+        };
+
+        assert_eq!(
+            get_project_id(&pool, &row.name).await.unwrap_err(),
+            AppError::NotAProject
+        );
+
+        create_project(
+            &pool,
+            &user,
+            &row.name,
+            &cdata,
+            &row.created_at
+        ).await.unwrap();
+
+        let proj_id = get_project_id(&pool, &row.name).await.unwrap();
+
+        assert_eq!(
+            get_project_row(&pool, proj_id.0).await.unwrap(),
+            row
+        );
     }
 
 // TODO: add tests for create_project
