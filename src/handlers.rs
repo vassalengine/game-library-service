@@ -158,7 +158,7 @@ pub async fn package_version_get(
 
 pub async fn package_version_put(
     _proj_id: ProjectID,
-    Path((_pkg_name, _pkg_version)): Path<(String, Version)>,
+    Path((_pkg_name, _pkg_version)): Path<(String, String)>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
