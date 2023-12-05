@@ -1429,7 +1429,34 @@ mod test {
         );
     }
 
-// TODO: add tests for get_projects_end_window
+    #[sqlx::test]
+    async fn get_projects_end_window_empty(pool: Pool) {
+        assert_eq!(
+            get_projects_end_window(&pool, 3).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_end_window_not_all(pool: Pool) {
+        assert_eq!(
+            get_projects_end_window(&pool, 3).await.unwrap(),
+            "dcb".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_end_window_past_start(pool: Pool) {
+        assert_eq!(
+            get_projects_end_window(&pool, 5).await.unwrap(),
+            "dcba".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
 // TODO: add tests for get_projects_after_window
 // TODO: add tests for get_projects_before_window
 
