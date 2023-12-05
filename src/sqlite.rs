@@ -1457,8 +1457,57 @@ mod test {
         );
     }
 
-// TODO: add tests for get_projects_after_window
-// TODO: add tests for get_projects_before_window
+    #[sqlx::test]
+    async fn get_projects_after_window_empty(pool: Pool) {
+        assert_eq!(
+            get_projects_after_window(&pool, "a", 3).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_after_window_not_all(pool: Pool) {
+        assert_eq!(
+            get_projects_after_window(&pool, "b", 3).await.unwrap(),
+            "cd".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_after_window_past_end(pool: Pool) {
+        assert_eq!(
+            get_projects_after_window(&pool, "d", 3).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test]
+    async fn get_projects_before_window_empty(pool: Pool) {
+        assert_eq!(
+            get_projects_before_window(&pool, "d", 3).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_before_window_not_all(pool: Pool) {
+        assert_eq!(
+            get_projects_before_window(&pool, "c", 3).await.unwrap(),
+            "ba".chars()
+                .map(|c| fake_project_summary(c.into()))
+                .collect::<Vec<ProjectSummary>>()
+        );
+    }
+
+    #[sqlx::test(fixtures("proj_window"))]
+    async fn get_projects_before_window_past_start(pool: Pool) {
+        assert_eq!(
+            get_projects_before_window(&pool, "a", 3).await.unwrap(),
+            vec![]
+        );
+    }
 
     #[sqlx::test(fixtures("projects"))]
     async fn get_project_row_ok(pool: Pool) {
