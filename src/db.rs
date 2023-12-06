@@ -41,7 +41,7 @@ impl From<ProjectRow> for ProjectSummary {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct PackageRow {
-    pub id: i64,
+    pub package_id: i64,
     pub name: String,
 //    description: String
 }

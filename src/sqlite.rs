@@ -274,7 +274,7 @@ where
 {
     sqlx::query_scalar!(
         "
-SELECT id
+SELECT project_id
 FROM projects
 WHERE name = ?
         ",
@@ -313,7 +313,7 @@ where
 {
     sqlx::query_scalar!(
         "
-SELECT id
+SELECT user_id
 FROM users
 WHERE username = ?
 LIMIT 1
@@ -339,10 +339,10 @@ where
 SELECT users.username
 FROM users
 JOIN owners
-ON users.id = owners.user_id
+ON users.user_id = owners.user_id
 JOIN projects
-ON owners.project_id = projects.id
-WHERE projects.id = ?
+ON owners.project_id = projects.project_id
+WHERE projects.project_id = ?
 ORDER BY users.username
                 ",
                 proj_id
@@ -370,7 +370,7 @@ where
 SELECT 1 AS present
 FROM owners
 JOIN users
-ON users.id = owners.user_id
+ON users.user_id = owners.user_id
 WHERE users.username = ? AND owners.project_id = ?
 LIMIT 1
             ",
@@ -673,7 +673,7 @@ INSERT INTO projects (
     game_year
 )
 VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
-RETURNING id
+RETURNING project_id
             ",
             proj,
             proj_data.description,
@@ -732,7 +732,7 @@ where
 INSERT INTO projects_revisions
 SELECT *
 FROM projects
-WHERE projects.id = ?
+WHERE projects.project_id = ?
 RETURNING revision
             ",
             proj_id
@@ -756,14 +756,14 @@ where
         "
 UPDATE projects
 SET
-description = ?,
-revision = ?,
-modified_at = ?,
-game_title = ?,
-game_title_sort = ?,
-game_publisher = ?,
-game_year = ?
-WHERE id = ?
+    description = ?,
+    revision = ?,
+    modified_at = ?,
+    game_title = ?,
+    game_title_sort = ?,
+    game_publisher = ?,
+    game_year = ?
+WHERE project_id = ?
         ",
         proj_data.description,
         revision,
@@ -813,17 +813,17 @@ where
         ProjectRow,
         "
 SELECT
-name,
-description,
-revision,
-created_at,
-modified_at,
-game_title,
-game_title_sort,
-game_publisher,
-game_year
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
 FROM projects
-WHERE id = ?
+WHERE project_id = ?
 LIMIT 1
         ",
         proj_id
@@ -859,7 +859,7 @@ SELECT
     game_publisher,
     game_year
 FROM projects_revisions
-WHERE id = ?
+WHERE project_id = ?
     AND revision = ?
 LIMIT 1
         ",
@@ -888,7 +888,7 @@ SELECT
     game_publisher,
     game_year
 FROM projects
-WHERE id = ?
+WHERE project_id = ?
     AND revision = ?
 LIMIT 1
                 ",
@@ -914,7 +914,7 @@ where
             PackageRow,
             "
 SELECT
-    id,
+    package_id,
     name
 FROM packages
 WHERE project_id = ?
@@ -1031,10 +1031,10 @@ where
 SELECT users.username
 FROM users
 JOIN players
-ON users.id = players.user_id
+ON users.user_id = players.user_id
 JOIN projects
-ON players.project_id = projects.id
-WHERE projects.id = ?
+ON players.project_id = projects.project_id
+WHERE projects.project_id = ?
 ORDER BY users.username
                 ",
                 proj_id
@@ -1594,11 +1594,11 @@ mod test {
             get_packages(&pool, 42).await.unwrap(),
             vec![
                 PackageRow {
-                    id: 1,
+                    package_id: 1,
                     name: "a_package".into()
                 },
                 PackageRow {
-                    id: 2,
+                    package_id: 2,
                     name: "b_package".into()
                 }
             ]

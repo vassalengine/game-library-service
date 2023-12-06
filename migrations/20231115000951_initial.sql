@@ -1,5 +1,5 @@
 CREATE TABLE users(
-  id INTEGER PRIMARY KEY NOT NULL,
+  user_id INTEGER PRIMARY KEY NOT NULL,
   username TEXT NOT NULL,
   UNIQUE(username)
 );
@@ -7,16 +7,16 @@ CREATE TABLE users(
 CREATE TABLE owners(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL,
-  FOREIGN KEY(user_id) REFERENCES users(id),
-  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(user_id) REFERENCES users(user_id),
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(user_id, project_id)
 );
 
 CREATE TABLE players(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL,
-  FOREIGN KEY(user_id) REFERENCES users(id),
-  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(user_id) REFERENCES users(user_id),
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(user_id, project_id)
 );
 
@@ -25,18 +25,18 @@ CREATE TABLE readmes (
   revision INTEGER NOT NULL,
   text TEXT NOT NULL,
   PRIMARY KEY(project_id, revision),
-  FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 
 CREATE TABLE packages (
-  id INTEGER PRIMARY KEY NOT NULL,
+  package_id INTEGER PRIMARY KEY NOT NULL,
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 
 CREATE TABLE package_versions (
-  id INTEGER PRIMARY KEY NOT NULL,
+  package_version_id INTEGER PRIMARY KEY NOT NULL,
   package_id INTEGER NOT NULL,
   version TEXT NOT NULL,
   version_major INTEGER NOT NULL,
@@ -47,11 +47,11 @@ CREATE TABLE package_versions (
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
-  FOREIGN KEY(package_id) REFERENCES packages(id)
+  FOREIGN KEY(package_id) REFERENCES packages(package_id)
 );
 
 CREATE TABLE projects (
-  id INTEGER PRIMARY KEY NOT NULL,
+  project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   revision INTEGER NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE projects (
 );
 
 CREATE TABLE projects_revisions (
-  id INTEGER NOT NULL,
+  project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   revision INTEGER NOT NULL,
@@ -75,5 +75,5 @@ CREATE TABLE projects_revisions (
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-  UNIQUE(id, revision)
+  UNIQUE(project_id, revision)
 );

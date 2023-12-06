@@ -112,7 +112,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let mut packages = Vec::with_capacity(package_rows.len());
 
         for pr in package_rows {
-            let versions = self.db.get_versions(pr.id)
+            let versions = self.db.get_versions(pr.package_id)
                 .await?
                 .into_iter()
                 .map(|vr| VersionData {

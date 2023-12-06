@@ -1,11 +1,11 @@
-INSERT INTO packages (id, project_id, name)
+INSERT INTO packages (package_id, project_id, name)
 VALUES
   (1, 42, "a_package"),
   (2, 42, "b_package")
 ;
 
 INSERT INTO package_versions (
-  id,
+  package_version_id,
   package_id,
   version,
   version_major,

@@ -1,5 +1,5 @@
 INSERT INTO projects (
-  id,
+  project_id,
   name,
   description,
   revision,

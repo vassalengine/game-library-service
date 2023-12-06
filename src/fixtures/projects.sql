@@ -1,5 +1,5 @@
 INSERT INTO projects (
-  id,
+  project_id,
   name,
   description,
   revision,
@@ -37,7 +37,7 @@ VALUES
   );
 
 INSERT INTO projects_revisions (
-  id,
+  project_id,
   name,
   description,
   revision,
