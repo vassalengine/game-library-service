@@ -12,6 +12,14 @@ CREATE TABLE owners(
   UNIQUE(user_id, project_id)
 );
 
+CREATE TABLE authors(
+  user_id INTEGER NOT NULL,
+  package_version_id INTEGER NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(user_id),
+  FOREIGN KEY(package_version_id) REFERENCES package_versions(package_version_id),
+  UNIQUE(user_id, package_version_id)
+);
+
 CREATE TABLE players(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL,
