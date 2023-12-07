@@ -265,7 +265,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     }
 }
 
-pub async fn get_project_id<'e, E>(
+async fn get_project_id<'e, E>(
     ex: E,
     project: &str
 ) -> Result<ProjectID, AppError>
@@ -286,7 +286,7 @@ WHERE name = ?
     .ok_or(AppError::NotAProject)
 }
 
-pub async fn get_project_count<'e, E>(
+async fn get_project_count<'e, E>(
     ex: E
 ) -> Result<i32, AppError>
 where
@@ -304,7 +304,7 @@ FROM projects
     )
 }
 
-pub async fn get_user_id<'e, E>(
+async fn get_user_id<'e, E>(
     ex: E,
     user: &str
 ) -> Result<i64, AppError>
@@ -325,7 +325,7 @@ LIMIT 1
     .ok_or(AppError::NotAUser)
 }
 
-pub async fn get_owners<'e, E>(
+async fn get_owners<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Users, AppError>
@@ -356,7 +356,7 @@ ORDER BY users.username
     )
 }
 
-pub async fn user_is_owner<'e, E>(
+async fn user_is_owner<'e, E>(
     ex: E,
     user: &User,
     proj_id: i64
@@ -383,7 +383,7 @@ LIMIT 1
     )
 }
 
-pub async fn add_owner<'e, E>(
+async fn add_owner<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64
@@ -408,7 +408,7 @@ VALUES (?, ?)
     Ok(())
 }
 
-pub async fn add_owners<'a, A>(
+async fn add_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj_id: i64
@@ -430,7 +430,7 @@ where
     Ok(())
 }
 
-pub async fn remove_owner<'e, E>(
+async fn remove_owner<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64
@@ -453,7 +453,7 @@ WHERE user_id = ?
     Ok(())
 }
 
-pub async fn remove_owners<'a, A>(
+async fn remove_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj_id: i64
@@ -480,7 +480,7 @@ where
     Ok(())
 }
 
-pub async fn has_owner<'e, E>(
+async fn has_owner<'e, E>(
     ex: E,
     proj_id: i64,
 ) -> Result<bool, AppError>
@@ -503,7 +503,7 @@ LIMIT 1
     )
 }
 
-pub async fn get_projects_start_window<'e, E>(
+async fn get_projects_start_window<'e, E>(
     ex: E,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
@@ -538,7 +538,7 @@ where
     )
 }
 
-pub async fn get_projects_end_window<'e, E>(
+async fn get_projects_end_window<'e, E>(
     ex: E,
     limit: u32
 ) -> Result<Vec<ProjectSummary>, AppError>
@@ -573,7 +573,7 @@ LIMIT ?
     )
 }
 
-pub async fn get_projects_after_window<'e, E>(
+async fn get_projects_after_window<'e, E>(
     ex: E,
     name: &str,
     limit: u32
@@ -611,7 +611,7 @@ LIMIT ?
     )
 }
 
-pub async fn get_projects_before_window<'e, E>(
+async fn get_projects_before_window<'e, E>(
     ex: E,
     name: &str,
     limit: u32
@@ -649,7 +649,7 @@ LIMIT ?
     )
 }
 
-pub async fn create_project_row<'e, E>(
+async fn create_project_row<'e, E>(
     ex: E,
     proj: &str,
     proj_data: &ProjectDataPut,
@@ -689,7 +689,7 @@ RETURNING project_id
     )
 }
 
-pub async fn create_project<'a, A>(
+async fn create_project<'a, A>(
     conn: A,
     user: &User,
     proj: &str,
@@ -719,7 +719,7 @@ where
     Ok(())
 }
 
-pub async fn copy_project_revision<'e, E>(
+async fn copy_project_revision<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<i64, AppError>
@@ -742,7 +742,7 @@ RETURNING revision
     )
 }
 
-pub async fn update_project_row<'e, E>(
+async fn update_project_row<'e, E>(
     ex: E,
     proj_id: i64,
     revision: i64,
@@ -780,7 +780,7 @@ WHERE project_id = ?
     Ok(())
 }
 
-pub async fn update_project<'a, A>(
+async fn update_project<'a, A>(
     conn: A,
     proj_id: i64,
     proj_data: &ProjectDataPut,
@@ -802,7 +802,7 @@ where
     Ok(())
 }
 
-pub async fn get_project_row<'e, E>(
+async fn get_project_row<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<ProjectRow, AppError>
@@ -833,7 +833,7 @@ LIMIT 1
     .ok_or(AppError::NotAProject)
 }
 
-pub async fn get_project_row_revision<'a, A>(
+async fn get_project_row_revision<'a, A>(
     conn: A,
     proj_id: i64,
     revision: u32
@@ -902,7 +902,7 @@ LIMIT 1
     }
 }
 
-pub async fn get_packages<'e, E>(
+async fn get_packages<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Vec<PackageRow>, AppError>
@@ -927,7 +927,7 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
-pub async fn get_versions<'e, E>(
+async fn get_versions<'e, E>(
     ex: E,
     pkg_id: i64
 ) -> Result<Vec<VersionRow>, AppError>
@@ -957,7 +957,7 @@ ORDER BY
 }
 
 // TODO: figure out how to order version_pre
-pub async fn get_package_url<'e, E>(
+async fn get_package_url<'e, E>(
     ex: E,
     pkg_id: i64
 ) -> Result<String, AppError>
@@ -982,7 +982,7 @@ LIMIT 1
     .ok_or(AppError::NotAPackage)
 }
 
-pub async fn get_package_version_url<'e, E>(
+async fn get_package_version_url<'e, E>(
     ex: E,
     pkg_id: i64,
     version: &Version
@@ -1017,7 +1017,7 @@ LIMIT 1
     .ok_or(AppError::NotAVersion)
 }
 
-pub async fn get_players<'e, E>(
+async fn get_players<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Users, AppError>
@@ -1048,7 +1048,7 @@ ORDER BY users.username
     )
 }
 
-pub async fn add_player_id<'e, E>(
+async fn add_player_id<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64,
@@ -1073,7 +1073,7 @@ VALUES (?, ?)
     Ok(())
 }
 
-pub async fn add_player<'a, A>(
+async fn add_player<'a, A>(
     conn: A,
     player: &User,
     proj_id: i64
@@ -1093,7 +1093,7 @@ where
     Ok(())
 }
 
-pub async fn remove_player_id<'e, E>(
+async fn remove_player_id<'e, E>(
     ex: E,
     user_id: i64,
     proj_id: i64
@@ -1136,7 +1136,7 @@ where
     Ok(())
 }
 
-pub async fn get_readme<'e, E>(
+async fn get_readme<'e, E>(
     ex: E,
     proj_id: i64
 ) -> Result<Readme, AppError>
@@ -1159,7 +1159,7 @@ LIMIT 1
     .ok_or(AppError::NotAProject)
 }
 
-pub async fn get_readme_revision<'e, E>(
+async fn get_readme_revision<'e, E>(
     ex: E,
     proj_id: i64,
     revision: u32
@@ -1183,7 +1183,6 @@ LIMIT 1
     .await?
     .ok_or(AppError::NotARevision)
 }
-
 
 #[cfg(test)]
 mod test {
