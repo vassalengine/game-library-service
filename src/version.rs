@@ -33,6 +33,7 @@ impl Version {
     }
 }
 
+// TODO: Should have a non-AppError?
 impl TryFrom<&str> for Version {
     type Error = AppError;
 

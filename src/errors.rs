@@ -10,6 +10,7 @@ pub enum AppError {
     CannotRemoveLastOwner,
     #[error("{0}")]
     DatabaseError(String),
+// TODO: Internal error should have a string? cause?
     #[error("Internal error")]
     InternalError,
     #[error("Unprocessable entity")]

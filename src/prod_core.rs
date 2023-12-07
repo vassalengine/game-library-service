@@ -172,7 +172,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     ) -> Result<(), AppError>
     {
         let now = (self.now)().to_rfc3339();
-// FIXME:
+// FIXME: generate a sort key?
 //        let mut proj_data = proj_data;
 //        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
         self.db.create_project(user, proj, proj_data, &now).await
