@@ -434,23 +434,6 @@ mod test {
             }
         }
 
-/*
-        async fn get_packages(
-            &self,
-            _proj_id: i64,
-        ) -> Result<Packages, AppError>
-        {
-            Ok(
-                Packages {
-                    packages: vec![
-                        Package("a".into()),
-                        Package("b".into())
-                    ]
-                }
-            )
-        }
-*/
-
         async fn get_package(
             &self,
             _proj_id: i64,
@@ -459,33 +442,6 @@ mod test {
         {
             Ok("https://example.com/package".into())
         }
-
-/*
-        async fn get_package_version(
-            &self,
-            _proj_id: i64,
-            _pkg_id: i64,
-            version: &str
-        ) -> Result<VersionData, AppError>
-        {
-            match version {
-                "1.2.3" => Ok(
-                    VersionData {
-                        version: "1.2.3".into(),
-                        filename: "".into(),
-                        url: "".into(),
-                        size: 0,
-                        checksum: "".into(),
-                        published_at: "".into(),
-                        published_by: "".into(),
-                        requires: "".into(),
-                        authors: vec![]
-                    }
-                ),
-                _ => Err(AppError::NotAVersion)
-            }
-        }
-*/
 
         async fn get_package_version(
             &self,
