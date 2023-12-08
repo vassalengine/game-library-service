@@ -204,6 +204,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_versions(&self.0, pkg_id).await
     }
 
+    async fn get_authors(
+        &self,
+        pkg_ver_id: i64
+    ) -> Result<Users, AppError>
+    {
+        get_authors(&self.0, pkg_ver_id).await
+    }
+
     async fn get_package_url(
         &self,
         pkg_id: i64
@@ -939,6 +947,7 @@ where
             VersionRow,
             "
 SELECT
+    package_version_id,
     version,
     filename,
     url
@@ -953,6 +962,35 @@ ORDER BY
         )
         .fetch_all(ex)
         .await?
+    )
+}
+
+async fn get_authors<'e, E>(
+    ex: E,
+    pkg_ver_id: i64
+) -> Result<Users, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        Users {
+            users: sqlx::query_scalar!(
+                "
+SELECT users.username
+FROM users
+JOIN authors
+ON users.user_id = authors.user_id
+WHERE authors.package_version_id = ?
+ORDER BY users.username
+                ",
+                pkg_ver_id
+            )
+            .fetch_all(ex)
+            .await?
+            .into_iter()
+            .map(User)
+            .collect()
+        }
     )
 }
 
@@ -1635,11 +1673,13 @@ mod test {
             get_versions(&pool, 1).await.unwrap(),
             vec![
                 VersionRow {
+                    package_version_id: 2,
                     version: "1.2.4".into(),
                     filename: "a_package-1.2.4".into(),
                     url: "https://example.com/a_package-1.2.4".into()
                 },
                 VersionRow {
+                    package_version_id: 1,
                     version: "1.2.3".into(),
                     filename: "a_package-1.2.3".into(),
                     url: "https://example.com/a_package-1.2.3".into()
@@ -1654,6 +1694,28 @@ mod test {
         assert_eq!(
             get_versions(&pool, 0).await.unwrap(),
             vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("projects", "packages", "users", "authors"))]
+    async fn get_authors_ok(pool: Pool) {
+        assert_eq!(
+            get_authors(&pool, 2).await.unwrap(),
+            Users {
+                users: vec![
+                    User("alice".into()),
+                    User("bob".into())
+                ]
+            }
+        );
+    }
+
+// TODO: can we tell when the package version doesn't exist?
+    #[sqlx::test(fixtures("projects", "packages", "users", "authors"))]
+    async fn get_authors_not_a_package_version(pool: Pool) {
+        assert_eq!(
+            get_authors(&pool, 0).await.unwrap(),
+            Users { users: vec![] }
         );
     }
 

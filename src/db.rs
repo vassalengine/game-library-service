@@ -48,6 +48,7 @@ pub struct PackageRow {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct VersionRow {
+    pub package_version_id: i64,
     pub version: String,
     pub filename: String,
     pub url: String,
@@ -238,6 +239,14 @@ pub trait DatabaseClient {
         &self,
         _pkg_id: i64
     ) -> Result<Vec<VersionRow>, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_authors(
+        &self,
+        _pkg_ver_id: i64
+    ) -> Result<Users, AppError>
     {
         unimplemented!();
     }
