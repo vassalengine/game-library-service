@@ -289,34 +289,6 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     }
 }
 
-/*
-async fn get_authors(
-    db: &Pool,
-    pkg_id: i64
-) -> Result<Vec<String>, sqlx::Error> {
-    sqlx::query_scalar!(
-        "
-SELECT users.username
-FROM users
-JOIN owners
-ON users.id = owners.user_id
-JOIN projects
-ON owners.project_id = projects.id
-WHERE projects.id = ?
-ORDER BY users.username
-                    ",
-                    proj_id
-                )
-                .fetch_all(&self.db)
-                .await?
-                .into_iter()
-                .map(User)
-                .collect()
-            }
-        )
-    }
-*/
-
 impl<C: DatabaseClient + Sync> ProdCore<C>  {
     async fn get_projects_start(
         &self,
