@@ -1222,7 +1222,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1232,7 +1232,7 @@ mod test {
 
 // TODO: can we tell when the project doesn't exist?
 /*
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn get_owners_not_a_project(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 0).await.unwrap_err(),
@@ -1243,17 +1243,17 @@ mod test {
 
 // TODO: can we tell when the project doesn't exist?
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         assert!(user_is_owner(&pool, &User("bob".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         assert!(!user_is_owner(&pool, &User("alice".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn add_owner_new(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1271,7 +1271,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn add_owner_existing(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1287,7 +1287,7 @@ mod test {
 // TODO: add test for add_owner not a project
 // TODO: add test for add_owner not a user
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn remove_owner_ok(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1300,7 +1300,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn remove_owner_not_an_owner(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1316,7 +1316,7 @@ mod test {
 // TODO: add test for remove_owner not a project
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn has_owner_yes(pool: Pool) {
         assert!(has_owner(&pool, 42).await.unwrap());
     }
@@ -1534,7 +1534,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 42, 1).await.unwrap(),
@@ -1552,7 +1552,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 6, 1).await.unwrap(),
@@ -1657,7 +1657,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn get_players_ok(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -1671,7 +1671,7 @@ mod test {
     }
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn get_players_not_a_project(pool: Pool) {
         assert_eq!(
             get_players(&pool, 0).await.unwrap(),
@@ -1679,7 +1679,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn add_player_new(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -1703,7 +1703,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn add_player_existing(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -1729,7 +1729,7 @@ mod test {
 // TODO: add test for add_player not a project
 // TODO: add test for add_player not a user
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn remove_player_existing(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -1751,7 +1751,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn remove_player_not_a_player(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),

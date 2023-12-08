@@ -704,12 +704,46 @@ mod test {
                     year: "1979".into()
                 },
                 owners: vec!["alice".into(), "bob".into()],
-                packages: vec![]
+                packages: vec![
+                    PackageData {
+                        name: "a_package".into(),
+                        description: "".into(),
+                        versions: vec![
+                            VersionData {
+                                version: "1.2.4".into(),
+                                filename: "a_package-1.2.4".into(),
+                                url: "https://example.com/a_package-1.2.4".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!["alice".into(), "bob".into()]
+                            },
+                            VersionData {
+                                version: "1.2.3".into(),
+                                filename: "a_package-1.2.3".into(),
+                                url: "https://example.com/a_package-1.2.3".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!["alice".into()]
+                            }
+                        ]
+                    },
+                    PackageData {
+                        name: "b_package".into(),
+                        description: "".into(),
+                        versions: vec![]
+                    }
+                ]
             }
         );
     }
 
-    #[sqlx::test(fixtures("projects", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -734,7 +768,7 @@ mod test {
     }
 
 // TODO: need to show pacakges as they were?
-    #[sqlx::test(fixtures("projects", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -758,7 +792,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users"))]
+    #[sqlx::test(fixtures("projects", "users", "packages"))]
     async fn create_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -797,7 +831,7 @@ mod test {
         assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn update_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -871,7 +905,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -880,19 +914,19 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("alice".into())] };
@@ -908,7 +942,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("bob".into())] };
@@ -919,7 +953,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("bob".into())] };
@@ -929,7 +963,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn get_players_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -943,7 +977,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn add_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         core.add_player(&User("chuck".into()), 42).await.unwrap();
@@ -959,7 +993,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn remove_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         core.remove_player(&User("bob".into()), 42).await.unwrap();
