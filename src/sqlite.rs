@@ -932,7 +932,8 @@ where
             "
 SELECT
     package_id,
-    name
+    name,
+    created_at
 FROM packages
 WHERE project_id = ?
 ORDER BY name COLLATE NOCASE ASC
@@ -1642,11 +1643,13 @@ mod test {
             vec![
                 PackageRow {
                     package_id: 1,
-                    name: "a_package".into()
+                    name: "a_package".into(),
+                    created_at: "2023-12-09T15:56:29,180282477+00:00".into()
                 },
                 PackageRow {
                     package_id: 2,
-                    name: "b_package".into()
+                    name: "b_package".into(),
+                    created_at: "2021-11-06T15:56:29,180282477+00:00".into()
                 }
             ]
         );

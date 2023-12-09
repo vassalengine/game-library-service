@@ -37,6 +37,7 @@ CREATE TABLE packages (
   package_id INTEGER PRIMARY KEY NOT NULL,
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 

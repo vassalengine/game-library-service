@@ -44,6 +44,7 @@ impl From<ProjectRow> for ProjectSummary {
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
+    pub created_at: String
 //    description: String
 }
 

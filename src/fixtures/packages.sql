@@ -1,7 +1,7 @@
-INSERT INTO packages (package_id, project_id, name)
+INSERT INTO packages (package_id, project_id, name, created_at)
 VALUES
-  (1, 42, "a_package"),
-  (2, 42, "b_package")
+  (1, 42, "a_package", "2023-12-09T15:56:29,180282477+00:00"),
+  (2, 42, "b_package", "2021-11-06T15:56:29,180282477+00:00")
 ;
 
 INSERT INTO package_versions (
