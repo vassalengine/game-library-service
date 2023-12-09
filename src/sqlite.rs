@@ -1863,4 +1863,14 @@ mod test {
             AppError::NotARevision
         );
     }
+
+    #[sqlx::test(fixtures("readmes", "projects"))]
+    async fn get_readme_default(pool: Pool) {
+        // The default readme must exist at id 0 and be empty.
+        assert_eq!(
+            get_readme(&pool, 0).await.unwrap(),
+            Readme { text: "".into() }
+        );
+    }
+
 }
