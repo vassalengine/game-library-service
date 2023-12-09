@@ -162,6 +162,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
+                readme_id: proj_row.readme_id,
                 owners,
                 packages
             }
@@ -229,6 +230,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
+                readme_id: proj_row.readme_id,
                 owners,
 // TODO
                 packages: vec![]
@@ -283,19 +285,10 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn get_readme(
         &self,
-        proj_id: i64
+        readme_id: i64
     ) -> Result<Readme, AppError>
     {
-        self.db.get_readme(proj_id).await
-    }
-
-    async fn get_readme_revision(
-        &self,
-        proj_id: i64,
-        revision: u32
-    ) -> Result<Readme, AppError>
-    {
-        self.db.get_readme_revision(proj_id, revision).await
+        self.db.get_readme(readme_id).await
     }
 }
 
@@ -507,7 +500,7 @@ mod test {
         }
     }
 
-    #[sqlx::test(fixtures("ten_projects"))]
+    #[sqlx::test(fixtures("readmes", "ten_projects"))]
     async fn get_projects_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -534,7 +527,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("ten_projects"))]
+    #[sqlx::test(fixtures("readmes", "ten_projects"))]
     async fn get_projects_after_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -587,7 +580,7 @@ mod test {
         }
     }
 
-    #[sqlx::test(fixtures("ten_projects"))]
+    #[sqlx::test(fixtures("readmes", "ten_projects"))]
     async fn get_projects_before_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -640,7 +633,7 @@ mod test {
         }
     }
 
-    #[sqlx::test(fixtures("ten_projects"))]
+    #[sqlx::test(fixtures("readmes", "ten_projects"))]
     async fn get_projects_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -667,7 +660,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "two_owners", "packages", "authors"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners", "packages", "authors"))]
     async fn get_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -685,6 +678,7 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
+                readme_id: 8,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
                     PackageData {
@@ -725,7 +719,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -743,6 +737,7 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
+                readme_id: 8,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![]
             }
@@ -750,7 +745,7 @@ mod test {
     }
 
 // TODO: need to show pacakges as they were?
-    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -768,13 +763,14 @@ mod test {
                     publisher: "Otters!".into(),
                     year: "1993".into()
                 },
+                readme_id: 4,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![]
             }
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "packages"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "packages"))]
     async fn create_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -793,6 +789,7 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
+            readme_id: 0,
             owners: vec!["bob".into()],
             packages: vec![]
         };
@@ -813,7 +810,7 @@ mod test {
         assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn update_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
@@ -831,6 +828,7 @@ mod test {
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
+            readme_id: 8,
             owners: vec!["bob".into()],
             packages: vec![]
         };
@@ -858,7 +856,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "packages"))]
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -867,7 +865,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "packages"))]
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
     async fn get_package_version_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
@@ -877,7 +875,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "packages"))]
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
     async fn get_package_version_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();
@@ -887,7 +885,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -896,19 +894,19 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("alice".into())] };
@@ -924,7 +922,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("bob".into())] };
@@ -935,7 +933,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
         let core = make_core(pool, fake_now);
         let users = Users { users: vec![User("bob".into())] };
@@ -945,7 +943,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "players"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
     async fn get_players_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -959,7 +957,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "players"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
     async fn add_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         core.add_player(&User("chuck".into()), 42).await.unwrap();
@@ -975,7 +973,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "users", "players"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
     async fn remove_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         core.remove_player(&User("bob".into()), 42).await.unwrap();
@@ -985,29 +983,20 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("projects", "readme"))]
+    #[sqlx::test(fixtures("readmes", "projects"))]
     async fn get_readme_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_readme(42).await.unwrap(),
-            Readme { text: "third try".into() }
+            core.get_readme(8).await.unwrap(),
+            Readme { text: "hey".into() }
         );
     }
 
-    #[sqlx::test(fixtures("projects", "readme"))]
-    async fn get_readme_revision_ok(pool: Pool) {
+    #[sqlx::test(fixtures("readmes", "projects"))]
+    async fn get_readme_not_a_readme(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_readme_revision(42, 2).await.unwrap(),
-            Readme { text: "second try".into() }
-        );
-    }
-
-    #[sqlx::test(fixtures("projects", "readme"))]
-    async fn get_readme_revision_bad(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_readme_revision(42, 4).await.unwrap_err(),
+            core.get_readme(1).await.unwrap_err(),
             AppError::NotARevision
         );
     }

@@ -29,11 +29,8 @@ CREATE TABLE players(
 );
 
 CREATE TABLE readmes (
-  project_id INTEGER NOT NULL,
-  revision INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  PRIMARY KEY(project_id, revision),
-  FOREIGN KEY(project_id) REFERENCES projects(project_id)
+  readme_id INTEGER PRIMARY KEY NOT NULL,
+  text TEXT NOT NULL
 );
 
 CREATE TABLE packages (
@@ -69,7 +66,9 @@ CREATE TABLE projects (
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-  UNIQUE(name)
+  readme_id INTEGER NOT NULL,
+  UNIQUE(name),
+  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id)
 );
 
 CREATE TABLE projects_revisions (
@@ -83,5 +82,7 @@ CREATE TABLE projects_revisions (
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-  UNIQUE(project_id, revision)
+  readme_id INTEGER NOT NULL,
+  UNIQUE(project_id, revision),
+  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id)
 );

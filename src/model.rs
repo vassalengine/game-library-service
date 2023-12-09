@@ -88,6 +88,7 @@ pub struct ProjectData {
     pub modified_at: String,
     pub tags: Vec<String>,
     pub game: GameData,
+    pub readme_id: i64,
     pub owners: Vec<String>,
     pub packages: Vec<PackageData>
 }

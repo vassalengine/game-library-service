@@ -8,7 +8,8 @@ INSERT INTO projects (
   game_title,
   game_title_sort,
   game_publisher,
-  game_year
+  game_year,
+  readme_id
 )
 VALUES
   (
@@ -21,7 +22,8 @@ VALUES
     "A Game of Tests",
     "Game of Tests, A",
     "Test Game Company",
-    "1979"
+    "1979",
+    8
   ),
   (
     6,
@@ -33,7 +35,8 @@ VALUES
     "Some Other Game",
     "Some Other Game",
     "XYZ",
-    "1993"
+    "1993",
+    4
   );
 
 INSERT INTO projects_revisions (
@@ -46,7 +49,8 @@ INSERT INTO projects_revisions (
   game_title,
   game_title_sort,
   game_publisher,
-  game_year
+  game_year,
+  readme_id
 )
 VALUES
   (
@@ -59,5 +63,6 @@ VALUES
     "Some Otter Game",
     "Some Otter Game",
     "Otters!",
-    "1993"
+    "1993",
+    4
   );

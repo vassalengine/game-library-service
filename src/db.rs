@@ -17,7 +17,8 @@ pub struct ProjectRow {
     pub game_title: String,
     pub game_title_sort: String,
     pub game_publisher: String,
-    pub game_year: String
+    pub game_year: String,
+    pub readme_id: i64
 }
 
 impl From<ProjectRow> for ProjectSummary {
@@ -296,17 +297,16 @@ pub trait DatabaseClient {
 
     async fn get_readme(
         &self,
-        _proj_id: i64
+        _readme_id: i64
     ) -> Result<Readme, AppError>
     {
         unimplemented!();
     }
 
-    async fn get_readme_revision(
+    async fn add_readme(
         &self,
-        _proj_id: i64,
-        _revision: u32
-    ) -> Result<Readme, AppError>
+        _text: &str
+    ) -> Result<i64, AppError>
     {
         unimplemented!();
     }
