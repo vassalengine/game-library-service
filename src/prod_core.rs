@@ -94,7 +94,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn get_project(
         &self,
-        proj_id: i64,
+        proj_id: i64
     ) -> Result<ProjectData, AppError>
     {
         let proj_row = self.db.get_project_row(proj_id).await?;
