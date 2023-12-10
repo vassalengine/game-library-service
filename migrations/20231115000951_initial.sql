@@ -52,6 +52,7 @@ CREATE TABLE package_versions (
   version_build TEXT NOT NULL,
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
+  created_at TEXT NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
   FOREIGN KEY(package_id) REFERENCES packages(package_id)
 );
@@ -59,31 +60,27 @@ CREATE TABLE package_versions (
 CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  revision INTEGER NOT NULL,
   created_at TEXT NOT NULL,
-  modified_at TEXT NOT NULL,
-  game_title TEXT NOT NULL,
-  game_title_sort TEXT NOT NULL,
-  game_publisher TEXT NOT NULL,
-  game_year TEXT NOT NULL,
-  readme_id INTEGER NOT NULL,
-  UNIQUE(name),
-  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id)
+  UNIQUE(name)
 );
 
-CREATE TABLE projects_revisions (
-  project_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
+CREATE TABLE project_data (
+  project_data_id INTEGER PRIMARY KEY NOT NULL,
   description TEXT NOT NULL,
-  revision INTEGER NOT NULL,
-  created_at TEXT NOT NULL,
-  modified_at TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
-  game_year TEXT NOT NULL,
+  game_year TEXT NOT NULL
+);
+
+CREATE TABLE project_revisions (
+  project_id INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
+  project_data_id INTEGER NOT NULL,
   readme_id INTEGER NOT NULL,
+  modified_at TEXT NOT NULL,
   UNIQUE(project_id, revision),
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id),
   FOREIGN KEY(readme_id) REFERENCES readmes(readme_id)
 );

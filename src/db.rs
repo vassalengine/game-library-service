@@ -41,6 +41,14 @@ impl From<ProjectRow> for ProjectSummary {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
+pub struct ProjectRevisionRow {
+    pub revision: i64,
+    pub project_data_id: i64,
+    pub readme_id: i64,
+    pub modified_at: String
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
@@ -237,9 +245,27 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
+    async fn get_packages_at(
+        &self,
+        _proj_id: i64,
+        _date: &str,
+    ) -> Result<Vec<PackageRow>, AppError>
+    {
+        unimplemented!();
+    }
+
     async fn get_versions(
         &self,
         _pkg_id: i64
+    ) -> Result<Vec<VersionRow>, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_versions_at(
+        &self,
+        _pkg_id: i64,
+        _date: &str
     ) -> Result<Vec<VersionRow>, AppError>
     {
         unimplemented!();

@@ -5,7 +5,7 @@ use sqlx::{
 };
 
 use crate::{
-    db::{DatabaseClient, PackageRow, ProjectRow, VersionRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, VersionRow},
     errors::AppError,
     model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
     version::Version
@@ -153,14 +153,6 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         create_project(&self.0, user, proj, proj_data, now).await
     }
 
-    async fn copy_project_revision(
-        &self,
-        proj_id: i64
-    ) -> Result<i64, AppError>
-    {
-        copy_project_revision(&self.0, proj_id).await
-    }
-
     async fn update_project(
         &self,
         proj_id: i64,
@@ -196,12 +188,30 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_packages(&self.0, proj_id).await
     }
 
+    async fn get_packages_at(
+        &self,
+        proj_id: i64,
+        date: &str,
+    ) -> Result<Vec<PackageRow>, AppError>
+    {
+        get_packages_at(&self.0, proj_id, date).await
+    }
+
     async fn get_versions(
         &self,
         pkg_id: i64
     ) -> Result<Vec<VersionRow>, AppError>
     {
         get_versions(&self.0, pkg_id).await
+    }
+
+    async fn get_versions_at(
+        &self,
+        pkg_id: i64,
+        date: &str
+    ) -> Result<Vec<VersionRow>, AppError>
+    {
+        get_versions_at(&self.0, pkg_id, date).await
     }
 
     async fn get_authors(
@@ -522,20 +532,24 @@ where
         sqlx::query_as!(
             ProjectRow,
             "
-    SELECT
-        name,
-        description,
-        revision,
-        created_at,
-        modified_at,
-        game_title,
-        game_title_sort,
-        game_publisher,
-        game_year,
-        readme_id
-    FROM projects
-    ORDER BY name COLLATE NOCASE ASC
-    LIMIT ?
+SELECT
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
+FROM projects
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+ORDER BY projects.name COLLATE NOCASE ASC
+LIMIT ?
             ",
             limit
         )
@@ -559,18 +573,22 @@ where
             ProjectRow,
             "
 SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
 FROM projects
-ORDER BY name COLLATE NOCASE DESC
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+ORDER BY projects.name COLLATE NOCASE DESC
 LIMIT ?
             ",
             limit
@@ -596,18 +614,22 @@ where
             ProjectRow,
             "
 SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
 FROM projects
-WHERE name > ?
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+WHERE projects.name > ?
 ORDER BY name COLLATE NOCASE ASC
 LIMIT ?
             ",
@@ -635,18 +657,22 @@ where
             ProjectRow,
             "
 SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
 FROM projects
-WHERE name < ?
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+WHERE projects.name < ?
 ORDER BY name COLLATE NOCASE DESC
 LIMIT ?
             ",
@@ -661,38 +687,53 @@ LIMIT ?
     )
 }
 
-async fn create_project_row<'e, E>(
+async fn create_project_entry<'e, E>(
     ex: E,
     proj: &str,
-    proj_data: &ProjectDataPut,
     now: &str
 ) -> Result<i64, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    // revisions start at 1; readme_id is 0, which is the empty readme
     Ok(
         sqlx::query_scalar!(
             "
 INSERT INTO projects (
     name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
+    created_at
 )
-VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, 0)
+VALUES (?, ?)
 RETURNING project_id
             ",
             proj,
+            now
+        )
+        .fetch_one(ex)
+        .await?
+    )
+}
+
+async fn create_project_data<'e, E>(
+    ex: E,
+    proj_data: &ProjectDataPut
+) -> Result<i64, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+INSERT INTO project_data (
+    description,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year
+)
+VALUES (?, ?, ?, ?, ?)
+RETURNING project_data_id
+            ",
             proj_data.description,
-            now,
-            now,
             proj_data.game.title,
             proj_data.game.title_sort_key,
             proj_data.game.publisher,
@@ -701,6 +742,40 @@ RETURNING project_id
         .fetch_one(ex)
         .await?
     )
+}
+
+async fn create_project_revision<'e, E>(
+    ex: E,
+    proj_id: i64,
+    revision: i64,
+    proj_data_id: i64,
+    readme_id: i64,
+    now: &str
+) -> Result<(), AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+INSERT INTO project_revisions (
+    project_id,
+    revision,
+    project_data_id,
+    readme_id,
+    modified_at
+)
+VALUES (?, ?, ?, ?, ?)
+        ",
+        proj_id,
+        revision,
+        proj_data_id,
+        readme_id,
+        now
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
 }
 
 async fn create_project<'a, A>(
@@ -715,12 +790,11 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    let proj_id = create_project_row(
-        &mut *tx,
-        proj,
-        proj_data,
-        &now
-    ).await?;
+    // create project entries
+    let proj_id = create_project_entry(&mut *tx, proj, now).await?;
+    let proj_data_id = create_project_data(&mut *tx, proj_data).await?;
+    // revisions start at 1; readme_id 0 is the empty readme
+    create_project_revision(&mut *tx, proj_id, 1, proj_data_id, 0, now).await?;
 
     // get user id of new owner
     let owner_id = get_user_id(&mut *tx, &user.0).await?;
@@ -730,68 +804,35 @@ where
 
     tx.commit().await?;
 
+// TODO: should return project id
     Ok(())
 }
 
-async fn copy_project_revision<'e, E>(
+async fn get_project_revision_current<'e, E>(
     ex: E,
     proj_id: i64
-) -> Result<i64, AppError>
+) -> Result<ProjectRevisionRow, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    Ok(
-        sqlx::query_scalar!(
-            "
-INSERT INTO projects_revisions
-SELECT *
-FROM projects
-WHERE projects.project_id = ?
-RETURNING revision
-            ",
-            proj_id
-         )
-        .fetch_one(ex)
-        .await?
-    )
-}
-
-async fn update_project_row<'e, E>(
-    ex: E,
-    proj_id: i64,
-    revision: i64,
-    proj_data: &ProjectDataPut,
-    now: &str
-) -> Result<(), AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
+    sqlx::query_as!(
+        ProjectRevisionRow,
         "
-UPDATE projects
-SET
-    description = ?,
-    revision = ?,
-    modified_at = ?,
-    game_title = ?,
-    game_title_sort = ?,
-    game_publisher = ?,
-    game_year = ?
+SELECT
+    revision,
+    project_data_id,
+    readme_id,
+    modified_at
+FROM project_revisions
 WHERE project_id = ?
+ORDER BY revision DESC
+LIMIT 1
         ",
-        proj_data.description,
-        revision,
-        now,
-        proj_data.game.title,
-        proj_data.game.title_sort_key,
-        proj_data.game.publisher,
-        proj_data.game.year,
         proj_id
     )
-    .execute(ex)
-    .await?;
-
-    Ok(())
+    .fetch_optional(ex)
+    .await?
+    .ok_or(AppError::NotARevision)
 }
 
 async fn update_project<'a, A>(
@@ -805,11 +846,21 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // archive the previous revision
-    let revision = 1 + copy_project_revision(&mut *tx, proj_id).await?;
+    // get the old project revision
+    let rev = get_project_revision_current(&mut *tx, proj_id).await?;
 
-    // update to the current revision
-    update_project_row(&mut *tx, proj_id, revision, proj_data, now).await?;
+    // write the updated project data
+    let proj_data_id = create_project_data(&mut *tx, proj_data).await?;
+
+    // write a new project revision
+    create_project_revision(
+        &mut *tx,
+        proj_id,
+        rev.revision + 1,
+        proj_data_id,
+        rev.readme_id,
+        now
+    ).await?;
 
     tx.commit().await?;
 
@@ -827,18 +878,23 @@ where
         ProjectRow,
         "
 SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
 FROM projects
-WHERE project_id = ?
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+WHERE projects.project_id = ?
+ORDER BY project_revisions.revision DESC
 LIMIT 1
         ",
         proj_id
@@ -848,75 +904,43 @@ LIMIT 1
     .ok_or(AppError::NotAProject)
 }
 
-async fn get_project_row_revision<'a, A>(
-    conn: A,
+async fn get_project_row_revision<'e, E>(
+    ex: E,
     proj_id: i64,
     revision: u32
 ) -> Result<ProjectRow, AppError>
 where
-    A: Acquire<'a, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
-    let mut conn = conn.acquire().await?;
-
-// TODO: check if a single UNION query is faster
-    // check the revisions table
-    let proj_row = sqlx::query_as!(
+    sqlx::query_as!(
         ProjectRow,
         "
 SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
-FROM projects_revisions
-WHERE project_id = ?
-    AND revision = ?
+    projects.name,
+    project_data.description,
+    project_revisions.revision,
+    projects.created_at,
+    project_revisions.modified_at,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_revisions.readme_id
+FROM projects
+JOIN project_revisions
+ON projects.project_id = project_revisions.project_id
+JOIN project_data
+ON project_data.project_data_id = project_revisions.project_data_id
+WHERE projects.project_id = ?
+    AND project_revisions.revision = ?
 LIMIT 1
         ",
         proj_id,
         revision
     )
-    .fetch_optional(&mut *conn)
+    .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotARevision);
-
-    match proj_row {
-        Ok(r) => Ok(r),
-        Err(_) => {
-            // check the current table
-            sqlx::query_as!(
-                ProjectRow,
-                "
-SELECT
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme_id
-FROM projects
-WHERE project_id = ?
-    AND revision = ?
-LIMIT 1
-                ",
-                proj_id,
-                revision
-            )
-            .fetch_optional(&mut *conn)
-            .await?
-            .ok_or(AppError::NotARevision)
-        }
-    }
+    .ok_or(AppError::NotARevision)
 }
 
 async fn get_packages<'e, E>(
@@ -939,6 +963,35 @@ WHERE project_id = ?
 ORDER BY name COLLATE NOCASE ASC
             ",
             proj_id
+        )
+       .fetch_all(ex)
+       .await?
+    )
+}
+
+async fn get_packages_at<'e, E>(
+    ex: E,
+    proj_id: i64,
+    date: &str
+) -> Result<Vec<PackageRow>, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_as!(
+            PackageRow,
+            "
+SELECT
+    package_id,
+    name,
+    created_at
+FROM packages
+WHERE project_id = ?
+    AND created_at <= ?
+ORDER BY name COLLATE NOCASE ASC
+            ",
+            proj_id,
+            date
         )
        .fetch_all(ex)
        .await?
@@ -969,6 +1022,39 @@ ORDER BY
     version_patch DESC
             ",
             pkg_id
+        )
+        .fetch_all(ex)
+        .await?
+    )
+}
+
+async fn get_versions_at<'e, E>(
+    ex: E,
+    pkg_id: i64,
+    date: &str
+) -> Result<Vec<VersionRow>, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_as!(
+            VersionRow,
+            "
+SELECT
+    package_version_id,
+    version,
+    filename,
+    url
+FROM package_versions
+WHERE package_id = ?
+    AND created_at <= ?
+ORDER BY
+    version_major DESC,
+    version_minor DESC,
+    version_patch DESC
+            ",
+            pkg_id,
+            date
         )
         .fetch_all(ex)
         .await?
@@ -1644,12 +1730,12 @@ mod test {
                 PackageRow {
                     package_id: 1,
                     name: "a_package".into(),
-                    created_at: "2023-12-09T15:56:29,180282477+00:00".into()
+                    created_at: "2023-12-09T15:56:29.180282477+00:00".into()
                 },
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
-                    created_at: "2021-11-06T15:56:29,180282477+00:00".into()
+                    created_at: "2021-11-06T15:56:29.180282477+00:00".into()
                 }
             ]
         );
@@ -1660,6 +1746,31 @@ mod test {
     async fn get_packages_not_a_project(pool: Pool) {
         assert_eq!(
             get_packages(&pool, 0).await.unwrap(),
+            vec![]
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    async fn get_packages_at_ok(pool: Pool) {
+        let date = "2022-01-01T00:00:00.000000000+00:00";
+        assert_eq!(
+            get_packages_at(&pool, 42, date).await.unwrap(),
+            vec![
+                PackageRow {
+                    package_id: 2,
+                    name: "b_package".into(),
+                    created_at: "2021-11-06T15:56:29.180282477+00:00".into()
+                }
+            ]
+        );
+    }
+
+    // TODO: can we tell when the project doesn't exist?
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    async fn get_packages_at_not_a_project(pool: Pool) {
+        let date = "2022-01-01T00:00:00.000000000+00:00";
+        assert_eq!(
+            get_packages_at(&pool, 0, date).await.unwrap(),
             vec![]
         );
     }
