@@ -1,9 +1,10 @@
 use axum::async_trait;
 use chrono::{DateTime, Utc};
+use std::future::Future;
 
 use crate::{
     core::Core,
-    db::DatabaseClient,
+    db::{DatabaseClient, PackageRow, ProjectRow, VersionRow},
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink},
@@ -97,76 +98,12 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         proj_id: i64
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = self.db.get_project_row(proj_id).await?;
-
-        let owners = self.get_owners(proj_id)
-            .await?
-            .users
-            .into_iter()
-            .map(|u| u.0)
-            .collect();
-
-// TODO: gross, is there a better way to do this?
-// We could get all the versions in one shot if the versions table also
-// stored the project id... except that still leaves the authors...
-        let package_rows = self.db.get_packages(proj_id).await?;
-        let mut packages = Vec::with_capacity(package_rows.len());
-
-        for pr in package_rows {
-            let version_rows = self.db.get_versions(pr.package_id).await?;
-            let mut versions = Vec::with_capacity(version_rows.len());
-
-            for vr in version_rows {
-                let authors = self.db.get_authors(vr.package_version_id)
-                    .await?
-                    .users
-                    .into_iter()
-                    .map(|u| u.0)
-                    .collect();
-
-                versions.push(
-                    VersionData {
-                        version: vr.version,
-                        filename: vr.filename,
-                        url: vr.url,
-                        size: 0,
-                        checksum: "".into(),
-                        published_at: "".into(),
-                        published_by: "".into(),
-                        requires: "".into(),
-                        authors
-                    }
-                );
-            }
-
-            packages.push(
-                PackageData {
-                    name: pr.name,
-                    description: "".into(),
-                    versions
-                }
-            );
-        }
-
-        Ok(
-            ProjectData {
-                name: proj_row.name,
-                description: proj_row.description,
-                revision: proj_row.revision,
-                created_at: proj_row.created_at,
-                modified_at: proj_row.modified_at,
-                tags: vec![],
-                game: GameData {
-                    title: proj_row.game_title,
-                    title_sort_key: proj_row.game_title_sort,
-                    publisher: proj_row.game_publisher,
-                    year: proj_row.game_year
-                },
-                readme_id: proj_row.readme_id,
-                owners,
-                packages
-            }
-        )
+        self.get_project_impl(
+            proj_id,
+            self.db.get_project_row(proj_id).await?,
+            self.db.get_packages(proj_id).await?,
+            |pkgid| self.db.get_versions(pkgid)
+        ).await
     }
 
 // TODO: require project names to match [A-Za-z0-9][A-Za-z0-9_-]{,63}?
@@ -196,92 +133,32 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     ) -> Result<(), AppError>
     {
         let now = (self.now)().to_rfc3339();
-
         self.db.update_project(proj_id, proj_data, &now).await
     }
 
+// TODO: combine this with get_project()
     async fn get_project_revision(
         &self,
         proj_id: i64,
         revision: u32
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = self.db.get_project_row_revision(proj_id, revision)
-            .await?;
-
-        let owners = self.get_owners(proj_id)
-            .await?
-            .users
-            .into_iter()
-            .map(|u| u.0)
-            .collect();
-
-// TODO: gross, is there a better way to do this?
-// We could get all the versions in one shot if the versions table also
-// stored the project id... except that still leaves the authors...
-        let package_rows = self.db.get_packages_at(
-            proj_id, &proj_row.modified_at
+        let proj_row = self.db.get_project_row_revision(
+            proj_id, revision
         ).await?;
-        let mut packages = Vec::with_capacity(package_rows.len());
 
-        for pr in package_rows {
-            let version_rows = self.db.get_versions_at(
-                pr.package_id, &proj_row.modified_at
-            ).await?;
-            let mut versions = Vec::with_capacity(version_rows.len());
+        let mtime = proj_row.modified_at.clone();
 
-            for vr in version_rows {
-                let authors = self.db.get_authors(vr.package_version_id)
-                    .await?
-                    .users
-                    .into_iter()
-                    .map(|u| u.0)
-                    .collect();
+        let package_rows = self.db.get_packages_at(
+            proj_id, &mtime
+        ).await?;
 
-                versions.push(
-                    VersionData {
-                        version: vr.version,
-                        filename: vr.filename,
-                        url: vr.url,
-                        size: 0,
-                        checksum: "".into(),
-                        published_at: "".into(),
-                        published_by: "".into(),
-                        requires: "".into(),
-                        authors
-                    }
-                );
-            }
-
-            packages.push(
-                PackageData {
-                    name: pr.name,
-                    description: "".into(),
-                    versions
-                }
-            );
-        }
-
-        Ok(
-            ProjectData {
-                name: proj_row.name,
-                description: proj_row.description,
-                revision: proj_row.revision,
-                created_at: proj_row.created_at,
-                modified_at: proj_row.modified_at,
-                tags: Vec::new(),
-                game: GameData {
-                    title: proj_row.game_title,
-                    title_sort_key: proj_row.game_title_sort,
-                    publisher: proj_row.game_publisher,
-                    year: proj_row.game_year
-                },
-                readme_id: proj_row.readme_id,
-                owners,
-// TODO
-                packages: vec![]
-            }
-        )
+        self.get_project_impl(
+            proj_id,
+            proj_row,
+            package_rows,
+            |pkgid| self.db.get_versions_at(pkgid, &mtime)
+        ).await
     }
 
     async fn get_package(
@@ -338,7 +215,87 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     }
 }
 
-impl<C: DatabaseClient + Sync> ProdCore<C>  {
+impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
+    async fn get_project_impl<F, R>(
+        &self,
+        proj_id: i64,
+        proj_row: ProjectRow,
+        package_rows: Vec<PackageRow>,
+        get_ver_rows: F
+    ) -> Result<ProjectData, AppError>
+    where
+        F: Fn(i64) -> R,
+        R: Future<Output = Result<Vec<VersionRow>, AppError>>
+    {
+        let owners = self.get_owners(proj_id)
+            .await?
+            .users
+            .into_iter()
+            .map(|u| u.0)
+            .collect();
+
+// TODO: gross, is there a better way to do this?
+// We could get all the versions in one shot if the versions table also
+// stored the project id... except that still leaves the authors...
+        let mut packages = Vec::with_capacity(package_rows.len());
+
+        for pr in package_rows {
+            let version_rows = get_ver_rows(pr.package_id).await?;
+            let mut versions = Vec::with_capacity(version_rows.len());
+
+            for vr in version_rows {
+                let authors = self.db.get_authors(vr.package_version_id)
+                    .await?
+                    .users
+                    .into_iter()
+                    .map(|u| u.0)
+                    .collect();
+
+                versions.push(
+                    VersionData {
+                        version: vr.version,
+                        filename: vr.filename,
+                        url: vr.url,
+                        size: 0,
+                        checksum: "".into(),
+                        published_at: "".into(),
+                        published_by: "".into(),
+                        requires: "".into(),
+                        authors
+                    }
+                );
+            }
+
+            packages.push(
+                PackageData {
+                    name: pr.name,
+                    description: "".into(),
+                    versions
+                }
+            );
+        }
+
+        Ok(
+            ProjectData {
+                name: proj_row.name,
+                description: proj_row.description,
+                revision: proj_row.revision,
+                created_at: proj_row.created_at,
+                modified_at: proj_row.modified_at,
+                tags: Vec::new(),
+                game: GameData {
+                    title: proj_row.game_title,
+                    title_sort_key: proj_row.game_title_sort,
+                    publisher: proj_row.game_publisher,
+                    year: proj_row.game_year
+                },
+                readme_id: proj_row.readme_id,
+                owners,
+                packages
+            }
+        )
+    }
+
     async fn get_projects_start(
         &self,
         limit: u32
