@@ -136,7 +136,6 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         self.db.update_project(proj_id, proj_data, &now).await
     }
 
-// TODO: combine this with get_project()
     async fn get_project_revision(
         &self,
         proj_id: i64,
@@ -282,7 +281,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 revision: proj_row.revision,
                 created_at: proj_row.created_at,
                 modified_at: proj_row.modified_at,
-                tags: Vec::new(),
+                tags: vec![],
                 game: GameData {
                     title: proj_row.game_title,
                     title_sort_key: proj_row.game_title_sort,
