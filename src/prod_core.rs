@@ -215,6 +215,33 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 }
 
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
+    async fn make_version_data(
+        &self,
+        vr: VersionRow
+    ) -> Result<VersionData, AppError>
+    {
+        let authors = self.db.get_authors(vr.package_version_id)
+            .await?
+            .users
+            .into_iter()
+            .map(|u| u.0)
+            .collect();
+
+        Ok(
+            VersionData {
+                version: vr.version,
+                filename: vr.filename,
+                url: vr.url,
+                size: 0,
+                checksum: "".into(),
+                published_at: "".into(),
+                published_by: "".into(),
+                requires: "".into(),
+                authors
+            }
+        )
+    }
+
     async fn get_project_impl<'s, F, R>(
         &'s self,
         proj_id: i64,
@@ -243,26 +270,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             let mut versions = Vec::with_capacity(version_rows.len());
 
             for vr in version_rows {
-                let authors = self.db.get_authors(vr.package_version_id)
-                    .await?
-                    .users
-                    .into_iter()
-                    .map(|u| u.0)
-                    .collect();
-
-                versions.push(
-                    VersionData {
-                        version: vr.version,
-                        filename: vr.filename,
-                        url: vr.url,
-                        size: 0,
-                        checksum: "".into(),
-                        published_at: "".into(),
-                        published_by: "".into(),
-                        requires: "".into(),
-                        authors
-                    }
-                );
+                versions.push(self.make_version_data(vr).await?);
             }
 
             packages.push(
