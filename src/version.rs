@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use crate::errors::AppError;
 
+#[non_exhaustive]
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(try_from = "&str")]
 pub struct Version {
