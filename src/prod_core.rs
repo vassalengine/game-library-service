@@ -102,7 +102,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             proj_id,
             self.db.get_project_row(proj_id).await?,
             self.db.get_packages(proj_id).await?,
-            |pkgid| self.db.get_versions(pkgid)
+            |db, pkgid| db.get_versions(pkgid)
         ).await
     }
 
@@ -156,7 +156,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             proj_id,
             proj_row,
             package_rows,
-            |pkgid| self.db.get_versions_at(pkgid, &mtime)
+            |db, pkgid| db.get_versions_at(pkgid, &mtime)
         ).await
     }
 
@@ -215,15 +215,15 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 }
 
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
-    async fn get_project_impl<F, R>(
-        &self,
+    async fn get_project_impl<'s, F, R>(
+        &'s self,
         proj_id: i64,
         proj_row: ProjectRow,
         package_rows: Vec<PackageRow>,
         get_ver_rows: F
     ) -> Result<ProjectData, AppError>
     where
-        F: Fn(i64) -> R,
+        F: Fn(&'s C, i64) -> R,
         R: Future<Output = Result<Vec<VersionRow>, AppError>>
     {
         let owners = self.get_owners(proj_id)
@@ -239,7 +239,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let mut packages = Vec::with_capacity(package_rows.len());
 
         for pr in package_rows {
-            let version_rows = get_ver_rows(pr.package_id).await?;
+            let version_rows = get_ver_rows(&self.db, pr.package_id).await?;
             let mut versions = Vec::with_capacity(version_rows.len());
 
             for vr in version_rows {
