@@ -14,7 +14,7 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn new(version: semver::Version) -> Option<Version> {
+    pub fn new(version: &semver::Version) -> Option<Version> {
         Some(
             Version {
                 major: i64::try_from(version.major).ok()?,
@@ -40,6 +40,7 @@ impl TryFrom<&str> for Version {
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse::<semver::Version>()
             .ok()
+            .as_ref()
             .and_then(Version::new)
             .ok_or(AppError::MalformedVersion)
     }
