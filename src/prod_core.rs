@@ -1,5 +1,6 @@
 use axum::async_trait;
 use chrono::{DateTime, Utc};
+use futures_util::future::try_join_all;
 use std::future::Future;
 
 use crate::{
@@ -242,6 +243,31 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         )
     }
 
+    async fn make_package_data<'s, F, R>(
+        &'s self,
+        pr: PackageRow,
+        get_ver_rows: &F
+    ) -> Result<PackageData, AppError>
+    where
+        F: Fn(&'s Self, i64) -> R,
+        R: Future<Output = Result<Vec<VersionRow>, AppError>>
+    {
+        let versions = try_join_all(
+            get_ver_rows(&self, pr.package_id)
+                .await?
+                .into_iter()
+                .map(|vr| self.make_version_data(vr))
+        ).await?;
+
+        Ok(
+            PackageData {
+                name: pr.name,
+                description: "".into(),
+                versions
+            }
+        )
+    }
+
     async fn get_project_impl<'s, F, R>(
         &'s self,
         proj_id: i64,
@@ -260,27 +286,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             .map(|u| u.0)
             .collect();
 
-// TODO: gross, is there a better way to do this?
-// We could get all the versions in one shot if the versions table also
-// stored the project id... except that still leaves the authors...
-        let mut packages = Vec::with_capacity(package_rows.len());
-
-        for pr in package_rows {
-            let version_rows = get_ver_rows(&self, pr.package_id).await?;
-            let mut versions = Vec::with_capacity(version_rows.len());
-
-            for vr in version_rows {
-                versions.push(self.make_version_data(vr).await?);
-            }
-
-            packages.push(
-                PackageData {
-                    name: pr.name,
-                    description: "".into(),
-                    versions
-                }
-            );
-        }
+        let packages = try_join_all(
+            package_rows
+                .into_iter()
+                .map(|pr| self.make_package_data(pr, &get_ver_rows))
+        ).await?;
 
         Ok(
             ProjectData {
