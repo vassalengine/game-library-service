@@ -7,7 +7,7 @@ use sqlx::{
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, VersionRow},
     errors::AppError,
-    model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    model::{ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
     version::Version
 };
 
@@ -1318,6 +1318,8 @@ RETURNING readme_id
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use crate::model::GameData;
 
     #[sqlx::test(fixtures("readmes", "projects"))]
     async fn get_project_id_ok(pool: Pool) {

@@ -9,7 +9,6 @@ use crate::{
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink},
-    sqlite::{Pool, SqlxDatabaseClient},
     version::Version
 };
 
@@ -479,6 +478,10 @@ mod test {
     use super::*;
 
     use once_cell::sync::Lazy;
+
+    use crate::sqlite::{
+        Pool, SqlxDatabaseClient
+    };
 
     const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
 
