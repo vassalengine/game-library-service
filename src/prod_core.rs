@@ -252,7 +252,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         R: Future<Output = Result<Vec<VersionRow>, AppError>>
     {
         let versions = try_join_all(
-            get_ver_rows(&self, pr.package_id)
+            get_ver_rows(self, pr.package_id)
                 .await?
                 .into_iter()
                 .map(|vr| self.make_version_data(vr))
@@ -691,9 +691,9 @@ mod test {
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 1,
-                created_at: NOW.into(),
-                modified_at: NOW.into(),
+                revision: 3,
+                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
                 tags: Vec::new(),
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -736,23 +736,40 @@ mod test {
                         name: "b_package".into(),
                         description: "".into(),
                         versions: vec![]
+                    },
+                    PackageData {
+                        name: "c_package".into(),
+                        description: "".into(),
+                        versions: vec![
+                            VersionData {
+                                version: "0.1.0".into(),
+                                filename: "c_package-0.1.0".into(),
+                                url: "https://example.com/c_package-0.1.0".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec![]
+                            }
+                        ]
                     }
                 ]
             }
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners", "packages", "authors"))]
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project_revision(42, 1).await.unwrap(),
+            core.get_project_revision(42, 2).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 1,
-                created_at: NOW.into(),
-                modified_at: NOW.into(),
+                revision: 2,
+                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-12T15:50:06.419538067+00:00".into(),
                 tags: Vec::new(),
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -762,33 +779,82 @@ mod test {
                 },
                 readme_id: 8,
                 owners: vec!["alice".into(), "bob".into()],
-                packages: vec![]
+                packages: vec![
+                    PackageData {
+                        name: "a_package".into(),
+                        description: "".into(),
+                        versions: vec![
+                            VersionData {
+                                version: "1.2.4".into(),
+                                filename: "a_package-1.2.4".into(),
+                                url: "https://example.com/a_package-1.2.4".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!["alice".into(), "bob".into()]
+                            },
+                            VersionData {
+                                version: "1.2.3".into(),
+                                filename: "a_package-1.2.3".into(),
+                                url: "https://example.com/a_package-1.2.3".into(),
+                                size: 0,
+                                checksum: "".into(),
+                                published_at: "".into(),
+                                published_by: "".into(),
+                                requires: "".into(),
+                                authors: vec!["alice".into()]
+                            }
+                        ]
+                    },
+                    PackageData {
+                        name: "b_package".into(),
+                        description: "".into(),
+                        versions: vec![]
+                    },
+                    PackageData {
+                        name: "c_package".into(),
+                        description: "".into(),
+                        versions: vec![]
+                    }
+                ]
             }
         );
     }
 
-// TODO: need to show pacakges as they were?
-    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners", "packages"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project_revision(6, 1).await.unwrap(),
+            core.get_project_revision(42, 1).await.unwrap(),
             ProjectData {
-                name: "a_game".into(),
-                description: "Another game".into(),
+                name: "test_game".into(),
+                description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 1,
-                created_at: "2019-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2019-11-12T15:50:06.419538067+00:00".into(),
-                tags: Vec::new(),
+                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                tags: vec![],
                 game: GameData {
-                    title: "Some Otter Game".into(),
-                    title_sort_key: "Some Otter Game".into(),
-                    publisher: "Otters!".into(),
-                    year: "1993".into()
+                    title: "A Game of Tests".into(),
+                    title_sort_key: "Game of Tests, A".into(),
+                    publisher: "Test Game Company".into(),
+                    year: "1979".into()
                 },
-                readme_id: 4,
+                readme_id: 8,
                 owners: vec!["alice".into(), "bob".into()],
-                packages: vec![]
+                packages: vec![
+                    PackageData {
+                        name: "b_package".into(),
+                        description: "".into(),
+                        versions: vec![]
+                    },
+                    PackageData {
+                        name: "c_package".into(),
+                        description: "".into(),
+                        versions: vec![]
+                    }
+                ]
             }
         );
     }
@@ -841,7 +907,7 @@ mod test {
         let new_data = ProjectData {
             name: proj.0.clone(),
             description: "new description".into(),
-            revision: 2,
+            revision: 4,
             created_at: NOW.into(),
             modified_at: NOW.into(),
             tags: Vec::new(),
@@ -874,7 +940,7 @@ mod test {
         assert_eq!(core.get_project(proj_id.0).await.unwrap(), new_data);
         // old data is kept as a revision
         assert_eq!(
-            core.get_project_revision(proj_id.0, 1).await.unwrap(),
+            core.get_project_revision(proj_id.0, 3).await.unwrap(),
             old_data
         );
     }

@@ -1649,9 +1649,9 @@ mod test {
             ProjectRow {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 1,
+                revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
@@ -1672,6 +1672,25 @@ mod test {
     #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
+            get_project_row_revision(&pool, 42, 2).await.unwrap(),
+            ProjectRow {
+                name: "test_game".into(),
+                description: "Brian's Trademarked Game of Being a Test Case".into(),
+                revision: 2,
+                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-12T15:50:06.419538067+00:00".into(),
+                game_title: "A Game of Tests".into(),
+                game_title_sort: "Game of Tests, A".into(),
+                game_publisher: "Test Game Company".into(),
+                game_year: "1979".into(),
+                readme_id: 8
+            }
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
+    async fn get_project_revision_ok_old(pool: Pool) {
+        assert_eq!(
             get_project_row_revision(&pool, 42, 1).await.unwrap(),
             ProjectRow {
                 name: "test_game".into(),
@@ -1688,25 +1707,6 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
-    async fn get_project_revision_ok_old(pool: Pool) {
-        assert_eq!(
-            get_project_row_revision(&pool, 6, 1).await.unwrap(),
-            ProjectRow {
-                name: "a_game".into(),
-                description: "Another game".into(),
-                revision: 1,
-                created_at: "2019-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2019-11-12T15:50:06.419538067+00:00".into(),
-                game_title: "Some Otter Game".into(),
-                game_title_sort: "Some Otter Game".into(),
-                game_publisher: "Otters!".into(),
-                game_year: "1993".into(),
-                readme_id: 4
-            }
-        );
-    }
-
 // TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("readmes", "projects"))]
     async fn get_project_revision_not_a_project(pool: Pool) {
@@ -1719,7 +1719,7 @@ mod test {
     #[sqlx::test(fixtures("readmes", "projects"))]
     async fn get_project_revision_not_a_revision(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 42, 2).await.unwrap_err(),
+            get_project_row_revision(&pool, 42, 0).await.unwrap_err(),
             AppError::NotARevision
         );
     }
@@ -1737,7 +1737,12 @@ mod test {
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
-                    created_at: "2021-11-06T15:56:29.180282477+00:00".into()
+                    created_at: "2022-11-06T15:56:29.180282477+00:00".into()
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: "2023-11-06T15:56:29.180282477+00:00".into()
                 }
             ]
         );
@@ -1753,8 +1758,16 @@ mod test {
     }
 
     #[sqlx::test(fixtures("readmes", "projects", "packages"))]
-    async fn get_packages_at_ok(pool: Pool) {
-        let date = "2022-01-01T00:00:00.000000000+00:00";
+    async fn get_packages_at_none(pool: Pool) {
+        let date = "1970-01-01T00:00:00.000000000+00:00";
+        assert_eq!(
+            get_packages_at(&pool, 42, date).await.unwrap(),
+            vec![]
+        );
+    }
+
+    async fn get_packages_at_some(pool: Pool) {
+        let date = "2023-01-01T00:00:00.000000000+00:00";
         assert_eq!(
             get_packages_at(&pool, 42, date).await.unwrap(),
             vec![
