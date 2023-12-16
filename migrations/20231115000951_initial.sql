@@ -50,8 +50,10 @@ CREATE TABLE releases (
   version_patch INTEGER NOT NULL,
   version_pre TEXT NOT NULL,
   version_build TEXT NOT NULL,
-  filename TEXT NOT NULL,
   url TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  checksum TEXT NOT NULL,
   published_at TEXT NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
   FOREIGN KEY(package_id) REFERENCES packages(package_id)

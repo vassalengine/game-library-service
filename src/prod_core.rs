@@ -217,10 +217,10 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn make_version_data(
         &self,
-        vr: ReleaseRow
+        rr: ReleaseRow
     ) -> Result<VersionData, AppError>
     {
-        let authors = self.db.get_authors(vr.release_id)
+        let authors = self.db.get_authors(rr.release_id)
             .await?
             .users
             .into_iter()
@@ -229,12 +229,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
         Ok(
             VersionData {
-                version: vr.version,
-                filename: vr.filename,
-                url: vr.url,
-                size: 0,
-                checksum: "".into(),
-                published_at: vr.published_at,
+                version: rr.version,
+                filename: rr.filename,
+                url: rr.url,
+                size: rr.size,
+                checksum: rr.checksum,
+                published_at: rr.published_at,
                 published_by: "".into(),
                 requires: "".into(),
                 authors
@@ -712,8 +712,8 @@ mod test {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
-                                size: 0,
-                                checksum: "".into(),
+                                size: 5678,
+                                checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
@@ -723,8 +723,8 @@ mod test {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
-                                size: 0,
-                                checksum: "".into(),
+                                size: 1234,
+                                checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
@@ -745,8 +745,8 @@ mod test {
                                 version: "0.1.0".into(),
                                 filename: "c_package-0.1.0".into(),
                                 url: "https://example.com/c_package-0.1.0".into(),
-                                size: 0,
-                                checksum: "".into(),
+                                size: 123456,
+                                checksum: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
                                 published_at: "2023-12-13T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
@@ -788,8 +788,8 @@ mod test {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
-                                size: 0,
-                                checksum: "".into(),
+                                size: 5678,
+                                checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
@@ -799,8 +799,8 @@ mod test {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
-                                size: 0,
-                                checksum: "".into(),
+                                size: 1234,
+                                checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),

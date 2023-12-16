@@ -59,7 +59,7 @@ pub struct VersionData {
     pub version: String,
     pub filename: String,
     pub url: String,
-    pub size: u64,
+    pub size: i64,
     pub checksum: String,
     pub published_at: String,
     pub published_by: String,
@@ -118,5 +118,3 @@ pub struct Projects {
     pub projects: Vec<ProjectSummary>,
     pub meta: Pagination
 }
-
-

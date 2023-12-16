@@ -62,10 +62,8 @@ pub struct ReleaseRow {
     pub version: String,
     pub filename: String,
     pub url: String,
-/*
-    size: u64,
-    checksum: String,
-*/
+    pub size: i64,
+    pub checksum: String,
     pub published_at: String
 /*
     published_by: String,
