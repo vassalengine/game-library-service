@@ -1765,6 +1765,7 @@ mod test {
         );
     }
 
+    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
     async fn get_packages_at_some(pool: Pool) {
         let date = "2023-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -1773,7 +1774,7 @@ mod test {
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
-                    created_at: "2021-11-06T15:56:29.180282477+00:00".into()
+                    created_at: "2022-11-06T15:56:29.180282477+00:00".into()
                 }
             ]
         );
