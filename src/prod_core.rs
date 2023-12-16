@@ -234,7 +234,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 url: vr.url,
                 size: 0,
                 checksum: "".into(),
-                published_at: "".into(),
+                published_at: vr.published_at,
                 published_by: "".into(),
                 requires: "".into(),
                 authors
@@ -714,7 +714,7 @@ mod test {
                                 url: "https://example.com/a_package-1.2.4".into(),
                                 size: 0,
                                 checksum: "".into(),
-                                published_at: "".into(),
+                                published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
@@ -725,7 +725,7 @@ mod test {
                                 url: "https://example.com/a_package-1.2.3".into(),
                                 size: 0,
                                 checksum: "".into(),
-                                published_at: "".into(),
+                                published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
@@ -747,7 +747,7 @@ mod test {
                                 url: "https://example.com/c_package-0.1.0".into(),
                                 size: 0,
                                 checksum: "".into(),
-                                published_at: "".into(),
+                                published_at: "2023-12-13T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
                                 authors: vec![]
@@ -790,7 +790,7 @@ mod test {
                                 url: "https://example.com/a_package-1.2.4".into(),
                                 size: 0,
                                 checksum: "".into(),
-                                published_at: "".into(),
+                                published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
@@ -801,7 +801,7 @@ mod test {
                                 url: "https://example.com/a_package-1.2.3".into(),
                                 size: 0,
                                 checksum: "".into(),
-                                published_at: "".into(),
+                                published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
