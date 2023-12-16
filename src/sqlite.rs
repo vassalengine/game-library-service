@@ -804,7 +804,6 @@ where
 
     tx.commit().await?;
 
-// TODO: should return project id
     Ok(())
 }
 
