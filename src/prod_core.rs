@@ -945,7 +945,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_package_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -954,7 +954,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_release_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
@@ -964,7 +964,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_release_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();

@@ -1729,7 +1729,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_packages_ok(pool: Pool) {
         assert_eq!(
             get_packages(&pool, 42).await.unwrap(),
@@ -1754,7 +1754,7 @@ mod test {
     }
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_packages_not_a_project(pool: Pool) {
         assert_eq!(
             get_packages(&pool, 0).await.unwrap(),
@@ -1762,7 +1762,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_packages_at_none(pool: Pool) {
         let date = "1970-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -1771,7 +1771,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_packages_at_some(pool: Pool) {
         let date = "2023-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -1787,7 +1787,7 @@ mod test {
     }
 
     // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_packages_at_not_a_project(pool: Pool) {
         let date = "2022-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -1796,7 +1796,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_package_url_ok(pool: Pool) {
         assert_eq!(
             get_package_url(&pool, 1).await.unwrap(),
@@ -1804,7 +1804,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_package_url_not_a_package(pool: Pool) {
         assert_eq!(
             get_package_url(&pool, 0).await.unwrap_err(),
@@ -1812,7 +1812,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_versions_ok(pool: Pool) {
         assert_eq!(
             get_versions(&pool, 1).await.unwrap(),
@@ -1840,7 +1840,7 @@ mod test {
     }
 
 // TODO: can we tell when the package doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
     async fn get_versions_not_a_package(pool: Pool) {
         assert_eq!(
             get_versions(&pool, 0).await.unwrap(),
@@ -1848,7 +1848,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "packages", "users", "authors"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages", "authors"))]
     async fn get_authors_ok(pool: Pool) {
         assert_eq!(
             get_authors(&pool, 2).await.unwrap(),
@@ -1862,7 +1862,7 @@ mod test {
     }
 
 // TODO: can we tell when the package version doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "packages", "users", "authors"))]
+    #[sqlx::test(fixtures("users", "readmes", "projects", "packages", "authors"))]
     async fn get_authors_not_a_release(pool: Pool) {
         assert_eq!(
             get_authors(&pool, 0).await.unwrap(),

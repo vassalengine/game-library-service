@@ -55,8 +55,10 @@ CREATE TABLE releases (
   size INTEGER NOT NULL,
   checksum TEXT NOT NULL,
   published_at TEXT NOT NULL,
+  published_by INTEGER NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
-  FOREIGN KEY(package_id) REFERENCES packages(package_id)
+  FOREIGN KEY(package_id) REFERENCES packages(package_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE projects (
