@@ -5,7 +5,7 @@ use sqlx::{
 };
 
 use crate::{
-    db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, VersionRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, ReleaseRow},
     errors::AppError,
     model::{ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
     version::Version
@@ -200,7 +200,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_versions(
         &self,
         pkg_id: i64
-    ) -> Result<Vec<VersionRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, AppError>
     {
         get_versions(&self.0, pkg_id).await
     }
@@ -209,7 +209,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg_id: i64,
         date: &str
-    ) -> Result<Vec<VersionRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, AppError>
     {
         get_versions_at(&self.0, pkg_id, date).await
     }
@@ -230,13 +230,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_package_url(&self.0, pkg_id).await
     }
 
-     async fn get_package_version_url(
+     async fn get_release_url(
         &self,
         pkg_id: i64,
         version: &Version
     ) -> Result<String, AppError>
     {
-        get_package_version_url(&self.0, pkg_id, version).await
+        get_release_url(&self.0, pkg_id, version).await
     }
 
     async fn get_players(
@@ -1000,21 +1000,21 @@ ORDER BY name COLLATE NOCASE ASC
 async fn get_versions<'e, E>(
     ex: E,
     pkg_id: i64
-) -> Result<Vec<VersionRow>, AppError>
+) -> Result<Vec<ReleaseRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            VersionRow,
+            ReleaseRow,
             "
 SELECT
-    package_version_id,
+    release_id,
     version,
     filename,
     url,
     published_at
-FROM package_versions
+FROM releases
 WHERE package_id = ?
 ORDER BY
     version_major DESC,
@@ -1032,21 +1032,21 @@ async fn get_versions_at<'e, E>(
     ex: E,
     pkg_id: i64,
     date: &str
-) -> Result<Vec<VersionRow>, AppError>
+) -> Result<Vec<ReleaseRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            VersionRow,
+            ReleaseRow,
             "
 SELECT
-    package_version_id,
+    release_id,
     version,
     filename,
     url,
     published_at
-FROM package_versions
+FROM releases
 WHERE package_id = ?
     AND published_at <= ?
 ORDER BY
@@ -1077,7 +1077,7 @@ SELECT users.username
 FROM users
 JOIN authors
 ON users.user_id = authors.user_id
-WHERE authors.package_version_id = ?
+WHERE authors.release_id = ?
 ORDER BY users.username
                 ",
                 pkg_ver_id
@@ -1102,7 +1102,7 @@ where
     sqlx::query_scalar!(
         "
 SELECT url
-FROM package_versions
+FROM releases
 WHERE package_id = ?
 ORDER BY
     version_major DESC,
@@ -1117,7 +1117,7 @@ LIMIT 1
     .ok_or(AppError::NotAPackage)
 }
 
-async fn get_package_version_url<'e, E>(
+async fn get_release_url<'e, E>(
     ex: E,
     pkg_id: i64,
     version: &Version
@@ -1131,7 +1131,7 @@ where
     sqlx::query_scalar!(
         "
 SELECT url
-FROM package_versions
+FROM releases
 WHERE package_id = ?
     AND version_major = ?
     AND version_minor = ?
@@ -1813,15 +1813,15 @@ mod test {
         assert_eq!(
             get_versions(&pool, 1).await.unwrap(),
             vec![
-                VersionRow {
-                    package_version_id: 2,
+                ReleaseRow {
+                    release_id: 2,
                     version: "1.2.4".into(),
                     filename: "a_package-1.2.4".into(),
                     url: "https://example.com/a_package-1.2.4".into(),
                     published_at: "2023-12-10T15:56:29.180282477+00:00".into()
                 },
-                VersionRow {
-                    package_version_id: 1,
+                ReleaseRow {
+                    release_id: 1,
                     version: "1.2.3".into(),
                     filename: "a_package-1.2.3".into(),
                     url: "https://example.com/a_package-1.2.3".into(),
@@ -1855,7 +1855,7 @@ mod test {
 
 // TODO: can we tell when the package version doesn't exist?
     #[sqlx::test(fixtures("readmes", "projects", "packages", "users", "authors"))]
-    async fn get_authors_not_a_package_version(pool: Pool) {
+    async fn get_authors_not_a_release(pool: Pool) {
         assert_eq!(
             get_authors(&pool, 0).await.unwrap(),
             Users { users: vec![] }

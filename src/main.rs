@@ -124,8 +124,8 @@ fn routes(api: &str) -> Router<AppState> {
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name/:version"),
-            get(handlers::package_version_get)
-            .put(handlers::package_version_put)
+            get(handlers::release_get)
+            .put(handlers::release_put)
         )
         .route(
             &format!("{api}/projects/:proj/readme"),
@@ -444,7 +444,7 @@ mod test {
             Ok("https://example.com/package".into())
         }
 
-        async fn get_package_version(
+        async fn get_release(
             &self,
             _proj_id: i64,
             _pkg_id: i64,
@@ -1332,7 +1332,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_package_version_ok() {
+    async fn get_release_ok() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1350,7 +1350,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_package_version_not_a_project() {
+    async fn get_release_not_a_project() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1368,7 +1368,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_package_version_not_a_package() {
+    async fn get_release_not_a_package() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1386,7 +1386,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_package_version_not_a_version() {
+    async fn get_release_not_a_version() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)

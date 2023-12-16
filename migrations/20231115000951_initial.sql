@@ -14,10 +14,10 @@ CREATE TABLE owners(
 
 CREATE TABLE authors(
   user_id INTEGER NOT NULL,
-  package_version_id INTEGER NOT NULL,
+  release_id INTEGER NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(user_id),
-  FOREIGN KEY(package_version_id) REFERENCES package_versions(package_version_id),
-  UNIQUE(user_id, package_version_id)
+  FOREIGN KEY(release_id) REFERENCES releases(release_id),
+  UNIQUE(user_id, release_id)
 );
 
 CREATE TABLE players(
@@ -41,8 +41,8 @@ CREATE TABLE packages (
   FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 
-CREATE TABLE package_versions (
-  package_version_id INTEGER PRIMARY KEY NOT NULL,
+CREATE TABLE releases (
+  release_id INTEGER PRIMARY KEY NOT NULL,
   package_id INTEGER NOT NULL,
   version TEXT NOT NULL,
   version_major INTEGER NOT NULL,

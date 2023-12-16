@@ -124,7 +124,7 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn get_package_version(
+    async fn get_release(
         &self,
         _proj_id: i64,
         _pkg_id: i64,

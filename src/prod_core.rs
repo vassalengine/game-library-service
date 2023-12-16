@@ -5,7 +5,7 @@ use std::future::Future;
 
 use crate::{
     core::Core,
-    db::{DatabaseClient, PackageRow, ProjectRow, VersionRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
     pagination::{Limit, Pagination, Seek, SeekLink},
@@ -169,14 +169,14 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         self.db.get_package_url(pkg_id).await
     }
 
-    async fn get_package_version(
+    async fn get_release(
         &self,
         _proj_id: i64,
         pkg_id: i64,
         version: &Version
     ) -> Result<String, AppError>
     {
-        self.db.get_package_version_url(pkg_id, version).await
+        self.db.get_release_url(pkg_id, version).await
     }
 
     async fn get_players(
@@ -217,10 +217,10 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn make_version_data(
         &self,
-        vr: VersionRow
+        vr: ReleaseRow
     ) -> Result<VersionData, AppError>
     {
-        let authors = self.db.get_authors(vr.package_version_id)
+        let authors = self.db.get_authors(vr.release_id)
             .await?
             .users
             .into_iter()
@@ -249,7 +249,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<PackageData, AppError>
     where
         F: Fn(&'s Self, i64) -> R,
-        R: Future<Output = Result<Vec<VersionRow>, AppError>>
+        R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
         let versions = try_join_all(
             get_ver_rows(self, pr.package_id)
@@ -276,7 +276,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<ProjectData, AppError>
     where
         F: Fn(&'s Self, i64) -> R,
-        R: Future<Output = Result<Vec<VersionRow>, AppError>>
+        R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
         let owners = self.get_owners(proj_id)
             .await?
@@ -955,21 +955,21 @@ mod test {
     }
 
     #[sqlx::test(fixtures("readmes", "projects", "packages"))]
-    async fn get_package_version_ok(pool: Pool) {
+    async fn get_release_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_package_version(42, 1, &version).await.unwrap(),
+            core.get_release(42, 1, &version).await.unwrap(),
             "https://example.com/a_package-1.2.3"
         );
     }
 
     #[sqlx::test(fixtures("readmes", "projects", "packages"))]
-    async fn get_package_version_not_a_version(pool: Pool) {
+    async fn get_release_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_package_version(42, 1, &version).await.unwrap_err(),
+            core.get_release(42, 1, &version).await.unwrap_err(),
             AppError::NotAVersion
         );
     }

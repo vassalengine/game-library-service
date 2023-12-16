@@ -5,8 +5,8 @@ VALUES
   (3, 42, "c_package", "2023-11-06T15:56:29.180282477+00:00")
 ;
 
-INSERT INTO package_versions (
-  package_version_id,
+INSERT INTO releases (
+  release_id,
   package_id,
   version,
   version_major,

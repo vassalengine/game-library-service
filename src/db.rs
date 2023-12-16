@@ -57,8 +57,8 @@ pub struct PackageRow {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct VersionRow {
-    pub package_version_id: i64,
+pub struct ReleaseRow {
+    pub release_id: i64,
     pub version: String,
     pub filename: String,
     pub url: String,
@@ -259,7 +259,7 @@ pub trait DatabaseClient {
     async fn get_versions(
         &self,
         _pkg_id: i64
-    ) -> Result<Vec<VersionRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, AppError>
     {
         unimplemented!();
     }
@@ -268,7 +268,7 @@ pub trait DatabaseClient {
         &self,
         _pkg_id: i64,
         _date: &str
-    ) -> Result<Vec<VersionRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, AppError>
     {
         unimplemented!();
     }
@@ -289,7 +289,7 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_package_version_url(
+    async fn get_release_url(
         &self,
         _pkg_id: i64,
         _version: &Version

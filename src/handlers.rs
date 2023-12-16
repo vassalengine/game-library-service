@@ -140,25 +140,23 @@ pub async fn package_get(
     Ok(Redirect::to(&core.get_package(proj_id.0, pkg_id.0).await?))
 }
 
-pub async fn package_version_get(
-    proj_id: ProjectID,
-    pkg_id: PackageID,
-    Path((_, _, pkg_version)): Path<(String, String, Version)>,
+
+// TODO: Version extractor?
+pub async fn release_get(
+    ProjectIDAndPackageID((proj_id, pkg_id)): ProjectIDAndPackageID,
+    Path((_, _, version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    Ok(
-        Redirect::to(
-            &core.get_package_version(
-                proj_id.0, pkg_id.0, &pkg_version
-            ).await?
-        )
-    )
+    let version = version.parse::<Version>()
+        .or(Err(AppError::NotFound))?;
+
+    Ok(Redirect::to(&core.get_release(proj_id.0, pkg_id.0, &version).await?))
 }
 
-pub async fn package_version_put(
+pub async fn release_put(
     _proj_id: ProjectID,
-    Path((_pkg_name, _pkg_version)): Path<(String, String)>,
+    Path((_pkg_name, _version)): Path<(String, String)>,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {
@@ -166,7 +164,7 @@ pub async fn package_version_put(
 }
 
 /*
-pub async fn package_version_put(
+pub async fn release_put(
     _: Owner,
     proj_id: ProjectID,
     pkg_id: PackageID,
