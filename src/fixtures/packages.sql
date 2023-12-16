@@ -16,7 +16,7 @@ INSERT INTO package_versions (
   version_build,
   url,
   filename,
-  created_at
+  published_at
 )
 VALUES
   (1, 1, "1.2.3", 1, 2, 3, "", "", "https://example.com/a_package-1.2.3", "a_package-1.2.3", "2023-12-09T15:56:29.180282477+00:00"),

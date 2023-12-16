@@ -65,7 +65,9 @@ pub struct VersionRow {
 /*
     size: u64,
     checksum: String,
-    published_at: String,
+*/
+    pub published_at: String
+/*
     published_by: String,
     requires: String
 */

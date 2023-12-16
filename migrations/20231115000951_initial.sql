@@ -52,7 +52,7 @@ CREATE TABLE package_versions (
   version_build TEXT NOT NULL,
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
-  created_at TEXT NOT NULL,
+  published_at TEXT NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch),
   FOREIGN KEY(package_id) REFERENCES packages(package_id)
 );

@@ -1012,7 +1012,8 @@ SELECT
     package_version_id,
     version,
     filename,
-    url
+    url,
+    published_at
 FROM package_versions
 WHERE package_id = ?
 ORDER BY
@@ -1043,10 +1044,11 @@ SELECT
     package_version_id,
     version,
     filename,
-    url
+    url,
+    published_at
 FROM package_versions
 WHERE package_id = ?
-    AND created_at <= ?
+    AND published_at <= ?
 ORDER BY
     version_major DESC,
     version_minor DESC,
@@ -1815,13 +1817,15 @@ mod test {
                     package_version_id: 2,
                     version: "1.2.4".into(),
                     filename: "a_package-1.2.4".into(),
-                    url: "https://example.com/a_package-1.2.4".into()
+                    url: "https://example.com/a_package-1.2.4".into(),
+                    published_at: "2023-12-10T15:56:29.180282477+00:00".into()
                 },
                 VersionRow {
                     package_version_id: 1,
                     version: "1.2.3".into(),
                     filename: "a_package-1.2.3".into(),
-                    url: "https://example.com/a_package-1.2.3".into()
+                    url: "https://example.com/a_package-1.2.3".into(),
+                    published_at: "2023-12-09T15:56:29.180282477+00:00".into()
                 }
             ]
         );
