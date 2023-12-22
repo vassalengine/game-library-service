@@ -209,7 +209,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
+        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, ReleaseData, User, Users},
         pagination::{Limit, Pagination, Seek, SeekLink},
         version::Version
     };
@@ -385,8 +385,8 @@ mod test {
                         PackageData {
                             name: "".into(),
                             description: "".into(),
-                            versions: vec![
-                                VersionData {
+                            releases: vec![
+                                ReleaseData {
                                     version: "".into(),
                                     filename: "".into(),
                                     url: "".into(),
@@ -1006,8 +1006,8 @@ mod test {
                     PackageData {
                         name: "".into(),
                         description: "".into(),
-                        versions: vec![
-                            VersionData {
+                        releases: vec![
+                            ReleaseData {
                                 version: "".into(),
                                 filename: "".into(),
                                 url: "".into(),
@@ -1222,8 +1222,8 @@ mod test {
                     PackageData {
                         name: "".into(),
                         description: "".into(),
-                        versions: vec![
-                            VersionData {
+                        releases: vec![
+                            ReleaseData {
                                 version: "".into(),
                                 filename: "".into(),
                                 url: "".into(),

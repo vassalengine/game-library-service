@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, User, Users, VersionData},
+    model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, ReleaseData, User, Users},
     pagination::{Limit, Pagination, Seek, SeekLink},
     version::Version
 };
@@ -218,7 +218,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn make_version_data(
         &self,
         rr: ReleaseRow
-    ) -> Result<VersionData, AppError>
+    ) -> Result<ReleaseData, AppError>
     {
         let authors = self.db.get_authors(rr.release_id)
             .await?
@@ -228,7 +228,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             .collect();
 
         Ok(
-            VersionData {
+            ReleaseData {
                 version: rr.version,
                 filename: rr.filename,
                 url: rr.url,
@@ -251,7 +251,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         F: Fn(&'s Self, i64) -> R,
         R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
-        let versions = try_join_all(
+        let releases = try_join_all(
             get_release_rows(self, pr.package_id)
                 .await?
                 .into_iter()
@@ -262,7 +262,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             PackageData {
                 name: pr.name,
                 description: "".into(),
-                versions
+                releases
             }
         )
     }
@@ -707,8 +707,8 @@ mod test {
                     PackageData {
                         name: "a_package".into(),
                         description: "".into(),
-                        versions: vec![
-                            VersionData {
+                        releases: vec![
+                            ReleaseData {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
@@ -719,7 +719,7 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
-                            VersionData {
+                            ReleaseData {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
@@ -735,13 +735,13 @@ mod test {
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        versions: vec![]
+                        releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        versions: vec![
-                            VersionData {
+                        releases: vec![
+                            ReleaseData {
                                 version: "0.1.0".into(),
                                 filename: "c_package-0.1.0".into(),
                                 url: "https://example.com/c_package-0.1.0".into(),
@@ -783,8 +783,8 @@ mod test {
                     PackageData {
                         name: "a_package".into(),
                         description: "".into(),
-                        versions: vec![
-                            VersionData {
+                        releases: vec![
+                            ReleaseData {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
@@ -795,7 +795,7 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
-                            VersionData {
+                            ReleaseData {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
@@ -811,12 +811,12 @@ mod test {
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        versions: vec![]
+                        releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        versions: vec![]
+                        releases: vec![]
                     }
                 ]
             }
@@ -847,12 +847,12 @@ mod test {
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        versions: vec![]
+                        releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        versions: vec![]
+                        releases: vec![]
                     }
                 ]
             }
