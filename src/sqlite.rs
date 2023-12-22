@@ -197,21 +197,21 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_packages_at(&self.0, proj_id, date).await
     }
 
-    async fn get_versions(
+    async fn get_releases(
         &self,
         pkg_id: i64
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
-        get_versions(&self.0, pkg_id).await
+        get_releases(&self.0, pkg_id).await
     }
 
-    async fn get_versions_at(
+    async fn get_releases_at(
         &self,
         pkg_id: i64,
         date: &str
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
-        get_versions_at(&self.0, pkg_id, date).await
+        get_releases_at(&self.0, pkg_id, date).await
     }
 
     async fn get_authors(
@@ -997,7 +997,8 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
-async fn get_versions<'e, E>(
+// TODO: figure out how to order version_pre
+async fn get_releases<'e, E>(
     ex: E,
     pkg_id: i64
 ) -> Result<Vec<ReleaseRow>, AppError>
@@ -1030,7 +1031,8 @@ ORDER BY
     )
 }
 
-async fn get_versions_at<'e, E>(
+// TODO: figure out how to order version_pre
+async fn get_releases_at<'e, E>(
     ex: E,
     pkg_id: i64,
     date: &str
@@ -1813,9 +1815,9 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
-    async fn get_versions_ok(pool: Pool) {
+    async fn get_releases_ok(pool: Pool) {
         assert_eq!(
-            get_versions(&pool, 1).await.unwrap(),
+            get_releases(&pool, 1).await.unwrap(),
             vec![
                 ReleaseRow {
                     release_id: 2,
@@ -1841,9 +1843,9 @@ mod test {
 
 // TODO: can we tell when the package doesn't exist?
     #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
-    async fn get_versions_not_a_package(pool: Pool) {
+    async fn get_releases_not_a_package(pool: Pool) {
         assert_eq!(
-            get_versions(&pool, 0).await.unwrap(),
+            get_releases(&pool, 0).await.unwrap(),
             vec![]
         );
     }

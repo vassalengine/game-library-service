@@ -102,7 +102,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             proj_id,
             self.db.get_project_row(proj_id).await?,
             self.db.get_packages(proj_id).await?,
-            |pc, pkgid| pc.db.get_versions(pkgid)
+            |pc, pkgid| pc.db.get_releases(pkgid)
         ).await
     }
 
@@ -156,7 +156,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             proj_id,
             proj_row,
             package_rows,
-            |pc, pkgid| pc.db.get_versions_at(pkgid, &mtime)
+            |pc, pkgid| pc.db.get_releases_at(pkgid, &mtime)
         ).await
     }
 
@@ -245,14 +245,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn make_package_data<'s, F, R>(
         &'s self,
         pr: PackageRow,
-        get_ver_rows: &F
+        get_release_rows: &F
     ) -> Result<PackageData, AppError>
     where
         F: Fn(&'s Self, i64) -> R,
         R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
         let versions = try_join_all(
-            get_ver_rows(self, pr.package_id)
+            get_release_rows(self, pr.package_id)
                 .await?
                 .into_iter()
                 .map(|vr| self.make_version_data(vr))
@@ -272,7 +272,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         proj_id: i64,
         proj_row: ProjectRow,
         package_rows: Vec<PackageRow>,
-        get_ver_rows: F
+        get_release_rows: F
     ) -> Result<ProjectData, AppError>
     where
         F: Fn(&'s Self, i64) -> R,
@@ -288,7 +288,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let packages = try_join_all(
             package_rows
                 .into_iter()
-                .map(|pr| self.make_package_data(pr, &get_ver_rows))
+                .map(|pr| self.make_package_data(pr, &get_release_rows))
         ).await?;
 
         Ok(

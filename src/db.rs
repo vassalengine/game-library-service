@@ -254,7 +254,7 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_versions(
+    async fn get_releases(
         &self,
         _pkg_id: i64
     ) -> Result<Vec<ReleaseRow>, AppError>
@@ -262,7 +262,7 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_versions_at(
+    async fn get_releases_at(
         &self,
         _pkg_id: i64,
         _date: &str
