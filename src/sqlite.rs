@@ -1010,14 +1010,17 @@ where
             ReleaseRow,
             "
 SELECT
-    release_id,
-    version,
-    url,
-    filename,
-    size,
-    checksum,
-    published_at
+    releases.release_id,
+    releases.version,
+    releases.url,
+    releases.filename,
+    releases.size,
+    releases.checksum,
+    releases.published_at,
+    users.username AS published_by
 FROM releases
+JOIN users
+ON releases.published_by = users.user_id
 WHERE package_id = ?
 ORDER BY
     version_major DESC,
@@ -1045,14 +1048,17 @@ where
             ReleaseRow,
             "
 SELECT
-    release_id,
-    version,
-    url,
-    filename,
-    size,
-    checksum,
-    published_at
+    releases.release_id,
+    releases.version,
+    releases.url,
+    releases.filename,
+    releases.size,
+    releases.checksum,
+    releases.published_at,
+    users.username AS published_by
 FROM releases
+JOIN users
+ON releases.published_by = users.user_id
 WHERE package_id = ?
     AND published_at <= ?
 ORDER BY
@@ -1826,7 +1832,8 @@ mod test {
                     filename: "a_package-1.2.4".into(),
                     size: 5678,
                     checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                    published_at: "2023-12-10T15:56:29.180282477+00:00".into()
+                    published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                    published_by: "alice".into()
                 },
                 ReleaseRow {
                     release_id: 1,
@@ -1835,7 +1842,8 @@ mod test {
                     filename: "a_package-1.2.3".into(),
                     size: 1234,
                     checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                    published_at: "2023-12-09T15:56:29.180282477+00:00".into()
+                    published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                    published_by: "bob".into()
                 }
             ]
         );

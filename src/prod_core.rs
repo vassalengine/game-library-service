@@ -235,7 +235,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 size: rr.size,
                 checksum: rr.checksum,
                 published_at: rr.published_at,
-                published_by: "".into(),
+                published_by: rr.published_by,
                 requires: "".into(),
                 authors
             }
@@ -715,7 +715,7 @@ mod test {
                                 size: 5678,
                                 checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
-                                published_by: "".into(),
+                                published_by: "alice".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
@@ -726,7 +726,7 @@ mod test {
                                 size: 1234,
                                 checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
-                                published_by: "".into(),
+                                published_by: "bob".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
                             }
@@ -748,7 +748,7 @@ mod test {
                                 size: 123456,
                                 checksum: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
                                 published_at: "2023-12-13T15:56:29.180282477+00:00".into(),
-                                published_by: "".into(),
+                                published_by: "chuck".into(),
                                 requires: "".into(),
                                 authors: vec![]
                             }
@@ -791,7 +791,7 @@ mod test {
                                 size: 5678,
                                 checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
-                                published_by: "".into(),
+                                published_by: "alice".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
@@ -802,7 +802,7 @@ mod test {
                                 size: 1234,
                                 checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
-                                published_by: "".into(),
+                                published_by: "bob".into(),
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
                             }

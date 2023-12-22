@@ -64,11 +64,9 @@ pub struct ReleaseRow {
     pub url: String,
     pub size: i64,
     pub checksum: String,
-    pub published_at: String
-/*
-    published_by: String,
-    requires: String
-*/
+    pub published_at: String,
+    pub published_by: String
+//    requires: String
 }
 
 #[async_trait]
