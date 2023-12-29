@@ -1001,8 +1001,8 @@ ORDER BY name COLLATE NOCASE ASC
 
 // TODO: can we combine these?
 // TODO: make Version borrow Strings?
-impl<'a> From<&'a ReleaseRow> for Version {
-    fn from(r: &'a ReleaseRow) -> Self {
+impl<'r> From<&'r ReleaseRow> for Version {
+    fn from(r: &'r ReleaseRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -1013,8 +1013,8 @@ impl<'a> From<&'a ReleaseRow> for Version {
     }
 }
 
-impl<'a> From<&'a ReducedReleaseRow> for Version {
-    fn from(r: &'a ReducedReleaseRow) -> Self {
+impl<'r> From<&'r ReducedReleaseRow> for Version {
+    fn from(r: &'r ReducedReleaseRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -1027,7 +1027,7 @@ impl<'a> From<&'a ReducedReleaseRow> for Version {
 
 fn release_row_cmp<R>(a: &R, b: &R) -> Ordering
 where
-    Version: for<'a> From<&'a R>
+    Version: for<'r> From<&'r R>
 {
     let av: Version = a.into();
     let bv = b.into();
