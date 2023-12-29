@@ -3,6 +3,7 @@ use sqlx::{
     Acquire, Database, Executor,
     sqlite::Sqlite
 };
+use serde::Deserialize;
 use std::cmp::Ordering;
 
 use crate::{
@@ -998,9 +999,10 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
+// TODO: can we combine these?
 // TODO: make Version borrow Strings?
-impl From<&ReleaseRow> for Version {
-    fn from(r: &ReleaseRow) -> Self {
+impl<'a> From<&'a ReleaseRow> for Version {
+    fn from(r: &'a ReleaseRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -1011,7 +1013,22 @@ impl From<&ReleaseRow> for Version {
     }
 }
 
-fn release_row_cmp(a: &ReleaseRow, b: &ReleaseRow) -> Ordering {
+impl<'a> From<&'a ReducedReleaseRow> for Version {
+    fn from(r: &'a ReducedReleaseRow) -> Self {
+        Version {
+            major: r.version_major,
+            minor: r.version_minor,
+            patch: r.version_patch,
+            pre: Some(&r.version_pre).filter(|v| !v.is_empty()).cloned(),
+            build: Some(&r.version_build).filter(|v| !v.is_empty()).cloned()
+        }
+    }
+}
+
+fn release_row_cmp<R>(a: &R, b: &R) -> Ordering
+where
+    Version: for<'a> From<&'a R>
+{
     let av: Version = a.into();
     let bv = b.into();
     av.cmp(&bv)
@@ -1057,7 +1074,7 @@ ORDER BY
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(|a, b| release_row_cmp(&b, &a));
+    releases.sort_by(|a, b| release_row_cmp(b, a));
     Ok(releases)
 }
 
@@ -1104,7 +1121,7 @@ ORDER BY
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(|a, b| release_row_cmp(&b, &a));
+    releases.sort_by(|a, b| release_row_cmp(b, a));
     Ok(releases)
 }
 
@@ -1137,6 +1154,16 @@ ORDER BY users.username
     )
 }
 
+#[derive(Debug, Deserialize)]
+struct ReducedReleaseRow {
+    url: String,
+    version_major: i64,
+    version_minor: i64,
+    version_patch: i64,
+    version_pre: String,
+    version_build: String,
+}
+
 // TODO: figure out how to order version_pre
 async fn get_package_url<'e, E>(
     ex: E,
@@ -1145,9 +1172,16 @@ async fn get_package_url<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
+    let mut releases = sqlx::query_as!(
+        ReducedReleaseRow,
         "
-SELECT url
+SELECT
+    url,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build
 FROM releases
 WHERE package_id = ?
 ORDER BY
@@ -1156,13 +1190,19 @@ ORDER BY
     version_patch DESC,
     version_pre ASC,
     version_build ASC
-LIMIT 1
         ",
         pkg_id
     )
-    .fetch_optional(ex)
-    .await?
-    .ok_or(AppError::NotAPackage)
+    .fetch_all(ex)
+    .await?;
+
+    match releases.is_empty() {
+        true => Err(AppError::NotAPackage),
+        false => {
+            releases.sort_by(release_row_cmp);
+            Ok(releases.pop().unwrap().url)
+        }
+    }
 }
 
 async fn get_release_url<'e, E>(
