@@ -1,10 +1,13 @@
 use serde::Deserialize;
-use std::str::FromStr;
+use std::{
+    cmp::Ordering,
+    str::FromStr
+};
 
 use crate::errors::AppError;
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(try_from = "&str")]
 pub struct Version {
     pub major: i64,
@@ -32,6 +35,22 @@ impl Version {
             }
         )
     }
+
+    fn get_prerelease(&self) -> semver::Prerelease {
+        self.pre
+            .as_deref()
+            .map(semver::Prerelease::new)
+            .unwrap_or(Ok(semver::Prerelease::EMPTY))
+            .unwrap()
+    }
+
+    fn get_build(&self) -> semver::BuildMetadata {
+        self.build
+            .as_deref()
+            .map(semver::BuildMetadata::new)
+            .unwrap_or(Ok(semver::BuildMetadata::EMPTY))
+            .unwrap()
+    }
 }
 
 // TODO: Should have a non-AppError?
@@ -52,6 +71,30 @@ impl FromStr for Version {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Version::try_from(s)
+    }
+}
+
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self.major, self.minor, self.patch).cmp(
+            &(other.major, other.minor, other.patch)
+        ) {
+            Ordering::Equal => {
+                match self.get_prerelease().cmp(&other.get_prerelease()) {
+                    Ordering::Equal => {
+                        self.get_build().cmp(&other.get_build())
+                    },
+                    ord => ord
+                }
+            },
+            ord => ord
+        }
     }
 }
 

@@ -3,6 +3,7 @@ use sqlx::{
     Acquire, Database, Executor,
     sqlite::Sqlite
 };
+use std::cmp::Ordering;
 
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, ReleaseRow},
@@ -997,7 +998,25 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
-// TODO: figure out how to order version_pre
+// TODO: make Version borrow Strings?
+impl From<&ReleaseRow> for Version {
+    fn from(r: &ReleaseRow) -> Self {
+        Version {
+            major: r.version_major,
+            minor: r.version_minor,
+            patch: r.version_patch,
+            pre: Some(&r.version_pre).filter(|v| !v.is_empty()).cloned(),
+            build: Some(&r.version_build).filter(|v| !v.is_empty()).cloned()
+        }
+    }
+}
+
+fn release_row_cmp(a: &ReleaseRow, b: &ReleaseRow) -> Ordering {
+    let av: Version = a.into();
+    let bv = b.into();
+    av.cmp(&bv)
+}
+
 async fn get_releases<'e, E>(
     ex: E,
     pkg_id: i64
@@ -1005,13 +1024,17 @@ async fn get_releases<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    Ok(
-        sqlx::query_as!(
-            ReleaseRow,
-            "
+    let mut releases = sqlx::query_as!(
+        ReleaseRow,
+        "
 SELECT
     releases.release_id,
     releases.version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
     releases.url,
     releases.filename,
     releases.size,
@@ -1025,16 +1048,19 @@ WHERE package_id = ?
 ORDER BY
     version_major DESC,
     version_minor DESC,
-    version_patch DESC
-            ",
-            pkg_id
-        )
-        .fetch_all(ex)
-        .await?
+    version_patch DESC,
+    version_pre ASC,
+    version_build ASC
+        ",
+        pkg_id
     )
+    .fetch_all(ex)
+    .await?;
+
+    releases.sort_by(|a, b| release_row_cmp(&b, &a));
+    Ok(releases)
 }
 
-// TODO: figure out how to order version_pre
 async fn get_releases_at<'e, E>(
     ex: E,
     pkg_id: i64,
@@ -1043,13 +1069,17 @@ async fn get_releases_at<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    Ok(
-        sqlx::query_as!(
-            ReleaseRow,
-            "
+    let mut releases = sqlx::query_as!(
+        ReleaseRow,
+        "
 SELECT
     releases.release_id,
     releases.version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
     releases.url,
     releases.filename,
     releases.size,
@@ -1064,14 +1094,18 @@ WHERE package_id = ?
 ORDER BY
     version_major DESC,
     version_minor DESC,
-    version_patch DESC
-            ",
-            pkg_id,
-            date
-        )
-        .fetch_all(ex)
-        .await?
+    version_patch DESC,
+    version_pre ASC,
+    version_build ASC
+        ",
+        pkg_id,
+        date
     )
+    .fetch_all(ex)
+    .await?;
+
+    releases.sort_by(|a, b| release_row_cmp(&b, &a));
+    Ok(releases)
 }
 
 async fn get_authors<'e, E>(
@@ -1119,7 +1153,9 @@ WHERE package_id = ?
 ORDER BY
     version_major DESC,
     version_minor DESC,
-    version_patch DESC
+    version_patch DESC,
+    version_pre ASC,
+    version_build ASC
 LIMIT 1
         ",
         pkg_id
@@ -1828,6 +1864,11 @@ mod test {
                 ReleaseRow {
                     release_id: 2,
                     version: "1.2.4".into(),
+                    version_major: 1,
+                    version_minor: 2,
+                    version_patch: 4,
+                    version_pre: "".into(),
+                    version_build: "".into(),
                     url: "https://example.com/a_package-1.2.4".into(),
                     filename: "a_package-1.2.4".into(),
                     size: 5678,
@@ -1838,6 +1879,11 @@ mod test {
                 ReleaseRow {
                     release_id: 1,
                     version: "1.2.3".into(),
+                    version_major: 1,
+                    version_minor: 2,
+                    version_patch: 3,
+                    version_pre: "".into(),
+                    version_build: "".into(),
                     url: "https://example.com/a_package-1.2.3".into(),
                     filename: "a_package-1.2.3".into(),
                     size: 1234,

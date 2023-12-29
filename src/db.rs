@@ -60,6 +60,11 @@ pub struct PackageRow {
 pub struct ReleaseRow {
     pub release_id: i64,
     pub version: String,
+    pub version_major: i64,
+    pub version_minor: i64,
+    pub version_patch: i64,
+    pub version_pre: String,
+    pub version_build: String,
     pub filename: String,
     pub url: String,
     pub size: i64,
