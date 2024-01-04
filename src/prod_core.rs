@@ -169,7 +169,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         self.db.get_package_url(pkg_id).await
     }
 
-    async fn get_release(
+    async fn get_release_version(
         &self,
         _proj_id: i64,
         pkg_id: i64,
@@ -955,21 +955,21 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
-    async fn get_release_ok(pool: Pool) {
+    async fn get_release_version_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_release(42, 1, &version).await.unwrap(),
+            core.get_release_version(42, 1, &version).await.unwrap(),
             "https://example.com/a_package-1.2.3"
         );
     }
 
     #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
-    async fn get_release_not_a_version(pool: Pool) {
+    async fn get_release_version_not_a_version(pool: Pool) {
         let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_release(42, 1, &version).await.unwrap_err(),
+            core.get_release_version(42, 1, &version).await.unwrap_err(),
             AppError::NotAVersion
         );
     }

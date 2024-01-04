@@ -151,7 +151,11 @@ pub async fn release_get(
     let version = version.parse::<Version>()
         .or(Err(AppError::NotFound))?;
 
-    Ok(Redirect::to(&core.get_release(proj_id.0, pkg_id.0, &version).await?))
+    Ok(
+        Redirect::to(
+            &core.get_release_version(proj_id.0, pkg_id.0, &version).await?
+        )
+    )
 }
 
 pub async fn release_put(
