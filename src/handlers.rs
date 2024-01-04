@@ -131,18 +131,18 @@ pub async fn packages_put(
     todo!();
 }
 
-pub async fn package_get(
+pub async fn release_get(
     proj_id: ProjectID,
     pkg_id: PackageID,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    Ok(Redirect::to(&core.get_package(proj_id.0, pkg_id.0).await?))
+    Ok(Redirect::to(&core.get_release(proj_id.0, pkg_id.0).await?))
 }
 
 
 // TODO: Version extractor?
-pub async fn release_get(
+pub async fn release_version_get(
     ProjectIDAndPackageID((proj_id, pkg_id)): ProjectIDAndPackageID,
     Path((_, _, version)): Path<(String, String, String)>,
     State(core): State<CoreArc>

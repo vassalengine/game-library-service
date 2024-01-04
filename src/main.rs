@@ -120,11 +120,11 @@ fn routes(api: &str) -> Router<AppState> {
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name"),
-            get(handlers::package_get)
+            get(handlers::release_get)
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name/:version"),
-            get(handlers::release_get)
+            get(handlers::release_version_get)
             .put(handlers::release_put)
         )
         .route(
@@ -435,7 +435,7 @@ mod test {
             }
         }
 
-        async fn get_package(
+        async fn get_release(
             &self,
             _proj_id: i64,
             _pkg_id: i64

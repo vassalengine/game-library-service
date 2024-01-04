@@ -160,7 +160,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         ).await
     }
 
-    async fn get_package(
+    async fn get_release(
         &self,
         _proj_id: i64,
         pkg_id: i64
@@ -946,10 +946,10 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
-    async fn get_package_ok(pool: Pool) {
+    async fn get_release_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_package(42, 1).await.unwrap(),
+            core.get_release(42, 1).await.unwrap(),
             "https://example.com/a_package-1.2.4"
         );
     }
