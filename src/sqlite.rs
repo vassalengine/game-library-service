@@ -283,6 +283,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         add_readme(&self.0, text).await
     }
 
+    async fn get_image_url(
+        &self,
+        pkg_id: i64,
+        img_name: &str
+    ) -> Result<String, AppError>
+    {
+        get_image_url(&self.0, pkg_id, img_name).await
+    }
 }
 
 async fn get_project_id<'e, E>(
@@ -1401,6 +1409,32 @@ RETURNING readme_id
         )
         .fetch_one(ex)
         .await?
+    )
+}
+
+async fn get_image_url<'e, E>(
+    ex: E,
+    proj_id: i64,
+    img_name: &str
+) -> Result<String, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT url
+FROM images
+WHERE proj_id = ?
+    AND filename = ?
+LIMIT 1
+            ",
+            proj_id,
+            img_name
+        )
+        .fetch_optional(ex)
+        .await?
+        .ok_or(AppError::NotFound)
     )
 }
 

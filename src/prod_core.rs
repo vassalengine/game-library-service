@@ -212,6 +212,15 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     {
         self.db.get_readme(readme_id).await
     }
+
+    async fn get_image(
+        &self,
+        proj_id: i64,
+        img_name: &str
+    ) -> Result<String, AppError>
+    {
+        self.db.get_image(proj_id, img_name).await
+    }
 }
 
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
