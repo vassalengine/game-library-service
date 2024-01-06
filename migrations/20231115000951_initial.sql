@@ -33,6 +33,17 @@ CREATE TABLE readmes (
   text TEXT NOT NULL
 );
 
+CREATE TABLE images (
+  project_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  url TEXT NOT NULL,
+  published_at TEXT NOT NULL,
+  published_by INTEGER NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id),
+  UNIQUE(project_id, filename)
+);
+
 CREATE TABLE packages (
   package_id INTEGER PRIMARY KEY NOT NULL,
   project_id INTEGER NOT NULL,
