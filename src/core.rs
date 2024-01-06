@@ -162,7 +162,7 @@ pub trait Core {
 
     async fn get_readme(
         &self,
-        _proj_id: i64
+        _readme_id: i64
     ) -> Result<Readme, AppError>
     {
         unimplemented!();
