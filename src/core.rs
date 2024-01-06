@@ -168,11 +168,11 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn get_readme_revision(
+    async fn get_image(
         &self,
         _proj_id: i64,
-        _revision: u32
-    ) -> Result<Readme, AppError>
+        _img_name: &str
+    ) -> Result<String, AppError>
     {
         unimplemented!();
     }

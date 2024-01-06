@@ -186,29 +186,20 @@ pub async fn release_put(
 */
 
 pub async fn readme_get(
-    proj_id: ProjectID,
+    Path(readme_id): Path<u32>,
     State(core): State<CoreArc>
 ) -> Result<Json<Readme>, AppError>
 {
-    Ok(Json(core.get_readme(proj_id.0).await?))
-}
-
-pub async fn readme_revision_get(
-    proj_id: ProjectID,
-    Path((_, revision)): Path<(String, u32)>,
-    State(core): State<CoreArc>
-) -> Result<Json<Readme>, AppError>
-{
-    Ok(Json(core.get_readme_revision(proj_id.0, revision).await?))
+    Ok(Json(core.get_readme(readme_id).await?))
 }
 
 pub async fn image_get(
-    _proj_id: ProjectID,
-    Path(_img_name): Path<String>,
-    State(_core): State<CoreArc>
-) -> Result<(), AppError>
+    proj_id: ProjectID,
+    Path(img_name): Path<String>,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
 {
-    todo!();
+    Ok(Redirect::to(&core.get_image(proj_id.0, img_name).await?))
 }
 
 pub async fn image_put(

@@ -128,12 +128,8 @@ fn routes(api: &str) -> Router<AppState> {
             .put(handlers::release_put)
         )
         .route(
-            &format!("{api}/projects/:proj/readme"),
+            &format!("{api}/projects/:proj/readme/:readme_id"),
             get(handlers::readme_get)
-        )
-        .route(
-            &format!("{api}/projects/:proj/readme/:revision"),
-            get(handlers::readme_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj/images/:img_name"),
@@ -500,17 +496,13 @@ mod test {
             Ok(Readme { text: "Stuff!".into() })
         }
 
-        async fn get_readme_revision(
+        async fn get_image(
             &self,
             _proj_id: i64,
-            revision: u32
-        ) -> Result<Readme, AppError>
+            _img_name: &str
+        ) -> Result<String, AppError>
         {
-            match revision {
-                    1 => Ok(Readme { text: "Old stuff!".into() }),
-                    2 => Ok(Readme { text: "Stuff!".into() }),
-                    _ => Err(AppError::NotARevision)
-            }
+            Ok("https://example.com/img.png".into())
         }
     }
 
@@ -1824,29 +1816,29 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_readme_revision_ok() {
+    async fn get_image_ok() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/readme/2"))
+                .uri(&format!("{API_V1}/projects/a_project/image/img.png"))
                 .body(Body::empty())
                 .unwrap()
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
         assert_eq!(
-            body_as::<Readme>(response).await,
-            Readme { text: "Stuff!".into() }
+            response.headers().get(LOCATION).unwrap(),
+            "https://example.com/img.png"
         );
     }
 
     #[tokio::test]
-    async fn get_readme_revision_not_a_project() {
+    async fn get_image_not_a_project() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/readme/2"))
+                .uri(&format!("{API_V1}/projects/not_a_project/image/img.png"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1859,23 +1851,6 @@ mod test {
         );
     }
 
-    #[tokio::test]
-    async fn get_readme_revision_not_a_revision() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/readme/3"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotARevision)
-        );
-    }
 
     #[tokio::test]
     async fn bad_path() {
