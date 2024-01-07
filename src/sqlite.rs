@@ -2142,4 +2142,27 @@ mod test {
         );
     }
 
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_url_ok(pool: Pool) {
+        assert_eq!(
+            get_image_url(&pool, 42, "img.png").await.unwrap(),
+            "https://example.com/images/img.png"
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_url_not_a_project(pool: Pool) {
+        assert_eq!(
+            get_image_url(&pool, 1, "img.png").await.unwrap_err(),
+            AppError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_url_not_an_image(pool: Pool) {
+        assert_eq!(
+            get_image_url(&pool, 42, "bogus").await.unwrap_err(),
+            AppError::NotFound
+        );
+    }
 }
