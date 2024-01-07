@@ -1098,4 +1098,32 @@ mod test {
             AppError::NotARevision
         );
     }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.get_image(42, "img.png").await.unwrap(),
+            "https://example.com/images/img.png"
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_not_a_project(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.get_image(1, "img.png").await.unwrap_err(),
+            AppError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    async fn get_image_not_an_image(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.get_image(42, "bogus").await.unwrap_err(),
+            AppError::NotFound
+        );
+    }
+
 }
