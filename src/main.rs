@@ -128,10 +128,6 @@ fn routes(api: &str) -> Router<AppState> {
             .put(handlers::release_put)
         )
         .route(
-            &format!("{api}/projects/:proj/readme/:readme_id"),
-            get(handlers::readme_get)
-        )
-        .route(
             &format!("{api}/projects/:proj/images/:img_name"),
             get(handlers::image_get)
             .put(handlers::image_put)
@@ -139,6 +135,10 @@ fn routes(api: &str) -> Router<AppState> {
         .route(
             &format!("{api}/projects/:proj/flag"),
             post(handlers::flag_post)
+        )
+        .route(
+            &format!("{api}/readme/:readme_id"),
+            get(handlers::readme_get)
         )
         .fallback(handlers::not_found)
         .layer(
@@ -490,10 +490,14 @@ mod test {
 
         async fn get_readme(
             &self,
-            _proj_id: i64
+            readme_id: i64
         ) -> Result<Readme, AppError>
         {
-            Ok(Readme { text: "Stuff!".into() })
+
+            match readme_id {
+                42 => Ok(Readme { text: "Stuff!".into() }),
+                _ => Err(AppError::NotFound)
+            }
         }
 
         async fn get_image(
@@ -1784,7 +1788,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/readme"))
+                .uri(&format!("{API_V1}/readme/42"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1798,11 +1802,11 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_readme_not_a_project() {
+    async fn get_readme_not_an_id() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/readme"))
+                .uri(&format!("{API_V1}/readme/1"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1811,7 +1815,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 

@@ -190,7 +190,7 @@ pub async fn readme_get(
     State(core): State<CoreArc>
 ) -> Result<Json<Readme>, AppError>
 {
-    Ok(Json(core.get_readme(readme_id).await?))
+    Ok(Json(core.get_readme(readme_id as i64).await?))
 }
 
 pub async fn image_get(
