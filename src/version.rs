@@ -226,4 +226,23 @@ mod test {
             AppError::MalformedVersion
         );
     }
+
+    #[test]
+    fn ordering() {
+        let vers: Vec<_> = [
+            "1.2.3-alpha.1",
+            "1.2.3-alpha.1+foo",
+            "1.2.3",
+            "1.2.3+foo"
+        ]
+        .iter()
+        .map(|v| v.parse::<Version>().unwrap())
+        .collect();
+
+        for i in 0..vers.len() {
+            for j in 0..vers.len() {
+                assert_eq!(vers[i].cmp(&vers[j]), i.cmp(&j));
+            }
+        }
+    }
 }
