@@ -219,7 +219,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         img_name: &str
     ) -> Result<String, AppError>
     {
-        self.db.get_image(proj_id, img_name).await
+        self.db.get_image_url(proj_id, img_name).await
     }
 }
 

@@ -341,7 +341,7 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_image(
+    async fn get_image_url(
         &self,
         _proj_id: i64,
         _img_name: &str

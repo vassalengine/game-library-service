@@ -285,11 +285,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_image_url(
         &self,
-        pkg_id: i64,
+        proj_id: i64,
         img_name: &str
     ) -> Result<String, AppError>
     {
-        get_image_url(&self.0, pkg_id, img_name).await
+        get_image_url(&self.0, proj_id, img_name).await
     }
 }
 
@@ -1420,22 +1420,20 @@ async fn get_image_url<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    Ok(
-        sqlx::query_scalar!(
-            "
+    sqlx::query_scalar!(
+        "
 SELECT url
 FROM images
-WHERE proj_id = ?
+WHERE project_id = ?
     AND filename = ?
 LIMIT 1
-            ",
-            proj_id,
-            img_name
-        )
-        .fetch_optional(ex)
-        .await?
-        .ok_or(AppError::NotFound)
-    )
+        ",
+        proj_id,
+        img_name
+     )
+     .fetch_optional(ex)
+     .await?
+     .ok_or(AppError::NotFound)
 }
 
 #[cfg(test)]

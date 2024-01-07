@@ -195,11 +195,11 @@ pub async fn readme_get(
 
 pub async fn image_get(
     proj_id: ProjectID,
-    Path(img_name): Path<String>,
+    Path((_, img_name)): Path<(String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    Ok(Redirect::to(&core.get_image(proj_id.0, img_name).await?))
+    Ok(Redirect::to(&core.get_image(proj_id.0, &img_name).await?))
 }
 
 pub async fn image_put(

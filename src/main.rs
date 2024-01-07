@@ -502,11 +502,16 @@ mod test {
 
         async fn get_image(
             &self,
-            _proj_id: i64,
-            _img_name: &str
+            proj_id: i64,
+            img_name: &str
         ) -> Result<String, AppError>
         {
-            Ok("https://example.com/img.png".into())
+            if proj_id == 1 && img_name == "img.png" {
+                Ok("https://example.com/img.png".into())
+            }
+            else {
+                Err(AppError::NotFound)
+            }
         }
     }
 
@@ -1824,7 +1829,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/image/img.png"))
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1842,7 +1847,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/image/img.png"))
+                .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
                 .body(Body::empty())
                 .unwrap()
         )
