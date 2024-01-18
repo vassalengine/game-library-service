@@ -11,8 +11,8 @@ edition = "2021"
 [dependencies]
 axum = { version = "^0.7", features = ["http1", "http2", "json", "macros", "query", "tokio"] }
 axum-extra = { version = "^0.9", features = ["typed-header"] }
-chrono = "^0.4"
 base64 = "^0.21"
+chrono = "^0.4"
 futures-util = "^0.3"
 jsonwebtoken = "^9"
 semver = "^1"
