@@ -749,7 +749,7 @@ ON projects.project_id = project_revisions.project_id
 JOIN project_data
 ON project_data.project_data_id = project_revisions.project_data_id
 WHERE projects.name > ?
-    OR (projects.name == ? AND projects.project_id > ?)
+    OR (projects.name = ? AND projects.project_id > ?)
 ORDER BY projects.name COLLATE NOCASE ASC
 LIMIT ?
             ",
@@ -794,7 +794,7 @@ ON projects.project_id = project_revisions.project_id
 JOIN project_data
 ON project_data.project_data_id = project_revisions.project_data_id
 WHERE project_data.game_title_sort > ?
-    OR (project_data.game_title_sort == ? AND projects.project_id > ?)
+    OR (project_data.game_title_sort = ? AND projects.project_id > ?)
 ORDER BY project_data.game_title_sort COLLATE NOCASE ASC
 LIMIT ?
             ",
@@ -855,7 +855,7 @@ ON projects.project_id = project_revisions.project_id
 JOIN project_data
 ON project_data.project_data_id = project_revisions.project_data_id
 WHERE projects.name < ?
-    OR (projects.name == ? AND projects.project_id < ?)
+    OR (projects.name = ? AND projects.project_id < ?)
 ORDER BY projects.name COLLATE NOCASE DESC
 LIMIT ?
             ",
@@ -900,7 +900,7 @@ ON projects.project_id = project_revisions.project_id
 JOIN project_data
 ON project_data.project_data_id = project_revisions.project_data_id
 WHERE project_data.game_title_sort < ?
-    OR (project_data.game_title_sort == ? AND projects.project_id < ?)
+    OR (project_data.game_title_sort = ? AND projects.project_id < ?)
 ORDER BY project_data.game_title_sort COLLATE NOCASE DESC
 LIMIT ?
             ",
