@@ -2022,6 +2022,54 @@ mod test {
         );
     }
 
+    #[sqlx::test(fixtures("readmes", "title_window"))]
+    async fn get_projects_start_window_by_title(pool: Pool) {
+        assert_eq!(
+            get_projects_start_window(
+                &pool, &OrderBy::GameTitle, 1
+            ).await.unwrap(),
+            vec![
+                ProjectRow {
+                    project_id: 1,
+                    name: "a".into(),
+                    description: "".into(),
+                    revision: 1,
+                    created_at: "".into(),
+                    modified_at: "".into(),
+                    game_title: "".into(),
+                    game_title_sort: "a".into(),
+                    game_publisher: "".into(),
+                    game_year: "".into(),
+                    readme_id: 0
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("readmes", "title_window"))]
+    async fn get_projects_after_window_by_title(pool: Pool) {
+        assert_eq!(
+            get_projects_after_window(
+                &pool, &OrderBy::GameTitle, "a", 1, 1
+            ).await.unwrap(),
+            vec![
+                ProjectRow {
+                    project_id: 2,
+                    name: "b".into(),
+                    description: "".into(),
+                    revision: 1,
+                    created_at: "".into(),
+                    modified_at: "".into(),
+                    game_title: "".into(),
+                    game_title_sort: "a".into(),
+                    game_publisher: "".into(),
+                    game_year: "".into(),
+                    readme_id: 0
+                }
+            ]
+        );
+    }
+
     #[sqlx::test(fixtures("readmes", "projects"))]
     async fn get_project_row_ok(pool: Pool) {
         assert_eq!(
