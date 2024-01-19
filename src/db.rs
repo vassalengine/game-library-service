@@ -4,11 +4,13 @@ use serde::Deserialize;
 use crate::{
     errors::AppError,
     model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    pagination::OrderBy,
     version::Version
 };
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ProjectRow {
+    pub project_id: i64,
     pub name: String,
     pub description: String,
     pub revision: i64,
@@ -162,34 +164,40 @@ pub trait DatabaseClient {
 
     async fn get_projects_start_window(
         &self,
+        _order_by: &OrderBy,
         _limit: u32
-    ) -> Result<Vec<ProjectSummary>, AppError>
+    ) -> Result<Vec<ProjectRow>, AppError>
     {
         unimplemented!();
     }
 
     async fn get_projects_end_window(
         &self,
+        _order_by: &OrderBy,
         _limit: u32
-    ) -> Result<Vec<ProjectSummary>, AppError>
+    ) -> Result<Vec<ProjectRow>, AppError>
     {
         unimplemented!();
     }
 
     async fn get_projects_after_window(
         &self,
+        _order_by: &OrderBy,
         _name: &str,
+        _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummary>, AppError>
+    ) -> Result<Vec<ProjectRow>, AppError>
     {
         unimplemented!();
     }
 
     async fn get_projects_before_window(
         &self,
+        _order_by: &OrderBy,
         _name: &str,
+        _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummary>, AppError>
+    ) -> Result<Vec<ProjectRow>, AppError>
     {
         unimplemented!();
     }

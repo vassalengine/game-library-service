@@ -47,27 +47,92 @@ impl TryFrom<&str> for Limit {
     }
 }
 
-// TODO: add order by value for Seek?
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(try_from = "&str")]
+pub enum Anchor {
+    #[default]
+    Start,
+    Before(u32, String),
+    After(u32, String),
+    End
+}
+
+impl From<Anchor> for String {
+    fn from(value: Anchor) -> Self {
+        match value {
+            Anchor::Start => "s".to_string(),
+            Anchor::Before(i, n) => format!("b:{}:{}", i, n),
+            Anchor::After(i, n) => format!("a:{}:{}", i, n),
+            Anchor::End => "e".to_string()
+        }
+    }
+}
+
+impl TryFrom<&str> for Anchor {
+    type Error = AppError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "s" => Ok(Anchor::Start),
+            "e" => Ok(Anchor::End),
+            s => {
+                let v: Vec<&str> = s.splitn(3, ':').collect();
+                if v.len() == 3 {
+                    let i = v[1].parse::<u32>()
+                        .or(Err(AppError::MalformedQuery))?;
+                    match v[0] {
+                        "b" => Ok(Anchor::Before(i, v[2].into())),
+                        "a" => Ok(Anchor::After(i, v[2].into())),
+                        _ => Err(AppError::MalformedQuery)
+                    }
+                }
+                else {
+                    Err(AppError::MalformedQuery)
+                }
+            }
+        }
+    }
+}
 
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
-pub enum Seek {
+pub enum OrderBy {
     #[default]
-    Start,
-    Before(String),
-    After(String),
-    End
+    ProjectName,
+    GameTitle
+}
+
+impl From<OrderBy> for String {
+    fn from(value: OrderBy) -> Self {
+        match value {
+            OrderBy::ProjectName => "p".to_string(),
+            OrderBy::GameTitle => "t".to_string()
+        }
+    }
+}
+
+impl TryFrom<&str> for OrderBy {
+    type Error = AppError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "p" => Ok(OrderBy::ProjectName),
+            "t" => Ok(OrderBy::GameTitle),
+            _ => Err(AppError::MalformedQuery)
+        }
+    }
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(try_from = "&str")]
+pub struct Seek {
+    pub anchor: Anchor,
+    pub order_by: OrderBy
 }
 
 impl From<Seek> for String {
     fn from(value: Seek) -> Self {
-        let s = match value {
-            Seek::Start => "s:".to_string(),
-            Seek::Before(s) => "b:".to_string() + &s,
-            Seek::After(s) => "a:".to_string() + &s,
-            Seek::End => "e:".to_string()
-        };
-
+        let s = String::from(value.order_by) + &String::from(value.anchor);
         base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s)
     }
 }
@@ -83,13 +148,17 @@ impl TryFrom<&str> for Seek {
         let d = str::from_utf8(&buf)
             .map_err(|_| AppError::MalformedQuery)?;
 
-        match d.split_once(':') {
-            Some(("s", "")) => Ok(Seek::Start),
-            Some(("b", n)) => Ok(Seek::Before(n.into())),
-            Some(("a", n)) => Ok(Seek::After(n.into())),
-            Some(("e", "")) => Ok(Seek::End),
-            _ => Err(AppError::MalformedQuery)
-        }
+        let mut i = d.chars();
+        let c = i.next().ok_or(AppError::MalformedQuery)?.to_string();
+        let order_by = OrderBy::try_from(c.as_str())?;
+        let anchor = Anchor::try_from(i.as_str())?;
+
+        Ok(
+            Seek {
+                anchor,
+                order_by
+            }
+        )
     }
 }
 
@@ -162,64 +231,111 @@ mod test {
     #[test]
     fn seek_to_string_start() {
         assert_eq!(
-            &String::from(Seek::Start),
-            "czo"
+            &String::from(
+                Seek {
+                    anchor: Anchor::Start,
+                    order_by: OrderBy::ProjectName
+                }
+            ),
+            "cHM"
         );
     }
+
+/*
+    #[test]
+    fn xxx() {
+        assert_eq!(
+            &String::from(
+                Seek {
+                    anchor: Anchor::Start,
+                    order_by: OrderBy::GameTitle
+                }
+            ),
+            "cHM6"
+        );
+    }
+*/
 
     #[test]
     fn seek_to_string_end() {
         assert_eq!(
-            &String::from(Seek::End),
-            "ZTo"
+            &String::from(
+                Seek {
+                    anchor: Anchor::End,
+                    order_by: OrderBy::ProjectName
+                }
+            ),
+            "cGU"
         );
     }
 
     #[test]
     fn seek_to_string_before() {
         assert_eq!(
-            &String::from(Seek::Before("abc".into())),
-            "YjphYmM"
+            &String::from(
+                Seek {
+                    anchor: Anchor::Before(0, "abc".into()),
+                    order_by: OrderBy::ProjectName
+                }
+            ),
+            "cGI6MDphYmM"
         );
     }
 
     #[test]
     fn seek_to_string_after() {
         assert_eq!(
-            &String::from(Seek::After("abc".into())),
-            "YTphYmM"
+            &String::from(
+                Seek {
+                    anchor: Anchor::After(0, "abc".into()),
+                    order_by: OrderBy::ProjectName
+                }
+            ),
+            "cGE6MDphYmM"
         );
     }
 
     #[test]
     fn string_to_seek_start() {
         assert_eq!(
-            Seek::try_from("czo").unwrap(),
-            Seek::Start
+            Seek::try_from("cHM").unwrap(),
+            Seek {
+                anchor: Anchor::Start,
+                order_by: OrderBy::ProjectName
+            }
         );
     }
 
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            Seek::try_from("ZTo").unwrap(),
-            Seek::End
+            Seek::try_from("cGU").unwrap(),
+            Seek {
+                anchor: Anchor::End,
+                order_by: OrderBy::ProjectName
+            }
         );
     }
 
     #[test]
     fn string_to_seek_before() {
         assert_eq!(
-            Seek::try_from("YjphYmM").unwrap(),
-            Seek::Before("abc".into())
+            Seek::try_from("cGI6MDphYmM").unwrap(),
+            Seek {
+                anchor: Anchor::Before(0, "abc".into()),
+                order_by: OrderBy::ProjectName
+            }
         );
     }
 
     #[test]
     fn string_to_seek_after() {
         assert_eq!(
-            Seek::try_from("YTphYmM").unwrap(),
-            Seek::After("abc".into())
+            Seek::try_from("cGE6MDphYmM").unwrap(),
+            Seek {
+                anchor: Anchor::After(0, "abc".into()),
+                order_by: OrderBy::ProjectName
+            }
         );
     }
 

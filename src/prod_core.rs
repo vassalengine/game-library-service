@@ -8,7 +8,7 @@ use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
     model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, ReleaseData, User, Users},
-    pagination::{Limit, Pagination, Seek, SeekLink},
+    pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
     version::Version
 };
 
@@ -72,14 +72,9 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         limit: Limit
     ) -> Result<Projects, AppError>
     {
-        let limit = limit.get() as u32;
-
-        let (prev_page, next_page, projects) = match from {
-            Seek::Start => self.get_projects_start(limit).await?,
-            Seek::After(name) => self.get_projects_after(&name, limit).await?,
-            Seek::Before(name) => self.get_projects_before(&name, limit).await?,
-            Seek::End => self.get_projects_end(limit).await?
-        };
+        let (prev_page, next_page, projects) = self.get_projects_from(
+            from, limit
+        ).await?;
 
         Ok(
             Projects {
@@ -321,31 +316,61 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         )
     }
 
+    async fn get_projects_from(
+        &self,
+        from: Seek,
+        limit: Limit
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        let limit = limit.get() as u32;
+
+        Ok(
+            match from.anchor {
+                Anchor::Start => self.get_projects_start(&from.order_by, limit).await?,
+                Anchor::After(id, name) => self.get_projects_after(&from.order_by, &name, id, limit).await?,
+                Anchor::Before(id, name) => self.get_projects_before(&from.order_by, &name, id, limit).await?,
+                Anchor::End => self.get_projects_end(&from.order_by, limit).await?
+            }
+        )
+    }
+
     async fn get_projects_start(
         &self,
+        order_by: &OrderBy,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.db.get_projects_start_window(limit_extra).await?;
+        let mut projects = self.db.get_projects_start_window(
+            order_by, limit_extra
+        ).await?;
 
         Ok(
             match projects.len() {
                 l if l == limit_extra as usize => {
                     projects.pop();
+                    let aid = projects[projects.len() - 1].project_id as u32;
+                    let aname = projects[projects.len() - 1].name.clone();
                     (
                         None,
-                        Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                        projects
+                        Some(
+                            SeekLink::new(
+                                Seek {
+                                    anchor: Anchor::After(aid, aname),
+                                    order_by: OrderBy::ProjectName
+                                }
+                            )
+                        ),
+                        projects.into_iter().map(ProjectSummary::from).collect()
                     )
                 }
                 _ => {
                     (
                         None,
                         None,
-                        projects
+                        projects.into_iter().map(ProjectSummary::from).collect()
                     )
                 }
             }
@@ -354,22 +379,34 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_end(
         &self,
+        order_by: &OrderBy,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.db.get_projects_end_window(limit_extra).await?;
+        let mut projects = self.db.get_projects_end_window(
+            order_by, limit_extra
+        ).await?;
 
         Ok(
             if projects.len() == limit_extra as usize {
                 projects.pop();
                 projects.reverse();
+                let bid = projects[0].project_id as u32;
+                let bname = projects[0].name.clone();
                 (
-                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::Before(bid, bname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
                     None,
-                    projects
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
             else {
@@ -377,7 +414,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 (
                     None,
                     None,
-                    projects
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
         )
@@ -385,37 +422,74 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_after(
         &self,
+        order_by: &OrderBy,
         name: &str,
+        id: u32,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.db.get_projects_after_window(name, limit_extra)
-            .await?;
+        let mut projects = self.db.get_projects_after_window(
+            order_by, name, id, limit_extra
+        ).await?;
 
         Ok(
             if projects.len() == limit_extra as usize {
                 projects.pop();
+                let bid = projects[0].project_id as u32;
+                let bname = projects[0].name.clone();
+                let aid = projects[projects.len() - 1].project_id as u32;
+                let aname = projects[projects.len() - 1].name.clone();
                 (
-                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                    projects
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::Before(bid, bname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::After(aid, aname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
             else if projects.is_empty() {
                 (
-                    Some(SeekLink::new(Seek::End)),
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::End,
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
                     None,
-                    projects
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
             else {
+                let bid = projects[0].project_id as u32;
+                let bname = projects[0].name.clone();
                 (
-                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::Before(bid, bname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
                     None,
-                    projects
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
         )
@@ -423,39 +497,76 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_before(
         &self,
+        order_by: &OrderBy,
         name: &str,
+        id: u32,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit + 1;
 
-        let mut projects = self.db.get_projects_before_window(name, limit_extra)
-            .await?;
+        let mut projects = self.db.get_projects_before_window(
+            order_by, name, id, limit_extra
+        ).await?;
 
         Ok(
             if projects.len() == limit_extra as usize {
                 projects.pop();
                 projects.reverse();
+                let bid = projects[0].project_id as u32;
+                let bname = projects[0].name.clone();
+                let aid = projects[projects.len() - 1].project_id as u32;
+                let aname = projects[projects.len() - 1].name.clone();
                 (
-                    Some(SeekLink::new(Seek::Before(projects[0].name.clone()))),
-                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                    projects
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::Before(bid, bname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::After(aid, aname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
             else if projects.is_empty() {
                 (
                     None,
-                    Some(SeekLink::new(Seek::Start)),
-                    projects
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::Start,
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
             else {
                 projects.reverse();
+                let aid = projects[projects.len() - 1].project_id as u32;
+                let aname = projects[projects.len() - 1].name.clone();
                 (
                     None,
-                    Some(SeekLink::new(Seek::After(projects[projects.len() - 1].name.clone()))),
-                    projects
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::After(aid, aname),
+                                order_by: OrderBy::ProjectName
+                            }
+                        )
+                    ),
+                    projects.into_iter().map(ProjectSummary::from).collect()
                 )
             }
         )
@@ -541,9 +652,19 @@ mod test {
             .collect();
 
         let prev_page = None;
-        let next_page = Some(SeekLink::new(Seek::After("e".into())));
+        let next_page = Some(
+            SeekLink::new(
+                Seek {
+                    anchor: Anchor::After(5, "e".into()),
+                    order_by: OrderBy::ProjectName
+                }
+            )
+        );
 
-        let lp = Seek::Start;
+        let lp = Seek {
+            anchor: Anchor::Start,
+            order_by: OrderBy::ProjectName
+        };
         let limit = Limit::new(5).unwrap();
 
         assert_eq!(
@@ -578,12 +699,27 @@ mod test {
                 .collect();
 
             let prev_page = if i == all_projects.len() - 1 {
-                Some(SeekLink::new(Seek::End))
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::End,
+                            order_by: OrderBy::ProjectName
+                        }
+                    )
+                )
             }
             else {
                 projects
                     .first()
-                    .map(|p| SeekLink::new(Seek::Before(p.name.clone())))
+                    .map(|p| SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(
+                                (i + 2) as u32,
+                                p.name.clone()
+                            ),
+                            order_by: OrderBy::ProjectName
+                        }
+                    ))
             };
 
             let next_page = if i + lim + 1 >= all_projects.len() {
@@ -592,10 +728,24 @@ mod test {
             else {
                 projects
                     .last()
-                    .map(|p| SeekLink::new(Seek::After(p.name.clone())))
+                    .map(|p| SeekLink::new(
+                        Seek {
+                            anchor: Anchor::After(
+                                (i + lim + 1) as u32,
+                                p.name.clone()
+                            ),
+                            order_by: OrderBy::ProjectName
+                        }
+                    ))
             };
 
-            let lp = Seek::After(all_projects[i].name.clone());
+            let lp = Seek {
+                anchor: Anchor::After(
+                    (i + 1) as u32,
+                    all_projects[i].name.clone()
+                ),
+                order_by: OrderBy::ProjectName
+            };
             let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
@@ -636,19 +786,49 @@ mod test {
             else {
                 projects
                     .first()
-                    .map(|p| SeekLink::new(Seek::Before(p.name.clone())))
+                    .map(|p| SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(
+                                (i.saturating_sub(lim) + 1) as u32,
+                                p.name.clone()
+                            ),
+                            order_by: OrderBy::ProjectName
+                        }
+                    ))
             };
 
             let next_page = if i == 0 {
-                Some(SeekLink::new(Seek::Start))
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Start,
+                            order_by: OrderBy::ProjectName
+                        }
+                    )
+                )
             }
             else {
                 projects
                     .last()
-                    .map(|p| SeekLink::new(Seek::After(p.name.clone())))
+                    .map(|p| SeekLink::new(
+                        Seek {
+                            anchor: Anchor::After(
+                                i as u32,
+                                p.name.clone()
+                            ),
+                            order_by: OrderBy::ProjectName
+                        }
+                    )
+                )
             };
 
-            let lp = Seek::Before(all_projects[i].name.clone());
+            let lp = Seek {
+                anchor: Anchor::Before(
+                    (i + 1) as u32,
+                    all_projects[i].name.clone()
+                ),
+                order_by: OrderBy::ProjectName
+            };
             let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
@@ -673,10 +853,20 @@ mod test {
             .map(|c| fake_project_summary(c.into()))
             .collect();
 
-        let prev_page = Some(SeekLink::new(Seek::Before("f".into())));
+        let prev_page = Some(
+            SeekLink::new(
+                Seek {
+                    anchor: Anchor::Before(6, "f".into()),
+                    order_by: OrderBy::ProjectName
+                }
+            )
+        );
         let next_page = None;
 
-        let lp = Seek::End;
+        let lp = Seek {
+            anchor: Anchor::End,
+            order_by: OrderBy::ProjectName
+        };
         let limit = Limit::new(5).unwrap();
 
         assert_eq!(
@@ -1125,5 +1315,4 @@ mod test {
             AppError::NotFound
         );
     }
-
 }
