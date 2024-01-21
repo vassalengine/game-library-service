@@ -20,7 +20,8 @@ pub struct ProjectRow {
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String,
-    pub readme_id: i64
+    pub readme_id: i64,
+    pub image: Option<String>
 }
 
 impl From<ProjectRow> for ProjectSummary {

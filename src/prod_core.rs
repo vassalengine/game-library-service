@@ -310,6 +310,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     year: proj_row.game_year
                 },
                 readme_id: proj_row.readme_id,
+                image: proj_row.image,
                 owners,
                 packages
             }
@@ -901,6 +902,7 @@ mod test {
                     year: "1979".into()
                 },
                 readme_id: 8,
+                image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
                     PackageData {
@@ -977,6 +979,7 @@ mod test {
                     year: "1979".into()
                 },
                 readme_id: 8,
+                image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
                     PackageData {
@@ -1041,6 +1044,7 @@ mod test {
                     year: "1979".into()
                 },
                 readme_id: 8,
+                image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
                     PackageData {
@@ -1078,6 +1082,7 @@ mod test {
                 year: "1999".into()
             },
             readme_id: 0,
+            image: None,
             owners: vec!["bob".into()],
             packages: vec![]
         };
@@ -1117,6 +1122,7 @@ mod test {
                 year: "1999".into()
             },
             readme_id: 8,
+            image: None,
             owners: vec!["bob".into()],
             packages: vec![]
         };

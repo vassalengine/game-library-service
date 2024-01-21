@@ -386,6 +386,7 @@ mod test {
                         year: "1983".into()
                     },
                     readme_id: 3,
+                    image: None,
                     owners: vec!["alice".into(), "bob".into()],
                     packages: vec![
                         PackageData {
@@ -1121,6 +1122,7 @@ mod test {
                     year: "1983".into()
                 },
                 readme_id: 3,
+                image: None,
                 owners: vec!["alice".into(), "bob".into()],
 // TODO: fill in more
                 packages: vec![
@@ -1338,6 +1340,7 @@ mod test {
                     year: "1983".into()
                 },
                 readme_id: 3,
+                image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
                     PackageData {

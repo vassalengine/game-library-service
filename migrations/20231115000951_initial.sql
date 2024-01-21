@@ -93,9 +93,11 @@ CREATE TABLE project_revisions (
   revision INTEGER NOT NULL,
   project_data_id INTEGER NOT NULL,
   readme_id INTEGER NOT NULL,
+  image TEXT,
   modified_at TEXT NOT NULL,
   UNIQUE(project_id, revision),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id),
-  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id)
+  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id),
+  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );

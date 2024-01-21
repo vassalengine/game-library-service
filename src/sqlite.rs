@@ -560,7 +560,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -598,7 +599,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -650,7 +652,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -688,7 +691,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -742,7 +746,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -787,7 +792,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -848,7 +854,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -893,7 +900,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -1130,7 +1138,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -1169,7 +1178,8 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
-    project_revisions.readme_id
+    project_revisions.readme_id,
+    project_revisions.image
 FROM projects
 JOIN project_revisions
 ON projects.project_id = project_revisions.project_id
@@ -1829,7 +1839,8 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
-            readme_id: 0
+            readme_id: 0,
+            image: None
         };
 
         let cdata = ProjectDataPut {
@@ -1886,7 +1897,8 @@ mod test {
             game_title_sort: "".into(),
             game_publisher: "".into(),
             game_year: "".into(),
-            readme_id: 0
+            readme_id: 0,
+            image: None
         }
     }
 
@@ -2040,7 +2052,8 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 0
+                    readme_id: 0,
+                    image: None
                 }
             ]
         );
@@ -2064,7 +2077,8 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 0
+                    readme_id: 0,
+                    image: None
                 }
             ]
         );
@@ -2085,7 +2099,8 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8
+                readme_id: 8,
+                image: None
             }
         );
     }
@@ -2113,7 +2128,8 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8
+                readme_id: 8,
+                image: None
             }
         );
     }
@@ -2133,7 +2149,8 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8
+                readme_id: 8,
+                image: None
             }
         );
     }
