@@ -24,6 +24,17 @@ VALUES
   (3, 3, "", "", "b", "", ""),
   (4, 4, "", "", "c", "", "");
 
+INSERT INTO readmes (
+  readme_id,
+  project_id,
+  text
+)
+VALUES
+  (1, 1, ""),
+  (2, 2, ""),
+  (3, 3, ""),
+  (4, 4, "");
+
 INSERT INTO project_revisions (
   project_id,
   revision,
@@ -32,7 +43,7 @@ INSERT INTO project_revisions (
   modified_at
 )
 VALUES
-  (1, 1, 1, 0, ""),
-  (2, 1, 2, 0, ""),
-  (3, 1, 3, 0, ""),
-  (4, 1, 4, 0, "");
+  (1, 1, 1, 1, ""),
+  (2, 1, 2, 2, ""),
+  (3, 1, 3, 3, ""),
+  (4, 1, 4, 4, "");

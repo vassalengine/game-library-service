@@ -284,10 +284,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn add_readme(
         &self,
+        proj_id: i64,
         text: &str
     ) -> Result<i64, AppError>
     {
-        add_readme(&self.0, text).await
+        add_readme(&self.0, proj_id, text).await
     }
 
     async fn get_image_url(
@@ -1044,11 +1045,16 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // create project entries
+    // create project components
+
     let proj_id = create_project_entry(&mut *tx, proj, now).await?;
     let proj_data_id = create_project_data(&mut *tx, proj_id, proj_data).await?;
-    // revisions start at 1; readme_id 0 is the empty readme
-    create_project_revision(&mut *tx, proj_id, 1, proj_data_id, 0, now).await?;
+    let readme_id = add_readme(&mut *tx, proj_id, "").await?;
+
+    // revisions start at 1
+    create_project_revision(
+        &mut *tx, proj_id, 1, proj_data_id, readme_id, now
+    ).await?;
 
     // get user id of new owner
     let owner_id = get_user_id(&mut *tx, &user.0).await?;
@@ -1639,6 +1645,7 @@ LIMIT 1
 
 async fn add_readme<'e, E>(
     ex: E,
+    proj_id: i64,
     text: &str
 ) -> Result<i64, AppError>
 where
@@ -1648,11 +1655,13 @@ where
         sqlx::query_scalar!(
             "
 INSERT INTO readmes (
+    project_id,
     text
 )
-VALUES (?)
+VALUES (?, ?)
 RETURNING readme_id
             ",
+            proj_id,
             text
         )
         .fetch_one(ex)
@@ -1690,7 +1699,7 @@ mod test {
 
     use crate::model::GameData;
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_id_ok(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "test_game").await.unwrap(),
@@ -1698,7 +1707,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_id_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "bogus").await.unwrap_err(),
@@ -1706,7 +1715,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_count_ok(pool: Pool) {
         assert_eq!(get_project_count(&pool).await.unwrap(), 2);
     }
@@ -1724,7 +1733,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1745,17 +1754,17 @@ mod test {
 
 // TODO: can we tell when the project doesn't exist?
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         assert!(user_is_owner(&pool, &User("bob".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         assert!(!user_is_owner(&pool, &User("alice".into()), 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn add_owner_new(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1773,7 +1782,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn add_owner_existing(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1789,7 +1798,7 @@ mod test {
 // TODO: add test for add_owner not a project
 // TODO: add test for add_owner not a user
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn remove_owner_ok(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1802,7 +1811,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn remove_owner_not_an_owner(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 42).await.unwrap(),
@@ -1818,17 +1827,17 @@ mod test {
 // TODO: add test for remove_owner not a project
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "users", "one_owner"))]
+    #[sqlx::test(fixtures("projects", "users", "one_owner"))]
     async fn has_owner_yes(pool: Pool) {
         assert!(has_owner(&pool, 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn has_owner_no(pool: Pool) {
         assert!(!has_owner(&pool, 42).await.unwrap());
     }
 
-    #[sqlx::test(fixtures("readmes", "users"))]
+    #[sqlx::test(fixtures("users"))]
     async fn create_project_ok(pool: Pool) {
         let user = User("bob".into());
         let row = ProjectRow {
@@ -1842,7 +1851,7 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
-            readme_id: 0,
+            readme_id: 1,
             image: None
         };
 
@@ -1900,7 +1909,7 @@ mod test {
             game_title_sort: "".into(),
             game_publisher: "".into(),
             game_year: "".into(),
-            readme_id: 0,
+            readme_id: id as i64,
             image: None
         }
     }
@@ -1915,7 +1924,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_start_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
@@ -1927,7 +1936,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_start_window_past_end(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
@@ -1949,7 +1958,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_end_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
@@ -1961,7 +1970,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_end_window_past_start(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
@@ -1983,7 +1992,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_after_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
@@ -1995,7 +2004,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_after_window_past_end(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
@@ -2015,7 +2024,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_before_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_before_window(
@@ -2027,7 +2036,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "proj_window"))]
+    #[sqlx::test(fixtures("proj_window"))]
     async fn get_projects_before_window_past_start(pool: Pool) {
         assert_eq!(
             get_projects_before_window(
@@ -2037,7 +2046,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "title_window"))]
+    #[sqlx::test(fixtures("title_window"))]
     async fn get_projects_start_window_by_title(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
@@ -2055,14 +2064,14 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 0,
+                    readme_id: 1,
                     image: None
                 }
             ]
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "title_window"))]
+    #[sqlx::test(fixtures("title_window"))]
     async fn get_projects_after_window_by_title(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
@@ -2080,14 +2089,14 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 0,
+                    readme_id: 2,
                     image: None
                 }
             ]
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_row_ok(pool: Pool) {
         assert_eq!(
             get_project_row(&pool, 42).await.unwrap(),
@@ -2108,7 +2117,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_row_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_row(&pool, 0).await.unwrap_err(),
@@ -2116,7 +2125,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 42, 2).await.unwrap(),
@@ -2137,7 +2146,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "two_owners"))]
+    #[sqlx::test(fixtures("projects", "users", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 42, 1).await.unwrap(),
@@ -2159,7 +2168,7 @@ mod test {
     }
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_revision_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 0, 2).await.unwrap_err(),
@@ -2167,7 +2176,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_project_revision_not_a_revision(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, 42, 0).await.unwrap_err(),
@@ -2175,7 +2184,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_ok(pool: Pool) {
         assert_eq!(
             get_packages(&pool, 42).await.unwrap(),
@@ -2200,7 +2209,7 @@ mod test {
     }
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_not_a_project(pool: Pool) {
         assert_eq!(
             get_packages(&pool, 0).await.unwrap(),
@@ -2208,7 +2217,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_none(pool: Pool) {
         let date = "1970-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -2217,7 +2226,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_some(pool: Pool) {
         let date = "2023-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -2233,7 +2242,7 @@ mod test {
     }
 
     // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_not_a_project(pool: Pool) {
         let date = "2022-01-01T00:00:00.000000000+00:00";
         assert_eq!(
@@ -2242,7 +2251,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_package_url_ok(pool: Pool) {
         assert_eq!(
             get_package_url(&pool, 1).await.unwrap(),
@@ -2250,7 +2259,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_package_url_not_a_package(pool: Pool) {
         assert_eq!(
             get_package_url(&pool, 0).await.unwrap_err(),
@@ -2258,7 +2267,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_ok(pool: Pool) {
         assert_eq!(
             get_releases(&pool, 1).await.unwrap(),
@@ -2298,7 +2307,7 @@ mod test {
     }
 
 // TODO: can we tell when the package doesn't exist?
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_not_a_package(pool: Pool) {
         assert_eq!(
             get_releases(&pool, 0).await.unwrap(),
@@ -2306,7 +2315,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages", "authors"))]
+    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
     async fn get_authors_ok(pool: Pool) {
         assert_eq!(
             get_authors(&pool, 2).await.unwrap(),
@@ -2320,7 +2329,7 @@ mod test {
     }
 
 // TODO: can we tell when the package version doesn't exist?
-    #[sqlx::test(fixtures("users", "readmes", "projects", "packages", "authors"))]
+    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
     async fn get_authors_not_a_release(pool: Pool) {
         assert_eq!(
             get_authors(&pool, 0).await.unwrap(),
@@ -2328,7 +2337,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn get_players_ok(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -2342,7 +2351,7 @@ mod test {
     }
 
 // TODO: can we tell when the project doesn't exist?
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn get_players_not_a_project(pool: Pool) {
         assert_eq!(
             get_players(&pool, 0).await.unwrap(),
@@ -2350,7 +2359,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn add_player_new(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -2374,7 +2383,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn add_player_existing(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -2400,7 +2409,7 @@ mod test {
 // TODO: add test for add_player not a project
 // TODO: add test for add_player not a user
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn remove_player_existing(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -2422,7 +2431,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "players"))]
+    #[sqlx::test(fixtures("projects", "users", "players"))]
     async fn remove_player_not_a_player(pool: Pool) {
         assert_eq!(
             get_players(&pool, 42).await.unwrap(),
@@ -2447,7 +2456,7 @@ mod test {
 
 // TODO: add test for remove_player not a project
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_readme_ok(pool: Pool) {
         assert_eq!(
             get_readme(&pool, 8).await.unwrap(),
@@ -2455,7 +2464,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
+    #[sqlx::test(fixtures("projects"))]
     async fn get_readme_not_a_readme(pool: Pool) {
         assert_eq!(
             get_readme(&pool, 1).await.unwrap_err(),
@@ -2463,16 +2472,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects"))]
-    async fn get_readme_default(pool: Pool) {
-        // The default readme must exist at id 0 and be empty.
-        assert_eq!(
-            get_readme(&pool, 0).await.unwrap(),
-            Readme { text: "".into() }
-        );
-    }
-
-    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    #[sqlx::test(fixtures("projects", "users", "images"))]
     async fn get_image_url_ok(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, 42, "img.png").await.unwrap(),
@@ -2480,7 +2480,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    #[sqlx::test(fixtures("projects", "users", "images"))]
     async fn get_image_url_not_a_project(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, 1, "img.png").await.unwrap_err(),
@@ -2488,7 +2488,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("readmes", "projects", "users", "images"))]
+    #[sqlx::test(fixtures("projects", "users", "images"))]
     async fn get_image_url_not_an_image(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, 42, "bogus").await.unwrap_err(),

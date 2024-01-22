@@ -45,6 +45,16 @@ VALUES
     "1993"
   );
 
+
+INSERT INTO readmes (
+  readme_id,
+  project_id,
+  text
+)
+VALUES
+  (4, 6, "ho"),
+  (8, 42, "hey");
+
 INSERT INTO project_revisions (
   project_id,
   revision,

@@ -30,7 +30,9 @@ CREATE TABLE players(
 
 CREATE TABLE readmes (
   readme_id INTEGER PRIMARY KEY NOT NULL,
-  text TEXT NOT NULL
+  project_id INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 
 CREATE TABLE images (
@@ -188,3 +190,57 @@ BEGIN
 END;
 
 /* SELECT rowid, * FROM project_data_fts WHERE project_data_fts MATCH 'Afrika' ORDER BY rank; */
+
+CREATE VIRTUAL TABLE readmes_fts USING fts5(
+  text,
+  content="readmes",
+  content_rowid="project_id"
+);
+
+CREATE TRIGGER readmes_ai AFTER INSERT ON readmes
+BEGIN
+  INSERT INTO readmes_fts (
+    rowid,
+    text
+  )
+  VALUES (
+    new.project_id,
+    new.text
+  );
+END;
+
+CREATE TRIGGER readmes_ad AFTER DELETE ON readmes
+BEGIN
+  INSERT INTO readmes_fts (
+    readmes_fts,
+    rowid,
+    text
+  )
+  VALUES (
+    'delete',
+    old.project_id,
+    old.text
+  );
+END;
+
+CREATE TRIGGER readmes_au AFTER UPDATE ON readmes
+BEGIN
+  INSERT INTO readmes_fts (
+    readmes_fts,
+    rowid,
+    text
+  )
+  VALUES (
+    'delete',
+    old.project_id,
+    old.text
+  );
+  INSERT INTO readmes_fts (
+    rowid,
+    text
+  )
+  VALUES (
+    new.project_id,
+    new.text
+  );
+END;

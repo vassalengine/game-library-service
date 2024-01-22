@@ -344,6 +344,7 @@ pub trait DatabaseClient {
 
     async fn add_readme(
         &self,
+        _proj_id: i64,
         _text: &str
     ) -> Result<i64, AppError>
     {
