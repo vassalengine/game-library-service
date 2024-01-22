@@ -81,11 +81,13 @@ CREATE TABLE projects (
 
 CREATE TABLE project_data (
   project_data_id INTEGER PRIMARY KEY NOT NULL,
+  project_id INTEGER NOT NULL,
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
-  game_year TEXT NOT NULL
+  game_year TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id)
 );
 
 CREATE TABLE project_revisions (
@@ -101,3 +103,88 @@ CREATE TABLE project_revisions (
   FOREIGN KEY(readme_id) REFERENCES readmes(readme_id),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
+
+/* Full-text search */
+
+CREATE VIRTUAL TABLE project_data_fts USING fts5(
+  description,
+  game_title,
+  game_publisher,
+  game_year,
+  content="project_data",
+  content_rowid="project_id"
+);
+
+CREATE TRIGGER project_data_ai AFTER INSERT ON project_data
+BEGIN
+  INSERT INTO project_data_fts (
+    rowid,
+    description,
+    game_title,
+    game_publisher,
+    game_year
+  )
+  VALUES (
+    new.project_id,
+    new.description,
+    new.game_title,
+    new.game_publisher,
+    new.game_year
+  );
+END;
+
+CREATE TRIGGER project_data_ad AFTER DELETE ON project_data
+BEGIN
+  INSERT INTO project_data_fts (
+    project_data_fts,
+    rowid,
+    description,
+    game_title,
+    game_publisher,
+    game_year
+  )
+  VALUES (
+    'delete',
+    old.project_id,
+    old.description,
+    old.game_title,
+    old.game_publisher,
+    old.game_year
+  );
+END;
+
+CREATE TRIGGER project_data_au AFTER UPDATE ON project_data
+BEGIN
+  INSERT INTO project_data_fts (
+    project_data_fts,
+    rowid,
+    description,
+    game_title,
+    game_publisher,
+    game_year
+  )
+  VALUES (
+    'delete',
+    old.project_id,
+    old.description,
+    old.game_title,
+    old.game_publisher,
+    old.game_year
+  );
+  INSERT INTO project_data_fts (
+    rowid,
+    description,
+    game_title,
+    game_publisher,
+    game_year
+  )
+  VALUES (
+    new.project_id,
+    new.description,
+    new.game_title,
+    new.game_publisher,
+    new.game_year
+  );
+END;
+
+/* SELECT rowid, * FROM project_data_fts WHERE project_data_fts MATCH 'Afrika' ORDER BY rank; */

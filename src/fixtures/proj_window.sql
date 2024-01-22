@@ -11,6 +11,7 @@ VALUES
 
 INSERT INTO project_data (
   project_data_id,
+  project_id,
   description,
   game_title,
   game_title_sort,
@@ -18,10 +19,10 @@ INSERT INTO project_data (
   game_year
 )
 VALUES
-  (1, "", "", "", "", ""),
-  (2, "", "", "", "", ""),
-  (3, "", "", "", "", ""),
-  (4, "", "", "", "", "");
+  (1, 1, "", "", "", "", ""),
+  (2, 2, "", "", "", "", ""),
+  (3, 3, "", "", "", "", ""),
+  (4, 4, "", "", "", "", "");
 
 INSERT INTO project_revisions (
   project_id,

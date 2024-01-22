@@ -9,6 +9,7 @@ VALUES
 
 INSERT INTO project_data (
   project_data_id,
+  project_id,
   description,
   game_title,
   game_title_sort,
@@ -18,6 +19,7 @@ INSERT INTO project_data (
 VALUES
   (
     1,
+    42,
     "Brian's Trademarked Game of Being a Test Case",
     "A Game of Tests",
     "Game of Tests, A",
@@ -26,6 +28,7 @@ VALUES
   ),
   (
     2,
+    42,
     "Another game",
     "Some Other Game",
     "Some Other Game",
@@ -34,6 +37,7 @@ VALUES
   ),
   (
     3,
+    42,
     "Another game",
     "Some Otter Game",
     "Some Otter Game",

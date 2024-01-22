@@ -966,6 +966,7 @@ RETURNING project_id
 
 async fn create_project_data<'e, E>(
     ex: E,
+    proj_id: i64,
     proj_data: &ProjectDataPut
 ) -> Result<i64, AppError>
 where
@@ -975,15 +976,17 @@ where
         sqlx::query_scalar!(
             "
 INSERT INTO project_data (
+    project_id,
     description,
     game_title,
     game_title_sort,
     game_publisher,
     game_year
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
 RETURNING project_data_id
             ",
+            proj_id,
             proj_data.description,
             proj_data.game.title,
             proj_data.game.title_sort_key,
@@ -1043,7 +1046,7 @@ where
 
     // create project entries
     let proj_id = create_project_entry(&mut *tx, proj, now).await?;
-    let proj_data_id = create_project_data(&mut *tx, proj_data).await?;
+    let proj_data_id = create_project_data(&mut *tx, proj_id, proj_data).await?;
     // revisions start at 1; readme_id 0 is the empty readme
     create_project_revision(&mut *tx, proj_id, 1, proj_data_id, 0, now).await?;
 
@@ -1100,7 +1103,7 @@ where
     let rev = get_project_revision_current(&mut *tx, proj_id).await?;
 
     // write the updated project data
-    let proj_data_id = create_project_data(&mut *tx, proj_data).await?;
+    let proj_data_id = create_project_data(&mut *tx, proj_id, proj_data).await?;
 
     // write a new project revision
     create_project_revision(
