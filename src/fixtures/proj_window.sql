@@ -1,49 +1,19 @@
 INSERT INTO projects (
   project_id,
   name,
-  created_at
-)
-VALUES
-  (1, "a", ""),
-  (2, "b", ""),
-  (3, "c", ""),
-  (4, "d", "");
-
-INSERT INTO project_data (
-  project_data_id,
-  project_id,
+  created_at,
   description,
   game_title,
   game_title_sort,
   game_publisher,
-  game_year
+  game_year,
+  readme,
+  image,
+  modified_at,
+  revision
 )
 VALUES
-  (1, 1, "", "", "", "", ""),
-  (2, 2, "", "", "", "", ""),
-  (3, 3, "", "", "", "", ""),
-  (4, 4, "", "", "", "", "");
-
-INSERT INTO readmes (
-  readme_id,
-  project_id,
-  text
-)
-VALUES
-  (1, 1, ""),
-  (2, 2, ""),
-  (3, 3, ""),
-  (4, 4, "");
-
-INSERT INTO project_revisions (
-  project_id,
-  revision,
-  project_data_id,
-  readme_id,
-  modified_at
-)
-VALUES
-  (1, 1, 1, 1, ""),
-  (2, 1, 2, 2, ""),
-  (3, 1, 3, 3, ""),
-  (4, 1, 4, 4, "");
+  (1, "a", "", "", "", "", "", "", "", NULL, "", 1),
+  (2, "b", "", "", "", "", "", "", "", NULL, "", 1),
+  (3, "c", "", "", "", "", "", "", "", NULL, "", 1),
+  (4, "d", "", "", "", "", "", "", "", NULL, "", 1);

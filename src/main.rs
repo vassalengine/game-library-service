@@ -96,7 +96,8 @@ fn routes(api: &str) -> Router<AppState> {
         .route(
             &format!("{api}/projects/:proj"),
             get(handlers::project_get)
-            .put(handlers::project_put)
+            .post(handlers::project_post)
+            .patch(handlers::project_patch)
         )
         .route(
             &format!("{api}/projects/:proj/:revision"),
@@ -135,10 +136,6 @@ fn routes(api: &str) -> Router<AppState> {
         .route(
             &format!("{api}/projects/:proj/flag"),
             post(handlers::flag_post)
-        )
-        .route(
-            &format!("{api}/readme/:readme_id"),
-            get(handlers::readme_get)
         )
         .fallback(handlers::not_found)
         .layer(
@@ -205,7 +202,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, ReleaseData, User, Users},
+        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
         pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
         version::Version
     };
@@ -385,7 +382,7 @@ mod test {
                         publisher: "Avalon Hill".into(),
                         year: "1983".into()
                     },
-                    readme_id: 3,
+                    readme: "".into(),
                     image: None,
                     owners: vec!["alice".into(), "bob".into()],
                     packages: vec![
@@ -415,7 +412,7 @@ mod test {
             &self,
             _user: &User,
             _proj: &str,
-            _proj_data: &ProjectDataPut
+            _proj_data: &ProjectDataPost
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -424,7 +421,7 @@ mod test {
         async fn update_project(
             &self,
             _proj_id: i64,
-            _proj_data: &ProjectDataPut
+            _proj_data: &ProjectDataPatch
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -433,7 +430,7 @@ mod test {
         async fn get_project_revision(
             &self,
             proj_id: i64,
-            revision: u32
+            revision: i64
         ) -> Result<ProjectData, AppError>
         {
             match revision {
@@ -497,18 +494,6 @@ mod test {
         ) -> Result<(), AppError>
         {
             Ok(())
-        }
-
-        async fn get_readme(
-            &self,
-            readme_id: i64
-        ) -> Result<Readme, AppError>
-        {
-
-            match readme_id {
-                42 => Ok(Readme { text: "Stuff!".into() }),
-                _ => Err(AppError::NotFound)
-            }
         }
 
         async fn get_image(
@@ -1121,7 +1106,7 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                readme_id: 3,
+                readme: "".into(),
                 image: None,
                 owners: vec!["alice".into(), "bob".into()],
 // TODO: fill in more
@@ -1167,8 +1152,8 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_create() {
-        let proj_data = ProjectDataPut {
+    async fn post_project_create() {
+        let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
             game: GameData {
@@ -1176,12 +1161,14 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into()
-            }
+            },
+            readme: "".into(),
+            image: None
         };
 
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(AUTHORIZATION, token("bob"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
@@ -1195,21 +1182,15 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_update() {
-        let proj_data = ProjectDataPut {
-            description: "A module for Empires in Arms".into(),
-            tags: vec![],
-            game: GameData {
-                title: "Empires in Arms".into(),
-                title_sort_key: "Empires in Arms".into(),
-                publisher: "Avalon Hill".into(),
-                year: "1983".into()
-            }
+    async fn patch_project_update() {
+        let proj_data = ProjectDataPatch {
+            description: Some("A module for Empires in Arms".into()),
+            ..Default::default()
         };
 
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token("bob"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
@@ -1223,8 +1204,8 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_unauth() {
-        let proj_data = ProjectDataPut {
+    async fn post_project_unauth() {
+        let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
             game: GameData {
@@ -1232,12 +1213,14 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into()
-            }
+            },
+            readme: "".into(),
+            image: None
         };
 
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -1253,10 +1236,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_wrong_json() {
+    async fn post_project_wrong_json() {
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .header(AUTHORIZATION, token("bob"))
@@ -1273,10 +1256,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_wrong_mime_type() {
+    async fn post_project_wrong_mime_type() {
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token("bob"))
@@ -1293,10 +1276,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn put_project_no_mime_type() {
+    async fn post_project_no_mime_type() {
         let response = try_request(
             Request::builder()
-                .method(Method::PUT)
+                .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token("bob"))
@@ -1339,7 +1322,7 @@ mod test {
                     publisher: "Avalon Hill".into(),
                     year: "1983".into()
                 },
-                readme_id: 3,
+                readme: "".into(),
                 image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
@@ -1908,42 +1891,6 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotAProject)
-        );
-    }
-
-    #[tokio::test]
-    async fn get_readme_ok() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/readme/42"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<Readme>(response).await,
-            Readme { text: "Stuff!".into() }
-        );
-    }
-
-    #[tokio::test]
-    async fn get_readme_not_an_id() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/readme/1"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
         );
     }
 

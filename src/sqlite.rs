@@ -1,15 +1,15 @@
 use axum::async_trait;
 use sqlx::{
-    Acquire, Database, Executor,
+    Acquire, Database, Executor, QueryBuilder,
     sqlite::Sqlite
 };
 use serde::Deserialize;
 use std::cmp::Ordering;
 
 use crate::{
-    db::{DatabaseClient, PackageRow, ProjectRow, ProjectRevisionRow, ReleaseRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{ProjectID, ProjectDataPut, Readme, User, Users},
+    model::{ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::OrderBy,
     version::Version
 };
@@ -115,7 +115,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         order_by: &OrderBy,
         limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         get_projects_start_window(&self.0, order_by, limit).await
     }
@@ -124,7 +124,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         order_by: &OrderBy,
         limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         get_projects_end_window(&self.0, order_by, limit).await
     }
@@ -135,7 +135,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         name: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         get_projects_after_window(&self.0, order_by, name, id, limit).await
     }
@@ -146,7 +146,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         name: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         get_projects_before_window(&self.0, order_by, name, id, limit).await
     }
@@ -155,7 +155,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: &User,
         proj: &str,
-        proj_data: &ProjectDataPut,
+        proj_data: &ProjectDataPost,
         now: &str
     ) -> Result<(), AppError>
     {
@@ -165,7 +165,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn update_project(
         &self,
         proj_id: i64,
-        proj_data: &ProjectDataPut,
+        proj_data: &ProjectDataPatch,
         now: &str
     ) -> Result<(), AppError>
     {
@@ -183,7 +183,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_row_revision(
         &self,
         proj_id: i64,
-        revision: u32
+        revision: i64
     ) -> Result<ProjectRow, AppError>
     {
         get_project_row_revision(&self.0, proj_id, revision).await
@@ -272,23 +272,6 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<(), AppError>
     {
         remove_player(&self.0, player, proj_id).await
-    }
-
-    async fn get_readme(
-        &self,
-        readme_id: i64
-    ) -> Result<Readme, AppError>
-    {
-        get_readme(&self.0, readme_id).await
-    }
-
-    async fn add_readme(
-        &self,
-        proj_id: i64,
-        text: &str
-    ) -> Result<i64, AppError>
-    {
-        add_readme(&self.0, proj_id, text).await
     }
 
     async fn get_image_url(
@@ -542,32 +525,27 @@ LIMIT 1
 async fn get_projects_start_window_by_project<'e, E>(
     ex: E,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
 ORDER BY projects.name COLLATE NOCASE ASC
 LIMIT ?
             ",
@@ -581,33 +559,28 @@ LIMIT ?
 async fn get_projects_start_window_by_title<'e, E>(
     ex: E,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-ORDER BY project_data.game_title_sort COLLATE NOCASE ASC
+ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE ASC
 LIMIT ?
             ",
             limit
@@ -621,7 +594,7 @@ async fn get_projects_start_window<'e, E>(
     ex: E,
     order_by: &OrderBy,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -634,32 +607,27 @@ where
 async fn get_projects_end_window_by_project<'e, E>(
     ex: E,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
 ORDER BY projects.name COLLATE NOCASE DESC
 LIMIT ?
             ",
@@ -673,33 +641,28 @@ LIMIT ?
 async fn get_projects_end_window_by_title<'e, E>(
     ex: E,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-ORDER BY project_data.game_title_sort COLLATE NOCASE DESC
+ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE DESC
 LIMIT ?
             ",
             limit
@@ -713,7 +676,7 @@ async fn get_projects_end_window<'e, E>(
     ex: E,
     order_by: &OrderBy,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -728,32 +691,27 @@ async fn get_projects_after_window_by_project<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
 WHERE projects.name > ?
     OR (projects.name = ? AND projects.project_id > ?)
 ORDER BY projects.name COLLATE NOCASE ASC
@@ -774,35 +732,30 @@ async fn get_projects_after_window_by_title<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-WHERE project_data.game_title_sort > ?
-    OR (project_data.game_title_sort = ? AND projects.project_id > ?)
-ORDER BY project_data.game_title_sort COLLATE NOCASE ASC
+WHERE projects.game_title_sort > ?
+    OR (projects.game_title_sort = ? AND projects.project_id > ?)
+ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE ASC
 LIMIT ?
             ",
             name,
@@ -821,7 +774,7 @@ async fn get_projects_after_window<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -836,32 +789,27 @@ async fn get_projects_before_window_by_project<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
 WHERE projects.name < ?
     OR (projects.name = ? AND projects.project_id < ?)
 ORDER BY projects.name COLLATE NOCASE DESC
@@ -882,35 +830,30 @@ async fn get_projects_before_window_by_title<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
         sqlx::query_as!(
-            ProjectRow,
+            ProjectSummaryRow,
             "
 SELECT
     projects.project_id,
     projects.name,
-    project_data.description,
-    project_revisions.revision,
+    projects.description,
+    projects.revision,
     projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-WHERE project_data.game_title_sort < ?
-    OR (project_data.game_title_sort = ? AND projects.project_id < ?)
-ORDER BY project_data.game_title_sort COLLATE NOCASE DESC
+WHERE projects.game_title_sort < ?
+    OR (projects.game_title_sort = ? AND projects.project_id < ?)
+ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE DESC
 LIMIT ?
             ",
             name,
@@ -929,7 +872,7 @@ async fn get_projects_before_window<'e, E>(
     name: &str,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -942,6 +885,7 @@ where
 async fn create_project_entry<'e, E>(
     ex: E,
     proj: &str,
+    proj_data: &ProjectDataPost,
     now: &str
 ) -> Result<i64, AppError>
 where
@@ -952,92 +896,42 @@ where
             "
 INSERT INTO projects (
     name,
-    created_at
-)
-VALUES (?, ?)
-RETURNING project_id
-            ",
-            proj,
-            now
-        )
-        .fetch_one(ex)
-        .await?
-    )
-}
-
-async fn create_project_data<'e, E>(
-    ex: E,
-    proj_id: i64,
-    proj_data: &ProjectDataPut
-) -> Result<i64, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_scalar!(
-            "
-INSERT INTO project_data (
-    project_id,
+    created_at,
     description,
     game_title,
     game_title_sort,
     game_publisher,
-    game_year
+    game_year,
+    readme,
+    image,
+    modified_at,
+    revision
 )
-VALUES (?, ?, ?, ?, ?, ?)
-RETURNING project_data_id
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING project_id
             ",
-            proj_id,
+            proj,
+            now,
             proj_data.description,
             proj_data.game.title,
             proj_data.game.title_sort_key,
             proj_data.game.publisher,
-            proj_data.game.year
+            proj_data.game.year,
+            "",
+            None::<&str>,
+            now,
+            1
         )
         .fetch_one(ex)
         .await?
     )
-}
-
-async fn create_project_revision<'e, E>(
-    ex: E,
-    proj_id: i64,
-    revision: i64,
-    proj_data_id: i64,
-    readme_id: i64,
-    now: &str
-) -> Result<(), AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query_scalar!(
-        "
-INSERT INTO project_revisions (
-    project_id,
-    revision,
-    project_data_id,
-    readme_id,
-    modified_at
-)
-VALUES (?, ?, ?, ?, ?)
-        ",
-        proj_id,
-        revision,
-        proj_data_id,
-        readme_id,
-        now
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
 }
 
 async fn create_project<'a, A>(
     conn: A,
     user: &User,
     proj: &str,
-    proj_data: &ProjectDataPut,
+    proj_data: &ProjectDataPost,
     now: &str
 ) -> Result<(), AppError>
 where
@@ -1046,15 +940,7 @@ where
     let mut tx = conn.begin().await?;
 
     // create project components
-
-    let proj_id = create_project_entry(&mut *tx, proj, now).await?;
-    let proj_data_id = create_project_data(&mut *tx, proj_id, proj_data).await?;
-    let readme_id = add_readme(&mut *tx, proj_id, "").await?;
-
-    // revisions start at 1
-    create_project_revision(
-        &mut *tx, proj_id, 1, proj_data_id, readme_id, now
-    ).await?;
+    let proj_id = create_project_entry(&mut *tx, proj, proj_data, now).await?;
 
     // get user id of new owner
     let owner_id = get_user_id(&mut *tx, &user.0).await?;
@@ -1067,37 +953,114 @@ where
     Ok(())
 }
 
-async fn get_project_revision_current<'e, E>(
+async fn archive_project_row<'e, E>(
     ex: E,
-    proj_id: i64
-) -> Result<ProjectRevisionRow, AppError>
+    proj_row: &ProjectRow
+) -> Result<i64, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_as!(
-        ProjectRevisionRow,
-        "
-SELECT
-    revision,
-    project_data_id,
-    readme_id,
-    modified_at
-FROM project_revisions
-WHERE project_id = ?
-ORDER BY revision DESC
-LIMIT 1
-        ",
-        proj_id
+    Ok(
+        sqlx::query_scalar!(
+            "
+INSERT INTO projects_arch (
+    project_id,
+    name,
+    created_at,
+    description,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    readme,
+    image,
+    modified_at,
+    revision
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING project_id
+            ",
+            proj_row.project_id,
+            proj_row.name,
+            proj_row.created_at,
+            proj_row.description,
+            proj_row.game_title,
+            proj_row.game_title_sort,
+            proj_row.game_publisher,
+            proj_row.game_year,
+            proj_row.readme,
+            proj_row.image,
+            proj_row.modified_at,
+            proj_row.revision
+        )
+        .fetch_one(ex)
+        .await?
     )
-    .fetch_optional(ex)
-    .await?
-    .ok_or(AppError::NotARevision)
 }
+
+async fn update_project_row<'e, E>(
+    ex: E,
+    proj_id: i64,
+    revision: i64,
+    proj_data: &ProjectDataPatch,
+    now: &str
+) -> Result<(), AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut qb: QueryBuilder<E::Database> = QueryBuilder::new(
+        "UPDATE projects SET "
+    );
+
+    let mut qbs = qb.separated(", ");
+
+    qbs
+        .push("revision = ")
+        .push_bind_unseparated(revision + 1)
+        .push("modified_at = ")
+        .push_bind_unseparated(now);
+
+    if let Some(description) = &proj_data.description {
+        qbs.push("description = ").push_bind_unseparated(description);
+    }
+
+    if let Some(game_title) = &proj_data.game.title {
+        qbs.push("game_title = ").push_bind_unseparated(game_title);
+    }
+
+    if let Some(game_title_sort) = &proj_data.game.title_sort_key {
+        qbs.push("game_title_sort = ").push_bind_unseparated(game_title_sort);
+    }
+
+    if let Some(game_publisher) = &proj_data.game.publisher {
+        qbs.push("game_publisher = ").push_bind_unseparated(game_publisher);
+    }
+
+    if let Some(game_year) = &proj_data.game.year {
+        qbs.push("game_year = ").push_bind_unseparated(game_year);
+    }
+
+    if let Some(readme) = &proj_data.readme {
+        qbs.push("readme = ").push_bind_unseparated(readme);
+    }
+
+    if let Some(image) = &proj_data.image {
+        qbs.push("image = ").push_bind_unseparated(image);
+    }
+
+    qb.push(" WHERE project_id = ").push_bind(proj_id);
+
+    qb.build().execute(ex).await?;
+
+    Ok(())
+}
+
+// TODO: update project mtime when packages change
 
 async fn update_project<'a, A>(
     conn: A,
     proj_id: i64,
-    proj_data: &ProjectDataPut,
+    proj_data: &ProjectDataPatch,
     now: &str
 ) -> Result<(), AppError>
 where
@@ -1105,21 +1068,14 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // get the old project revision
-    let rev = get_project_revision_current(&mut *tx, proj_id).await?;
+    // get current project data
+    let mut row = get_project_row(&mut *tx, proj_id).await?;
 
-    // write the updated project data
-    let proj_data_id = create_project_data(&mut *tx, proj_id, proj_data).await?;
+    // archive current project data
+    archive_project_row(&mut *tx, &row).await?;
 
-    // write a new project revision
-    create_project_revision(
-        &mut *tx,
-        proj_id,
-        rev.revision + 1,
-        proj_data_id,
-        rev.readme_id,
-        now
-    ).await?;
+    // update project data
+    update_project_row(&mut *tx, proj_id, row.revision, proj_data, now).await?;
 
     tx.commit().await?;
 
@@ -1137,25 +1093,20 @@ where
         ProjectRow,
         "
 SELECT
-    projects.project_id,
-    projects.name,
-    project_data.description,
-    project_revisions.revision,
-    projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    project_id,
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    readme,
+    image
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-WHERE projects.project_id = ?
-ORDER BY project_revisions.revision DESC
+WHERE project_id = ?
 LIMIT 1
         ",
         proj_id
@@ -1165,44 +1116,103 @@ LIMIT 1
     .ok_or(AppError::NotAProject)
 }
 
-async fn get_project_row_revision<'e, E>(
+async fn get_project_row_revision_impl<'e, E>(
     ex: E,
     proj_id: i64,
-    revision: u32
-) -> Result<ProjectRow, AppError>
+    revision: i64
+) -> Result<Option<ProjectRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_as!(
-        ProjectRow,
-        "
+    Ok(
+        sqlx::query_as!(
+            ProjectRow,
+            "
 SELECT
-    projects.project_id,
-    projects.name,
-    project_data.description,
-    project_revisions.revision,
-    projects.created_at,
-    project_revisions.modified_at,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_revisions.readme_id,
-    project_revisions.image
+    project_id,
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    image,
+    readme
 FROM projects
-JOIN project_revisions
-ON projects.project_id = project_revisions.project_id
-JOIN project_data
-ON project_data.project_data_id = project_revisions.project_data_id
-WHERE projects.project_id = ?
-    AND project_revisions.revision = ?
+WHERE project_id = ?
+    AND revision = ?
 LIMIT 1
-        ",
-        proj_id,
-        revision
+            ",
+            proj_id,
+            revision
+        )
+        .fetch_optional(ex)
+        .await?
     )
-    .fetch_optional(ex)
-    .await?
+}
+
+async fn get_project_row_arch_revision_impl<'e, E>(
+    ex: E,
+    proj_id: i64,
+    revision: i64
+) -> Result<Option<ProjectRow>, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_as!(
+            ProjectRow,
+            "
+SELECT
+    project_id,
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    image,
+    readme
+FROM projects_arch
+WHERE project_id = ?
+    AND revision = ?
+LIMIT 1
+            ",
+            proj_id,
+            revision
+        )
+        .fetch_optional(ex)
+        .await?
+    )
+}
+
+async fn get_project_row_revision<'a, A>(
+    conn: A,
+    proj_id: i64,
+    revision: i64
+) -> Result<ProjectRow, AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut conn = conn.acquire().await?;
+
+// TODO: can this be cleaned up?
+    let maybe_row = get_project_row_arch_revision_impl(
+        &mut *conn, proj_id, revision
+    ).await?;
+
+    match maybe_row {
+        Some(_) => maybe_row,
+        None => get_project_row_revision_impl(
+            &mut *conn, proj_id, revision
+        ).await?
+    }
     .ok_or(AppError::NotARevision)
 }
 
@@ -1621,54 +1631,6 @@ where
     Ok(())
 }
 
-async fn get_readme<'e, E>(
-    ex: E,
-    readme_id: i64
-) -> Result<Readme, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query_as!(
-        Readme,
-        "
-SELECT text
-FROM readmes
-WHERE readme_id = ?
-LIMIT 1
-        ",
-        readme_id
-    )
-    .fetch_optional(ex)
-    .await?
-    .ok_or(AppError::NotARevision)
-}
-
-async fn add_readme<'e, E>(
-    ex: E,
-    proj_id: i64,
-    text: &str
-) -> Result<i64, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_scalar!(
-            "
-INSERT INTO readmes (
-    project_id,
-    text
-)
-VALUES (?, ?)
-RETURNING readme_id
-            ",
-            proj_id,
-            text
-        )
-        .fetch_one(ex)
-        .await?
-    )
-}
-
 async fn get_image_url<'e, E>(
     ex: E,
     proj_id: i64,
@@ -1851,11 +1813,11 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
-            readme_id: 1,
+            readme: "".into(),
             image: None
         };
 
-        let cdata = ProjectDataPut {
+        let cdata = ProjectDataPost {
             description: row.description.clone(),
             tags: vec![],
             game: GameData {
@@ -1863,7 +1825,9 @@ mod test {
                 title_sort_key: row.game_title_sort.clone(),
                 publisher: row.game_publisher.clone(),
                 year: row.game_year.clone()
-            }
+            },
+            readme: "".into(),
+            image: None
         };
 
         assert_eq!(
@@ -1897,8 +1861,8 @@ mod test {
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
-    fn fake_project_row(id: usize, name: String) -> ProjectRow {
-        ProjectRow {
+    fn fake_project_row(id: usize, name: String) -> ProjectSummaryRow {
+        ProjectSummaryRow {
             project_id: id as i64,
             name,
             description: "".into(),
@@ -1909,7 +1873,6 @@ mod test {
             game_title_sort: "".into(),
             game_publisher: "".into(),
             game_year: "".into(),
-            readme_id: id as i64,
             image: None
         }
     }
@@ -1932,7 +1895,7 @@ mod test {
             ).await.unwrap(),
             "abc".char_indices()
                 .map(|(i, c)| fake_project_row(i + 1, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -1944,7 +1907,7 @@ mod test {
             ).await.unwrap(),
             "abcd".char_indices()
                 .map(|(i, c)| fake_project_row(i + 1, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -1966,7 +1929,7 @@ mod test {
             ).await.unwrap(),
             "dcb".char_indices()
                 .map(|(i, c)| fake_project_row(4 - i, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -1978,7 +1941,7 @@ mod test {
             ).await.unwrap(),
             "dcba".char_indices()
                 .map(|(i, c)| fake_project_row(4 - i, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -2000,7 +1963,7 @@ mod test {
             ).await.unwrap(),
             "cd".char_indices()
                 .map(|(i, c)| fake_project_row(i + 3, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -2032,7 +1995,7 @@ mod test {
             ).await.unwrap(),
             "ba".char_indices()
                 .map(|(i, c)| fake_project_row(2 - i, c.into()))
-                .collect::<Vec<ProjectRow>>()
+                .collect::<Vec<ProjectSummaryRow>>()
         );
     }
 
@@ -2053,7 +2016,7 @@ mod test {
                 &pool, &OrderBy::GameTitle, 1
             ).await.unwrap(),
             vec![
-                ProjectRow {
+                ProjectSummaryRow {
                     project_id: 1,
                     name: "a".into(),
                     description: "".into(),
@@ -2064,7 +2027,6 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 1,
                     image: None
                 }
             ]
@@ -2078,7 +2040,7 @@ mod test {
                 &pool, &OrderBy::GameTitle, "a", 1, 1
             ).await.unwrap(),
             vec![
-                ProjectRow {
+                ProjectSummaryRow {
                     project_id: 2,
                     name: "b".into(),
                     description: "".into(),
@@ -2089,7 +2051,6 @@ mod test {
                     game_title_sort: "a".into(),
                     game_publisher: "".into(),
                     game_year: "".into(),
-                    readme_id: 2,
                     image: None
                 }
             ]
@@ -2111,7 +2072,7 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8,
+                readme: "".into(),
                 image: None
             }
         );
@@ -2140,7 +2101,7 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8,
+                readme: "".into(),
                 image: None
             }
         );
@@ -2161,7 +2122,7 @@ mod test {
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
                 game_year: "1979".into(),
-                readme_id: 8,
+                readme: "".into(),
                 image: None
             }
         );
@@ -2455,22 +2416,6 @@ mod test {
     }
 
 // TODO: add test for remove_player not a project
-
-    #[sqlx::test(fixtures("projects"))]
-    async fn get_readme_ok(pool: Pool) {
-        assert_eq!(
-            get_readme(&pool, 8).await.unwrap(),
-            Readme { text: "hey".into() }
-        );
-    }
-
-    #[sqlx::test(fixtures("projects"))]
-    async fn get_readme_not_a_readme(pool: Pool) {
-        assert_eq!(
-            get_readme(&pool, 1).await.unwrap_err(),
-            AppError::NotARevision
-        );
-    }
 
     #[sqlx::test(fixtures("projects", "users", "images"))]
     async fn get_image_url_ok(pool: Pool) {

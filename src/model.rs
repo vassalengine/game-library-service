@@ -35,17 +35,6 @@ pub struct Owner(pub String);
 #[derive(Debug, PartialEq)]
 pub struct Owned(pub Owner, pub ProjectID);
 
-#[derive(Debug, PartialEq)]
-pub enum OwnedOrNew {
-    Owned(Owned),
-    User(User)
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Readme {
-    pub text: String
-}
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
@@ -88,17 +77,36 @@ pub struct ProjectData {
     pub modified_at: String,
     pub tags: Vec<String>,
     pub game: GameData,
-    pub readme_id: i64,
+    pub readme: String,
     pub image: Option<String>,
     pub owners: Vec<String>,
     pub packages: Vec<PackageData>
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct ProjectDataPut {
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct GameDataPatch {
+    pub title: Option<String>,
+    pub title_sort_key: Option<String>,
+    pub publisher: Option<String>,
+    pub year: Option<String>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct ProjectDataPatch {
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub game: GameDataPatch,
+    pub readme: Option<String>,
+    pub image: Option<Option<String>>
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProjectDataPost {
     pub description: String,
     pub tags: Vec<String>,
-    pub game: GameData
+    pub game: GameData,
+    pub readme: String,
+    pub image: Option<String>
 }
 
 // TODO: maybe use a date type for ctime, mtime?

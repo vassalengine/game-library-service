@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{PackageID, Project, Projects, ProjectData, ProjectDataPut, ProjectID, Readme, User, UserID, Users},
+    model::{PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
     pagination::{Limit, Seek},
     version::Version
 };
@@ -91,7 +91,7 @@ pub trait Core {
         &self,
         _user: &User,
         _proj: &str,
-        _proj_data: &ProjectDataPut
+        _proj_data: &ProjectDataPost
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -100,7 +100,7 @@ pub trait Core {
     async fn update_project(
         &self,
         _proj_id: i64,
-        _proj_data: &ProjectDataPut
+        _proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -109,7 +109,7 @@ pub trait Core {
     async fn get_project_revision(
         &self,
         _proj_id: i64,
-        _revision: u32
+        _revision: i64
     ) -> Result<ProjectData, AppError>
     {
         unimplemented!();
@@ -156,14 +156,6 @@ pub trait Core {
         _player: &User,
         _proj_id: i64
     ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
-
-    async fn get_readme(
-        &self,
-        _readme_id: i64
-    ) -> Result<Readme, AppError>
     {
         unimplemented!();
     }

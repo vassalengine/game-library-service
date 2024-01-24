@@ -1,68 +1,87 @@
 INSERT INTO projects (
   project_id,
   name,
-  created_at
-)
-VALUES
-  (42, "test_game", "2023-11-12T15:50:06.419538067+00:00"),
-  (6, "a_game", "2019-11-12T15:50:06.419538067+00:00");
-
-INSERT INTO project_data (
-  project_data_id,
-  project_id,
+  created_at,
   description,
   game_title,
   game_title_sort,
   game_publisher,
-  game_year
+  game_year,
+  readme,
+  image,
+  modified_at,
+  revision
 )
 VALUES
   (
-    1,
     42,
+    "test_game",
+    "2023-11-12T15:50:06.419538067+00:00",
     "Brian's Trademarked Game of Being a Test Case",
     "A Game of Tests",
     "Game of Tests, A",
     "Test Game Company",
-    "1979"
+    "1979",
+    "",
+    NULL,
+    "2023-12-14T15:50:06.419538067+00:00",
+    3
   ),
   (
-    2,
-    42,
+    6,
+    "a_game",
+    "2019-11-12T15:50:06.419538067+00:00",
     "Another game",
     "Some Other Game",
     "Some Other Game",
     "XYZ",
-    "1993"
-  ),
-  (
-    3,
-    42,
-    "Another game",
-    "Some Otter Game",
-    "Some Otter Game",
-    "Otters!",
-    "1993"
+    "1993",
+    "",
+    NULL,
+    "2019-11-12T15:50:06.419538067+00:00",
+    1
   );
 
-
-INSERT INTO readmes (
-  readme_id,
+INSERT INTO projects_arch (
   project_id,
-  text
+  name,
+  created_at,
+  description,
+  game_title,
+  game_title_sort,
+  game_publisher,
+  game_year,
+  readme,
+  image,
+  modified_at,
+  revision
 )
 VALUES
-  (4, 6, "ho"),
-  (8, 42, "hey");
-
-INSERT INTO project_revisions (
-  project_id,
-  revision,
-  project_data_id,
-  readme_id,
-  modified_at
-)
-VALUES
-  (42, 1, 1, 8, "2023-11-12T15:50:06.419538067+00:00"),
-  (42, 2, 1, 8, "2023-12-12T15:50:06.419538067+00:00"),
-  (42, 3, 1, 8, "2023-12-14T15:50:06.419538067+00:00");
+  (
+    42,
+    "test_game",
+    "2023-11-12T15:50:06.419538067+00:00",
+    "Brian's Trademarked Game of Being a Test Case",
+    "A Game of Tests",
+    "Game of Tests, A",
+    "Test Game Company",
+    "1979",
+    "",
+    NULL,
+    "2023-11-12T15:50:06.419538067+00:00",
+    1
+  ),
+  (
+    42,
+    "test_game",
+    "2023-11-12T15:50:06.419538067+00:00",
+    "Brian's Trademarked Game of Being a Test Case",
+    "A Game of Tests",
+    "Game of Tests, A",
+    "Test Game Company",
+    "1979",
+    "",
+    NULL,
+    "2023-12-12T15:50:06.419538067+00:00",
+    2
+  );

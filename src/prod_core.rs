@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, PackageData, Project, ProjectData, ProjectDataPut, ProjectID, Projects, ProjectSummary, Readme, ReleaseData, User, Users},
+    model::{GameData, GameDataPatch, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
     version::Version
 };
@@ -111,7 +111,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         &self,
         user: &User,
         proj: &str,
-        proj_data: &ProjectDataPut
+        proj_data: &ProjectDataPost
     ) -> Result<(), AppError>
     {
         let now = (self.now)().to_rfc3339();
@@ -124,7 +124,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     async fn update_project(
         &self,
         proj_id: i64,
-        proj_data: &ProjectDataPut
+        proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
     {
         let now = (self.now)().to_rfc3339();
@@ -134,7 +134,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     async fn get_project_revision(
         &self,
         proj_id: i64,
-        revision: u32
+        revision: i64
     ) -> Result<ProjectData, AppError>
     {
         let proj_row = self.db.get_project_row_revision(
@@ -198,14 +198,6 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     ) -> Result<(), AppError>
     {
         self.db.remove_player(player, proj_id).await
-    }
-
-    async fn get_readme(
-        &self,
-        readme_id: i64
-    ) -> Result<Readme, AppError>
-    {
-        self.db.get_readme(readme_id).await
     }
 
     async fn get_image(
@@ -309,7 +301,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year
                 },
-                readme_id: proj_row.readme_id,
+                readme: proj_row.readme,
                 image: proj_row.image,
                 owners,
                 packages
@@ -894,14 +886,14 @@ mod test {
                 revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
                 modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
-                tags: Vec::new(),
+                tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                readme_id: 8,
+                readme: "".into(),
                 image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
@@ -971,14 +963,14 @@ mod test {
                 revision: 2,
                 created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
                 modified_at: "2023-12-12T15:50:06.419538067+00:00".into(),
-                tags: Vec::new(),
+                tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                readme_id: 8,
+                readme: "".into(),
                 image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
@@ -1043,7 +1035,7 @@ mod test {
                     publisher: "Test Game Company".into(),
                     year: "1979".into()
                 },
-                readme_id: 8,
+                readme: "".into(),
                 image: None,
                 owners: vec!["alice".into(), "bob".into()],
                 packages: vec![
@@ -1074,20 +1066,20 @@ mod test {
             revision: 1,
             created_at: NOW.into(),
             modified_at: NOW.into(),
-            tags: Vec::new(),
+            tags: vec![],
             game: GameData {
                 title: "Some New Game".into(),
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            readme_id: 9,
+            readme: "".into(),
             image: None,
             owners: vec!["bob".into()],
             packages: vec![]
         };
 
-        let cdata = ProjectDataPut {
+        let cdata = ProjectDataPost {
             description: data.description.clone(),
             tags: vec![],
             game: GameData {
@@ -1095,7 +1087,9 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone()
-            }
+            },
+            readme: "".into(),
+            image: None
         };
 
         core.create_project(&user, &proj.0, &cdata).await.unwrap();
@@ -1112,30 +1106,32 @@ mod test {
             name: proj.0.clone(),
             description: "new description".into(),
             revision: 4,
-            created_at: NOW.into(),
+            created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
             modified_at: NOW.into(),
-            tags: Vec::new(),
+            tags: vec![],
             game: GameData {
                 title: "Some New Game".into(),
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into()
             },
-            readme_id: 8,
+            readme: "".into(),
             image: None,
             owners: vec!["bob".into()],
             packages: vec![]
         };
 
-        let cdata = ProjectDataPut {
-            description: new_data.description.clone(),
-            tags: vec![],
-            game: GameData {
-                title: new_data.game.title.clone(),
-                title_sort_key: new_data.game.title_sort_key.clone(),
-                publisher: new_data.game.publisher.clone(),
-                year: new_data.game.year.clone()
-            }
+        let cdata = ProjectDataPatch {
+            description: Some(new_data.description.clone()),
+            tags: Some(vec![]),
+            game: GameDataPatch {
+                title: Some(new_data.game.title.clone()),
+                title_sort_key: Some(new_data.game.title_sort_key.clone()),
+                publisher: Some(new_data.game.publisher.clone()),
+                year: Some(new_data.game.year.clone())
+            },
+            readme: Some("".into()),
+            image: None
         };
 
         let proj_id = core.get_project_id(&proj).await.unwrap();
@@ -1274,24 +1270,6 @@ mod test {
         assert_eq!(
             core.get_players(42).await.unwrap(),
             Users { users: vec![User("alice".into())] }
-        );
-    }
-
-    #[sqlx::test(fixtures("projects"))]
-    async fn get_readme_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_readme(8).await.unwrap(),
-            Readme { text: "hey".into() }
-        );
-    }
-
-    #[sqlx::test(fixtures("projects"))]
-    async fn get_readme_not_a_readme(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_readme(1).await.unwrap_err(),
-            AppError::NotARevision
         );
     }
 

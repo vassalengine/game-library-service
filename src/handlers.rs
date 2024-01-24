@@ -6,8 +6,8 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::Wrapper,
-    model::{Owned, OwnedOrNew, PackageID, PackageDataPut, ProjectData, ProjectDataPut, ProjectID, Projects, Readme, Users, User},
+    extractors::{ProjectIDAndPackageID, Wrapper},
+    model::{Owned, PackageID, PackageDataPut, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, Users, User},
     pagination::PaginationParams,
     version::Version
 };
@@ -44,21 +44,24 @@ pub async fn project_get(
     Ok(Json(core.get_project(proj_id.0).await?))
 }
 
-pub async fn project_put(
-    owned: OwnedOrNew,
+pub async fn project_post(
+    requester: User,
     Path(proj): Path<String>,
     State(core): State<CoreArc>,
-    Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPut>>
+    Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPost>>
 ) -> Result<(), AppError>
 {
-    match owned {
-        OwnedOrNew::Owned(owned) => {
-            core.update_project(owned.1.0, &proj_data).await
-        },
-        OwnedOrNew::User(user) => {
-            core.create_project(&user, &proj, &proj_data).await
-        }
-    }
+    core.create_project(&requester, &proj, &proj_data).await
+}
+
+pub async fn project_patch(
+    Owned(_, proj_id): Owned,
+    State(core): State<CoreArc>,
+    Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPatch>>
+) -> Result<(), AppError>
+{
+// TODO: pass through owner to note who made change
+    core.update_project(proj_id.0, &proj_data).await
 }
 
 pub async fn project_revision_get(
@@ -67,7 +70,7 @@ pub async fn project_revision_get(
     State(core): State<CoreArc>
 ) -> Result<Json<ProjectData>, AppError>
 {
-    Ok(Json(core.get_project_revision(proj_id.0, revision).await?))
+    Ok(Json(core.get_project_revision(proj_id.0, revision as i64).await?))
 }
 
 pub async fn owners_get(
@@ -184,14 +187,6 @@ pub async fn release_put(
     core.pacakge_version_put(proj_id.0, pkg_id.0, &pkg_version, ).await
 }
 */
-
-pub async fn readme_get(
-    Path(readme_id): Path<u32>,
-    State(core): State<CoreArc>
-) -> Result<Json<Readme>, AppError>
-{
-    Ok(Json(core.get_readme(readme_id as i64).await?))
-}
 
 pub async fn image_get(
     proj_id: ProjectID,

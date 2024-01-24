@@ -28,24 +28,6 @@ CREATE TABLE players(
   UNIQUE(user_id, project_id)
 );
 
-CREATE TABLE readmes (
-  readme_id INTEGER PRIMARY KEY NOT NULL,
-  project_id INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(project_id)
-);
-
-CREATE TABLE images (
-  project_id INTEGER NOT NULL,
-  filename TEXT NOT NULL,
-  url TEXT NOT NULL,
-  published_at TEXT NOT NULL,
-  published_by INTEGER NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(project_id),
-  FOREIGN KEY(published_by) REFERENCES users(user_id),
-  UNIQUE(project_id, filename)
-);
-
 CREATE TABLE packages (
   package_id INTEGER PRIMARY KEY NOT NULL,
   project_id INTEGER NOT NULL,
@@ -74,76 +56,111 @@ CREATE TABLE releases (
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
+CREATE TABLE images (
+  project_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  url TEXT NOT NULL,
+  published_at TEXT NOT NULL,
+  published_by INTEGER NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id),
+  UNIQUE(project_id, filename)
+);
+
 CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  UNIQUE(name)
-);
 
-CREATE TABLE project_data (
-  project_data_id INTEGER PRIMARY KEY NOT NULL,
-  project_id INTEGER NOT NULL,
+  /* project data */
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(project_id)
+
+  /* readme */
+  readme TEXT NOT NULL,
+
+  /* image */
+  image TEXT,
+
+  /* project revision */
+  modified_at TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+
+  UNIQUE(name),
+  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
 
-CREATE TABLE project_revisions (
+CREATE TABLE projects_arch (
   project_id INTEGER NOT NULL,
-  revision INTEGER NOT NULL,
-  project_data_id INTEGER NOT NULL,
-  readme_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+
+  /* project data */
+  description TEXT NOT NULL,
+  game_title TEXT NOT NULL,
+  game_title_sort TEXT NOT NULL,
+  game_publisher TEXT NOT NULL,
+  game_year TEXT NOT NULL,
+
+  /* readme */
+  readme TEXT NOT NULL,
+
+  /* image */
   image TEXT,
+
+  /* project revision */
   modified_at TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+
   UNIQUE(project_id, revision),
-  FOREIGN KEY(project_id) REFERENCES projects(project_id),
-  FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id),
-  FOREIGN KEY(readme_id) REFERENCES readmes(readme_id),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
 
 /* Full-text search */
 
-CREATE VIRTUAL TABLE project_data_fts USING fts5(
+CREATE VIRTUAL TABLE projects_fts USING fts5(
   description,
   game_title,
   game_publisher,
   game_year,
-  content="project_data",
+  readme,
+  content="projects",
   content_rowid="project_id"
 );
 
-CREATE TRIGGER project_data_ai AFTER INSERT ON project_data
+CREATE TRIGGER projects_ai AFTER INSERT ON projects
 BEGIN
-  INSERT INTO project_data_fts (
+  INSERT INTO projects_fts (
     rowid,
     description,
     game_title,
     game_publisher,
-    game_year
+    game_year,
+    readme
   )
   VALUES (
     new.project_id,
     new.description,
     new.game_title,
     new.game_publisher,
-    new.game_year
+    new.game_year,
+    new.readme
   );
 END;
 
-CREATE TRIGGER project_data_ad AFTER DELETE ON project_data
+CREATE TRIGGER projects_ad AFTER DELETE ON projects
 BEGIN
-  INSERT INTO project_data_fts (
-    project_data_fts,
+  INSERT INTO projects_fts (
+    projects_fts,
     rowid,
     description,
     game_title,
     game_publisher,
-    game_year
+    game_year,
+    readme
   )
   VALUES (
     'delete',
@@ -151,19 +168,21 @@ BEGIN
     old.description,
     old.game_title,
     old.game_publisher,
-    old.game_year
+    old.game_year,
+    old.readme
   );
 END;
 
-CREATE TRIGGER project_data_au AFTER UPDATE ON project_data
+CREATE TRIGGER projects_au AFTER UPDATE ON projects
 BEGIN
-  INSERT INTO project_data_fts (
-    project_data_fts,
+  INSERT INTO projects_fts (
+    projects_fts,
     rowid,
     description,
     game_title,
     game_publisher,
-    game_year
+    game_year,
+    readme
   )
   VALUES (
     'delete',
@@ -171,76 +190,25 @@ BEGIN
     old.description,
     old.game_title,
     old.game_publisher,
-    old.game_year
+    old.game_year,
+    old.readme
   );
-  INSERT INTO project_data_fts (
+  INSERT INTO projects_fts (
     rowid,
     description,
     game_title,
     game_publisher,
-    game_year
+    game_year,
+    readme
   )
   VALUES (
     new.project_id,
     new.description,
     new.game_title,
     new.game_publisher,
-    new.game_year
+    new.game_year,
+    new.readme
   );
 END;
 
-/* SELECT rowid, * FROM project_data_fts WHERE project_data_fts MATCH 'Afrika' ORDER BY rank; */
-
-CREATE VIRTUAL TABLE readmes_fts USING fts5(
-  text,
-  content="readmes",
-  content_rowid="project_id"
-);
-
-CREATE TRIGGER readmes_ai AFTER INSERT ON readmes
-BEGIN
-  INSERT INTO readmes_fts (
-    rowid,
-    text
-  )
-  VALUES (
-    new.project_id,
-    new.text
-  );
-END;
-
-CREATE TRIGGER readmes_ad AFTER DELETE ON readmes
-BEGIN
-  INSERT INTO readmes_fts (
-    readmes_fts,
-    rowid,
-    text
-  )
-  VALUES (
-    'delete',
-    old.project_id,
-    old.text
-  );
-END;
-
-CREATE TRIGGER readmes_au AFTER UPDATE ON readmes
-BEGIN
-  INSERT INTO readmes_fts (
-    readmes_fts,
-    rowid,
-    text
-  )
-  VALUES (
-    'delete',
-    old.project_id,
-    old.text
-  );
-  INSERT INTO readmes_fts (
-    rowid,
-    text
-  )
-  VALUES (
-    new.project_id,
-    new.text
-  );
-END;
+/* SELECT rowid, * FROM projects_fts WHERE projects_fts MATCH 'Afrika' ORDER BY rank; */

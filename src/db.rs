@@ -3,13 +3,13 @@ use serde::Deserialize;
 
 use crate::{
     errors::AppError,
-    model::{GameData, ProjectID, ProjectDataPut, ProjectSummary, Readme, User, Users},
+    model::{GameData, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
     pagination::OrderBy,
     version::Version
 };
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct ProjectRow {
+pub struct ProjectSummaryRow {
     pub project_id: i64,
     pub name: String,
     pub description: String,
@@ -20,12 +20,11 @@ pub struct ProjectRow {
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String,
-    pub readme_id: i64,
     pub image: Option<String>
 }
 
-impl From<ProjectRow> for ProjectSummary {
-    fn from(r: ProjectRow) -> Self {
+impl From<ProjectSummaryRow> for ProjectSummary {
+    fn from(r: ProjectSummaryRow) -> Self {
         ProjectSummary {
             name: r.name,
             description: r.description,
@@ -44,11 +43,19 @@ impl From<ProjectRow> for ProjectSummary {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct ProjectRevisionRow {
+pub struct ProjectRow {
+    pub project_id: i64,
+    pub name: String,
+    pub description: String,
     pub revision: i64,
-    pub project_data_id: i64,
-    pub readme_id: i64,
-    pub modified_at: String
+    pub created_at: String,
+    pub modified_at: String,
+    pub game_title: String,
+    pub game_title_sort: String,
+    pub game_publisher: String,
+    pub game_year: String,
+    pub image: Option<String>,
+    pub readme: String
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -167,7 +174,7 @@ pub trait DatabaseClient {
         &self,
         _order_by: &OrderBy,
         _limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         unimplemented!();
     }
@@ -176,7 +183,7 @@ pub trait DatabaseClient {
         &self,
         _order_by: &OrderBy,
         _limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         unimplemented!();
     }
@@ -187,7 +194,7 @@ pub trait DatabaseClient {
         _name: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         unimplemented!();
     }
@@ -198,7 +205,7 @@ pub trait DatabaseClient {
         _name: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         unimplemented!();
     }
@@ -207,7 +214,7 @@ pub trait DatabaseClient {
         &self,
         _user: &User,
         _proj: &str,
-        _proj_data: &ProjectDataPut,
+        _proj_data: &ProjectDataPost,
         _now: &str
     ) -> Result<(), AppError>
     {
@@ -225,7 +232,7 @@ pub trait DatabaseClient {
     async fn update_project(
         &self,
         _proj_id: i64,
-        _proj_data: &ProjectDataPut,
+        _proj_data: &ProjectDataPatch,
         _now: &str
     ) -> Result<(), AppError>
     {
@@ -243,7 +250,7 @@ pub trait DatabaseClient {
     async fn get_project_row_revision(
         &self,
         _proj_id: i64,
-        _revision: u32
+        _revision: i64
     ) -> Result<ProjectRow, AppError>
     {
         unimplemented!();
@@ -330,23 +337,6 @@ pub trait DatabaseClient {
         _player: &User,
         _proj_id: i64
     ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
-
-    async fn get_readme(
-        &self,
-        _readme_id: i64
-    ) -> Result<Readme, AppError>
-    {
-        unimplemented!();
-    }
-
-    async fn add_readme(
-        &self,
-        _proj_id: i64,
-        _text: &str
-    ) -> Result<i64, AppError>
     {
         unimplemented!();
     }
