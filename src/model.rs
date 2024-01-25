@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::pagination::Pagination;
+use crate::{
+    errors::AppError,
+    pagination::Pagination
+};
 
 // TODO: rationalize struct naming---names should reflect whether the
 // structs are input or ouptut
@@ -92,12 +95,52 @@ pub struct GameDataPatch {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct MaybeProjectDataPatch {
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub game: GameDataPatch,
+    pub readme: Option<String>,
+    pub image: Option<Option<String>>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(try_from = "MaybeProjectDataPatch")]
 pub struct ProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
     pub game: GameDataPatch,
     pub readme: Option<String>,
     pub image: Option<Option<String>>
+}
+
+impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
+    type Error = AppError;
+
+    fn try_from(m: MaybeProjectDataPatch) -> Result<Self, Self::Error> {
+        // at least one element must be present to be a valid request
+        if m.description.is_none() &&
+           m.tags.is_none() &&
+           m.game.title.is_none() &&
+           m.game.title_sort_key.is_none() &&
+           m.game.publisher.is_none() &&
+           m.game.year.is_none() &&
+           m.readme.is_none() &&
+           m.image.is_none()
+        {
+            Err(AppError::MalformedQuery)
+        }
+        else {
+            Ok(
+                ProjectDataPatch {
+                    description: m.description,
+                    tags: m.tags,
+                    game: m.game,
+                    readme: m.readme,
+                    image: m.image
+                }
+            )
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

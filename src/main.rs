@@ -1152,7 +1152,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn post_project_create() {
+    async fn post_project_ok() {
         let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
@@ -1170,28 +1170,6 @@ mod test {
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
-                .header(AUTHORIZATION, token("bob"))
-                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
-    }
-
-    #[tokio::test]
-    async fn patch_project_update() {
-        let proj_data = ProjectDataPatch {
-            description: Some("A module for Empires in Arms".into()),
-            ..Default::default()
-        };
-
-        let response = try_request(
-            Request::builder()
-                .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token("bob"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -1281,6 +1259,136 @@ mod test {
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_project_ok() {
+        let proj_data = ProjectDataPatch {
+            description: Some("A module for Empires in Arms".into()),
+            ..Default::default()
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[tokio::test]
+    async fn patch_project_no_data() {
+        let proj_data = ProjectDataPatch {
+            ..Default::default()
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(AUTHORIZATION, token("bob"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(),  StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_project_unauth() {
+        let proj_data = ProjectDataPatch {
+            description: Some("A module for Empires in Arms".into()),
+            ..Default::default()
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_project_wrong_json() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from(r#"{ "garbage": "whatever" }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_project_wrong_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token("bob"))
+                .body(Body::from("stuff"))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
+    }
+
+    #[tokio::test]
+    async fn patch_project_no_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token("bob"))
                 .body(Body::from("stuff"))
