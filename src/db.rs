@@ -221,14 +221,6 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn copy_project_revision(
-        &self,
-        _proj_id: i64
-    ) -> Result<i64, AppError>
-    {
-        unimplemented!();
-    }
-
     async fn update_project(
         &self,
         _proj_id: i64,
