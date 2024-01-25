@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, GameDataPatch, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
+    model::{GameData, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
     version::Version
 };
@@ -592,8 +592,9 @@ mod test {
 
     use once_cell::sync::Lazy;
 
-    use crate::sqlite::{
-        Pool, SqlxDatabaseClient
+    use crate::{
+        model::GameDataPatch,
+        sqlite::{Pool, SqlxDatabaseClient}
     };
 
     const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
