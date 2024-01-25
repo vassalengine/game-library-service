@@ -1069,7 +1069,7 @@ where
     let mut tx = conn.begin().await?;
 
     // get current project data
-    let mut row = get_project_row(&mut *tx, proj_id).await?;
+    let row = get_project_row(&mut *tx, proj_id).await?;
 
     // archive current project data
     archive_project_row(&mut *tx, &row).await?;
