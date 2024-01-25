@@ -202,7 +202,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
+        model::{GameData, Owner, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
         pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
         version::Version
     };
@@ -420,6 +420,7 @@ mod test {
 
         async fn update_project(
             &self,
+            _owner: &Owner,
             _proj_id: i64,
             _proj_data: &ProjectDataPatch
         ) -> Result<(), AppError>

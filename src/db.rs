@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     errors::AppError,
-    model::{GameData, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
+    model::{GameData, Owner, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
     pagination::OrderBy,
     version::Version
 };
@@ -50,6 +50,7 @@ pub struct ProjectRow {
     pub revision: i64,
     pub created_at: String,
     pub modified_at: String,
+    pub modified_by: i64,
     pub game_title: String,
     pub game_title_sort: String,
     pub game_publisher: String,
@@ -223,6 +224,7 @@ pub trait DatabaseClient {
 
     async fn update_project(
         &self,
+        _owner: &Owner,
         _proj_id: i64,
         _proj_data: &ProjectDataPatch,
         _now: &str

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
+    model::{Owner, PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
     pagination::{Limit, Seek},
     version::Version
 };
@@ -99,6 +99,7 @@ pub trait Core {
 
     async fn update_project(
         &self,
+        _user: &Owner,
         _proj_id: i64,
         _proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>

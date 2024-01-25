@@ -10,6 +10,7 @@ INSERT INTO projects (
   readme,
   image,
   modified_at,
+  modified_by,
   revision
 )
 VALUES
@@ -25,6 +26,7 @@ VALUES
     "",
     NULL,
     "2023-12-14T15:50:06.419538067+00:00",
+    1,
     3
   ),
   (
@@ -39,6 +41,7 @@ VALUES
     "",
     NULL,
     "2019-11-12T15:50:06.419538067+00:00",
+    1,
     1
   );
 
@@ -54,6 +57,7 @@ INSERT INTO projects_arch (
   readme,
   image,
   modified_at,
+  modified_by,
   revision
 )
 VALUES
@@ -69,6 +73,7 @@ VALUES
     "",
     NULL,
     "2023-11-12T15:50:06.419538067+00:00",
+    1,
     1
   ),
   (
@@ -83,5 +88,6 @@ VALUES
     "",
     NULL,
     "2023-12-12T15:50:06.419538067+00:00",
+    1,
     2
   );

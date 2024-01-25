@@ -45,23 +45,23 @@ pub async fn project_get(
 }
 
 pub async fn project_post(
-    requester: User,
+    owner: User,
     Path(proj): Path<String>,
     State(core): State<CoreArc>,
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPost>>
 ) -> Result<(), AppError>
 {
-    core.create_project(&requester, &proj, &proj_data).await
+    core.create_project(&owner, &proj, &proj_data).await
 }
 
 pub async fn project_patch(
-    Owned(_, proj_id): Owned,
+    Owned(owner, proj_id): Owned,
     State(core): State<CoreArc>,
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPatch>>
 ) -> Result<(), AppError>
 {
 // TODO: pass through owner to note who made change
-    core.update_project(proj_id.0, &proj_data).await
+    core.update_project(&owner, proj_id.0, &proj_data).await
 }
 
 pub async fn project_revision_get(

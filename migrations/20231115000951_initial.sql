@@ -87,10 +87,12 @@ CREATE TABLE projects (
 
   /* project revision */
   modified_at TEXT NOT NULL,
+  modified_by INTEGER NOT NULL,
   revision INTEGER NOT NULL,
 
   UNIQUE(name),
-  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
+  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
+  FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE projects_arch (
@@ -113,10 +115,12 @@ CREATE TABLE projects_arch (
 
   /* project revision */
   modified_at TEXT NOT NULL,
+  modified_by INTEGER NOT NULL,
   revision INTEGER NOT NULL,
 
   UNIQUE(project_id, revision),
-  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
+  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
+  FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );
 
 /* Full-text search */
