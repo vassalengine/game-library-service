@@ -924,7 +924,7 @@ async fn update_project_row<'e, E>(
     owner_id: i64,
     proj_id: i64,
     revision: i64,
-    proj_data: &ProjectDataPatch,
+    pd: &ProjectDataPatch,
     now: &str
 ) -> Result<(), AppError>
 where
@@ -944,37 +944,40 @@ where
         .push("modified_by = ")
         .push_bind_unseparated(owner_id);
 
-    if let Some(description) = &proj_data.description {
+    if let Some(description) = &pd.description {
         qbs.push("description = ").push_bind_unseparated(description);
     }
 
-    if let Some(game_title) = &proj_data.game.title {
+    if let Some(game_title) = &pd.game.title {
         qbs.push("game_title = ").push_bind_unseparated(game_title);
     }
 
-    if let Some(game_title_sort) = &proj_data.game.title_sort_key {
+    if let Some(game_title_sort) = &pd.game.title_sort_key {
         qbs.push("game_title_sort = ").push_bind_unseparated(game_title_sort);
     }
 
-    if let Some(game_publisher) = &proj_data.game.publisher {
+    if let Some(game_publisher) = &pd.game.publisher {
         qbs.push("game_publisher = ").push_bind_unseparated(game_publisher);
     }
 
-    if let Some(game_year) = &proj_data.game.year {
+    if let Some(game_year) = &pd.game.year {
         qbs.push("game_year = ").push_bind_unseparated(game_year);
     }
 
-    if let Some(readme) = &proj_data.readme {
+    if let Some(readme) = &pd.readme {
         qbs.push("readme = ").push_bind_unseparated(readme);
     }
 
-    if let Some(image) = &proj_data.image {
+    if let Some(image) = &pd.image {
         qbs.push("image = ").push_bind_unseparated(image);
     }
 
-    qb.push(" WHERE project_id = ").push_bind(proj_id);
-
-    qb.build().execute(ex).await?;
+    qb
+        .push(" WHERE project_id = ")
+        .push_bind(proj_id)
+        .build()
+        .execute(ex)
+        .await?;
 
     Ok(())
 }
