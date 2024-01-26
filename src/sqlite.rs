@@ -931,9 +931,21 @@ RETURNING project_id
     )
 }
 
+#[derive(Debug)]
+struct ProjectDataRow<'a> {
+    project_id: i64,
+    description: &'a str,
+    game_title: &'a str,
+    game_title_sort: &'a str,
+    game_publisher: &'a str,
+    game_year: &'a str,
+    readme: &'a str,
+    image: Option<&'a str>
+}
+
 async fn create_project_data_row<'e, E>(
     ex: E,
-    proj_row: &ProjectRow
+    row: &ProjectDataRow<'_>
 ) -> Result<i64, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -954,24 +966,34 @@ INSERT INTO project_data (
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_data_id
             ",
-            proj_row.project_id,
-            proj_row.description,
-            proj_row.game_title,
-            proj_row.game_title_sort,
-            proj_row.game_publisher,
-            proj_row.game_year,
-            proj_row.readme,
-            proj_row.image
+            row.project_id,
+            row.description,
+            row.game_title,
+            row.game_title_sort,
+            row.game_publisher,
+            row.game_year,
+            row.readme,
+            row.image
         )
         .fetch_one(ex)
         .await?
     )
 }
 
+#[derive(Debug)]
+struct ProjectRevisionRow<'a> {
+    project_id: i64,
+    name: &'a str,
+    created_at: &'a str,
+    modified_at: &'a str,
+    modified_by: i64,
+    revision: i64,
+    project_data_id: i64
+}
+
 async fn create_project_revision_row<'e, E>(
     ex: E,
-    proj_data_id: i64,
-    proj_row: &ProjectRow
+    row: &ProjectRevisionRow<'_>
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -989,13 +1011,13 @@ INSERT INTO project_revisions (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?)
         ",
-        proj_row.project_id,
-        proj_row.name,
-        proj_row.created_at,
-        proj_row.modified_at,
-        proj_row.modified_by,
-        proj_row.revision,
-        proj_data_id
+        row.project_id,
+        row.name,
+        row.created_at,
+        row.modified_at,
+        row.modified_by,
+        row.revision,
+        row.project_data_id
     )
     .execute(ex)
     .await?;
@@ -1007,7 +1029,7 @@ async fn create_project<'a, A>(
     conn: A,
     user: &User,
     proj: &str,
-    proj_data: &ProjectDataPost,
+    pd: &ProjectDataPost,
     now: &str
 ) -> Result<(), AppError>
 where
@@ -1020,31 +1042,37 @@ where
 
     // create project row
     let proj_id = create_project_row(
-        &mut *tx, owner_id, proj, proj_data, now
+        &mut *tx, owner_id, proj, pd, now
     ).await?;
 
     // associate new owner with the project
     add_owner(&mut *tx, owner_id, proj_id).await?;
 
-    // archive project
-    let row = ProjectRow {
+    // create project revision
+    let dr = ProjectDataRow {
         project_id: proj_id,
-        name: proj.into(),
-        description: proj_data.description.clone(),
-        revision: 1,
-        created_at: now.into(),
-        modified_at: now.into(),
-        modified_by: owner_id,
-        game_title: proj_data.game.title.clone(),
-        game_title_sort: proj_data.game.title_sort_key.clone(),
-        game_publisher: proj_data.game.publisher.clone(),
-        game_year: proj_data.game.year.clone(),
-        image: proj_data.image.clone(),
-        readme: proj_data.readme.clone()
+        description: &pd.description,
+        game_title: &pd.game.title,
+        game_title_sort: &pd.game.title_sort_key,
+        game_publisher:  &pd.game.publisher,
+        game_year: &pd.game.year,
+        readme: &pd.readme,
+        image: pd.image.as_deref()
     };
 
-    let proj_data_id = create_project_data_row(&mut *tx, &row).await?;
-    create_project_revision_row(&mut *tx, proj_data_id, &row).await?;
+    let proj_data_id = create_project_data_row(&mut *tx, &dr).await?;
+
+    let rr = ProjectRevisionRow {
+        project_id: proj_id,
+        name: proj,
+        created_at: now,
+        modified_at: now,
+        modified_by: owner_id,
+        revision: 1,
+        project_data_id: proj_data_id
+    };
+
+    create_project_revision_row(&mut *tx, &rr).await?;
 
     tx.commit().await?;
 
@@ -1070,7 +1098,7 @@ where
 
     qbs
         .push("revision = ")
-        .push_bind_unseparated(revision + 1)
+        .push_bind_unseparated(revision)
         .push("modified_at = ")
         .push_bind_unseparated(now)
         .push("modified_by = ")
@@ -1117,7 +1145,7 @@ async fn update_project<'a, A>(
     conn: A,
     owner: &Owner,
     proj_id: i64,
-    proj_data: &ProjectDataPatch,
+    pd: &ProjectDataPatch,
     now: &str
 ) -> Result<(), AppError>
 where
@@ -1129,48 +1157,37 @@ where
     let owner_id = get_user_id(&mut *tx, &owner.0).await?;
 
     // get project
-    let mut row = get_project_row(&mut *tx, proj_id).await?;
+    let row = get_project_row(&mut *tx, proj_id).await?;
+    let revision = row.revision + 1;
 
     // update project
-    update_project_row(
-        &mut *tx, owner_id, proj_id, row.revision, proj_data, now
-    ).await?;
+    update_project_row(&mut *tx, owner_id, proj_id, revision, pd, now).await?;
 
     // create project revision
-    row.revision = row.revision + 1;
-    row.modified_at = now.into();
-    row.modified_by = owner_id;
+    let dr = ProjectDataRow {
+        project_id: proj_id,
+        description: pd.description.as_ref().unwrap_or(&row.description),
+        game_title: pd.game.title.as_ref().unwrap_or(&row.game_title),
+        game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
+        game_publisher: pd.game.publisher.as_ref().unwrap_or(&row.game_publisher),
+        game_year: pd.game.year.as_ref().unwrap_or(&row.game_year),
+        readme: pd.readme.as_ref().unwrap_or(&row.readme),
+        image: pd.image.as_ref().unwrap_or(&row.image).as_deref()
+    };
 
-    if let Some(description) = &proj_data.description {
-        row.description = description.clone();
-    }
+    let proj_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
-    if let Some(game_title) = &proj_data.game.title {
-        row.game_title = game_title.clone();
-    }
+    let rr = ProjectRevisionRow {
+        project_id: proj_id,
+        name: &row.name,
+        created_at: &row.created_at,
+        modified_at: now,
+        modified_by: owner_id,
+        revision: revision,
+        project_data_id: proj_data_id
+    };
 
-    if let Some(game_title_sort) = &proj_data.game.title_sort_key {
-        row.game_title_sort = game_title_sort.clone();
-    }
-
-    if let Some(game_publisher) = &proj_data.game.publisher {
-        row.game_publisher = game_publisher.clone();
-    }
-
-    if let Some(game_year) = &proj_data.game.year {
-        row.game_year = game_year.clone();
-    }
-
-    if let Some(readme) = &proj_data.readme {
-        row.readme = readme.clone();
-    }
-
-    if let Some(image) = &proj_data.image {
-        row.image = image.clone();
-    }
-
-    let proj_data_id = create_project_data_row(&mut *tx, &row).await?;
-    create_project_revision_row(&mut *tx, proj_data_id, &row).await?;
+    create_project_revision_row(&mut *tx, &rr).await?;
 
     tx.commit().await?;
 
