@@ -33,7 +33,9 @@ CREATE TABLE packages (
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(project_id)
+  created_by INTEGER NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE releases (

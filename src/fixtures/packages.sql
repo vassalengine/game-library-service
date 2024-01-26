@@ -1,8 +1,14 @@
-INSERT INTO packages (package_id, project_id, name, created_at)
+INSERT INTO packages (
+  package_id,
+  project_id,
+  name,
+  created_at,
+  created_by
+)
 VALUES
-  (1, 42, "a_package", "2023-12-09T15:56:29.180282477+00:00"),
-  (2, 42, "b_package", "2022-11-06T15:56:29.180282477+00:00"),
-  (3, 42, "c_package", "2023-11-06T15:56:29.180282477+00:00")
+  (1, 42, "a_package", "2023-12-09T15:56:29.180282477+00:00", 1),
+  (2, 42, "b_package", "2022-11-06T15:56:29.180282477+00:00", 1),
+  (3, 42, "c_package", "2023-11-06T15:56:29.180282477+00:00", 1)
 ;
 
 INSERT INTO releases (
