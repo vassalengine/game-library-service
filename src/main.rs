@@ -542,10 +542,11 @@ mod test {
             .headers()
             .get_all(header_name)
             .iter()
-            .map(|v| v.as_ref())
+            .flat_map(|v| v.as_ref().split(|b| b == &b','))
+            .map(|v| if v[0] == b' ' { &v[1..] } else { &v })
             .collect::<Vec<_>>();
 
-        values.sort_unstable();
+        values.sort();
         values
     }
 
