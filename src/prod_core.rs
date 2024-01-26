@@ -942,7 +942,7 @@ mod test {
                                 url: "https://example.com/c_package-0.1.0".into(),
                                 size: 123456,
                                 checksum: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
-                                published_at: "2023-12-13T15:56:29.180282477+00:00".into(),
+                                published_at: "2023-12-15T15:56:29.180282477+00:00".into(),
                                 published_by: "chuck".into(),
                                 requires: "".into(),
                                 authors: vec![]
@@ -958,13 +958,13 @@ mod test {
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project_revision(42, 2).await.unwrap(),
+            core.get_project_revision(42, 3).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 2,
+                revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -1035,7 +1035,7 @@ mod test {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
-                    year: "1979".into()
+                    year: "1978".into()
                 },
                 readme: "".into(),
                 image: None,

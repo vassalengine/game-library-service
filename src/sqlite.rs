@@ -931,6 +931,78 @@ RETURNING project_id
     )
 }
 
+async fn create_project_data_row<'e, E>(
+    ex: E,
+    proj_row: &ProjectRow
+) -> Result<i64, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+INSERT INTO project_data (
+    project_id,
+    description,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    readme,
+    image
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING project_data_id
+            ",
+            proj_row.project_id,
+            proj_row.description,
+            proj_row.game_title,
+            proj_row.game_title_sort,
+            proj_row.game_publisher,
+            proj_row.game_year,
+            proj_row.readme,
+            proj_row.image
+        )
+        .fetch_one(ex)
+        .await?
+    )
+}
+
+async fn create_project_revision_row<'e, E>(
+    ex: E,
+    proj_data_id: i64,
+    proj_row: &ProjectRow
+) -> Result<(), AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+INSERT INTO project_revisions (
+    project_id,
+    name,
+    created_at,
+    modified_at,
+    modified_by,
+    revision,
+    project_data_id
+)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+        ",
+        proj_row.project_id,
+        proj_row.name,
+        proj_row.created_at,
+        proj_row.modified_at,
+        proj_row.modified_by,
+        proj_row.revision,
+        proj_data_id
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
 async fn create_project<'a, A>(
     conn: A,
     user: &User,
@@ -954,56 +1026,29 @@ where
     // associate new owner with the project
     add_owner(&mut *tx, owner_id, proj_id).await?;
 
+    // archive project
+    let row = ProjectRow {
+        project_id: proj_id,
+        name: proj.into(),
+        description: proj_data.description.clone(),
+        revision: 1,
+        created_at: now.into(),
+        modified_at: now.into(),
+        modified_by: owner_id,
+        game_title: proj_data.game.title.clone(),
+        game_title_sort: proj_data.game.title_sort_key.clone(),
+        game_publisher: proj_data.game.publisher.clone(),
+        game_year: proj_data.game.year.clone(),
+        image: proj_data.image.clone(),
+        readme: proj_data.readme.clone()
+    };
+
+    let proj_data_id = create_project_data_row(&mut *tx, &row).await?;
+    create_project_revision_row(&mut *tx, proj_data_id, &row).await?;
+
     tx.commit().await?;
 
     Ok(())
-}
-
-async fn archive_project_row<'e, E>(
-    ex: E,
-    proj_row: &ProjectRow
-) -> Result<i64, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_scalar!(
-            "
-INSERT INTO projects_arch (
-    project_id,
-    name,
-    created_at,
-    description,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    readme,
-    image,
-    modified_at,
-    modified_by,
-    revision
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING project_id
-            ",
-            proj_row.project_id,
-            proj_row.name,
-            proj_row.created_at,
-            proj_row.description,
-            proj_row.game_title,
-            proj_row.game_title_sort,
-            proj_row.game_publisher,
-            proj_row.game_year,
-            proj_row.readme,
-            proj_row.image,
-            proj_row.modified_at,
-            proj_row.modified_by,
-            proj_row.revision
-        )
-        .fetch_one(ex)
-        .await?
-    )
 }
 
 async fn update_project_row<'e, E>(
@@ -1083,16 +1128,49 @@ where
     // get user id of owner
     let owner_id = get_user_id(&mut *tx, &owner.0).await?;
 
-    // get project data
-    let row = get_project_row(&mut *tx, proj_id).await?;
+    // get project
+    let mut row = get_project_row(&mut *tx, proj_id).await?;
 
-    // archive project data
-    archive_project_row(&mut *tx, &row).await?;
-
-    // update project data
+    // update project
     update_project_row(
         &mut *tx, owner_id, proj_id, row.revision, proj_data, now
     ).await?;
+
+    // create project revision
+    row.revision = row.revision + 1;
+    row.modified_at = now.into();
+    row.modified_by = owner_id;
+
+    if let Some(description) = &proj_data.description {
+        row.description = description.clone();
+    }
+
+    if let Some(game_title) = &proj_data.game.title {
+        row.game_title = game_title.clone();
+    }
+
+    if let Some(game_title_sort) = &proj_data.game.title_sort_key {
+        row.game_title_sort = game_title_sort.clone();
+    }
+
+    if let Some(game_publisher) = &proj_data.game.publisher {
+        row.game_publisher = game_publisher.clone();
+    }
+
+    if let Some(game_year) = &proj_data.game.year {
+        row.game_year = game_year.clone();
+    }
+
+    if let Some(readme) = &proj_data.readme {
+        row.readme = readme.clone();
+    }
+
+    if let Some(image) = &proj_data.image {
+        row.image = image.clone();
+    }
+
+    let proj_data_id = create_project_data_row(&mut *tx, &row).await?;
+    create_project_revision_row(&mut *tx, proj_data_id, &row).await?;
 
     tx.commit().await?;
 
@@ -1134,105 +1212,43 @@ LIMIT 1
     .ok_or(AppError::NotAProject)
 }
 
-async fn get_project_row_revision_impl<'e, E>(
+async fn get_project_row_revision<'e, E>(
     ex: E,
-    proj_id: i64,
-    revision: i64
-) -> Result<Option<ProjectRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectRow,
-            "
-SELECT
-    project_id,
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    modified_by,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    image,
-    readme
-FROM projects
-WHERE project_id = ?
-    AND revision = ?
-LIMIT 1
-            ",
-            proj_id,
-            revision
-        )
-        .fetch_optional(ex)
-        .await?
-    )
-}
-
-async fn get_project_row_arch_revision_impl<'e, E>(
-    ex: E,
-    proj_id: i64,
-    revision: i64
-) -> Result<Option<ProjectRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectRow,
-            "
-SELECT
-    project_id,
-    name,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    modified_by,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    image,
-    readme
-FROM projects_arch
-WHERE project_id = ?
-    AND revision = ?
-LIMIT 1
-            ",
-            proj_id,
-            revision
-        )
-        .fetch_optional(ex)
-        .await?
-    )
-}
-
-async fn get_project_row_revision<'a, A>(
-    conn: A,
     proj_id: i64,
     revision: i64
 ) -> Result<ProjectRow, AppError>
 where
-    A: Acquire<'a, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
-    let mut conn = conn.acquire().await?;
-
-// TODO: can this be cleaned up?
-    let maybe_row = get_project_row_arch_revision_impl(
-        &mut *conn, proj_id, revision
-    ).await?;
-
-    match maybe_row {
-        Some(_) => maybe_row,
-        None => get_project_row_revision_impl(
-            &mut *conn, proj_id, revision
-        ).await?
-    }
+    sqlx::query_as!(
+        ProjectRow,
+        "
+SELECT
+    project_revisions.project_id,
+    project_revisions.name,
+    project_data.description,
+    project_revisions.revision,
+    project_revisions.created_at,
+    project_revisions.modified_at,
+    project_revisions.modified_by,
+    project_data.game_title,
+    project_data.game_title_sort,
+    project_data.game_publisher,
+    project_data.game_year,
+    project_data.image,
+    project_data.readme
+FROM project_revisions
+JOIN project_data
+ON project_revisions.project_data_id = project_data.project_data_id
+WHERE project_revisions.project_id = ?
+    AND project_revisions.revision = ?
+LIMIT 1
+        ",
+        proj_id,
+        revision
+    )
+    .fetch_optional(ex)
+    .await?
     .ok_or(AppError::NotARevision)
 }
 
@@ -2111,14 +2127,14 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "two_owners"))]
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 42, 2).await.unwrap(),
+            get_project_row_revision(&pool, 42, 3).await.unwrap(),
             ProjectRow {
                 project_id: 42,
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 2,
+                revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-12T15:50:06.419538067+00:00".into(),
+                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
                 modified_by: 1,
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
@@ -2145,7 +2161,7 @@ mod test {
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
                 game_publisher: "Test Game Company".into(),
-                game_year: "1979".into(),
+                game_year: "1978".into(),
                 readme: "".into(),
                 image: None
             }
