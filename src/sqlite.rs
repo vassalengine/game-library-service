@@ -881,9 +881,7 @@ where
     let owner_id = get_user_id(&mut *tx, &user.0).await?;
 
     // create project row
-    let proj_id = create_project_row(
-        &mut *tx, owner_id, proj, pd, now
-    ).await?;
+    let proj_id = create_project_row(&mut *tx, owner_id, proj, pd, now).await?;
 
     // associate new owner with the project
     add_owner(&mut *tx, owner_id, proj_id).await?;
