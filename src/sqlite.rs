@@ -838,7 +838,7 @@ async fn create_project_revision_row<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
+    sqlx::query!(
         "
 INSERT INTO project_revisions (
     project_id,
