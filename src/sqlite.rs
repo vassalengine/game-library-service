@@ -900,7 +900,7 @@ where
         image: pd.image.as_deref()
     };
 
-    let proj_data_id = create_project_data_row(&mut *tx, &dr).await?;
+    let project_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
     let rr = ProjectRevisionRow {
         project_id: proj_id,
@@ -909,7 +909,7 @@ where
         modified_at: now,
         modified_by: owner_id,
         revision: 1,
-        project_data_id: proj_data_id
+        project_data_id
     };
 
     create_project_revision_row(&mut *tx, &rr).await?;
@@ -1015,7 +1015,7 @@ where
         image: pd.image.as_ref().unwrap_or(&row.image).as_deref()
     };
 
-    let proj_data_id = create_project_data_row(&mut *tx, &dr).await?;
+    let project_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
     let rr = ProjectRevisionRow {
         project_id: proj_id,
@@ -1023,8 +1023,8 @@ where
         created_at: &row.created_at,
         modified_at: now,
         modified_by: owner_id,
-        revision: revision,
-        project_data_id: proj_data_id
+        revision,
+        project_data_id
     };
 
     create_project_revision_row(&mut *tx, &rr).await?;
