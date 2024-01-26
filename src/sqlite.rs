@@ -590,8 +590,8 @@ ORDER BY "
         .push(" LIMIT ")
         .push_bind(limit)
         .build_query_as::<ProjectSummaryRow>()
-            .fetch_all(ex)
-            .await?
+        .fetch_all(ex)
+        .await?
     )
 }
 
@@ -646,8 +646,8 @@ WHERE "
         .push(" LIMIT ")
         .push_bind(limit)
         .build_query_as::<ProjectSummaryRow>()
-            .fetch_all(ex)
-            .await?
+        .fetch_all(ex)
+        .await?
     )
 }
 
