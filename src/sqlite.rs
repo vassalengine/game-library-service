@@ -523,71 +523,131 @@ LIMIT 1
     )
 }
 
-async fn get_projects_start_window_by_project<'e, E>(
+// TODO: sort by most recent change?
+
+impl OrderBy {
+    fn field(&self) -> &'static str {
+        match self {
+            OrderBy::ProjectName => "name",
+            OrderBy::GameTitle => "game_title_sort"
+        }
+    }
+}
+
+enum OrderDirection {
+    Ascending,
+    Descending
+}
+
+impl OrderDirection {
+    fn dir(&self) -> &'static str {
+        match self {
+            OrderDirection::Ascending => "ASC",
+            OrderDirection::Descending => "DESC"
+        }
+    }
+
+    fn op(&self) -> &'static str {
+        match self {
+            OrderDirection::Ascending => ">",
+            OrderDirection::Descending => "<"
+        }
+    }
+}
+
+async fn get_projects_window_start_end_impl<'e, E>(
     ex: E,
+    ord_by: &OrderBy,
+    ord_dir: OrderDirection,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
+        QueryBuilder::new(
             "
 SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
+    project_id,
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    image
 FROM projects
-ORDER BY projects.name COLLATE NOCASE ASC
-LIMIT ?
-            ",
-            limit
+ORDER BY "
         )
-        .fetch_all(ex)
-        .await?
+        .push(ord_by.field())
+        .push(" COLLATE NOCASE ")
+        .push(ord_dir.dir())
+        .push(", project_id ")
+        .push(ord_dir.dir())
+        .push(" LIMIT ")
+        .push_bind(limit)
+        .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
 
-async fn get_projects_start_window_by_title<'e, E>(
+async fn get_projects_window_before_after_impl<'e, E>(
     ex: E,
+    ord_by: &OrderBy,
+    name: &str,
+    id: u32,
+    ord_dir: OrderDirection,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
+        QueryBuilder::new(
             "
 SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
+    project_id,
+    name,
+    description,
+    revision,
+    created_at,
+    modified_at,
+    game_title,
+    game_title_sort,
+    game_publisher,
+    game_year,
+    image
 FROM projects
-ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE ASC
-LIMIT ?
-            ",
-            limit
+WHERE "
         )
-        .fetch_all(ex)
-        .await?
+        .push(ord_by.field())
+        .push(" ")
+        .push(ord_dir.op())
+        .push(" ")
+        .push_bind(name)
+        .push(" OR (")
+        .push(ord_by.field())
+        .push(" = ")
+        .push_bind(name)
+        .push(" AND project_id ")
+        .push(ord_dir.op())
+        .push(" ")
+        .push_bind(id)
+        .push(") ORDER BY ")
+        .push(ord_by.field())
+        .push(" COLLATE NOCASE ")
+        .push(ord_dir.dir())
+        .push(", project_id ")
+        .push(ord_dir.dir())
+        .push(" LIMIT ")
+        .push_bind(limit)
+        .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
 
@@ -599,78 +659,12 @@ async fn get_projects_start_window<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match order_by {
-        OrderBy::ProjectName => get_projects_start_window_by_project(ex, limit).await,
-        OrderBy::GameTitle => get_projects_start_window_by_title(ex, limit).await
-    }
-}
-
-async fn get_projects_end_window_by_project<'e, E>(
-    ex: E,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-ORDER BY projects.name COLLATE NOCASE DESC
-LIMIT ?
-            ",
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
-}
-
-async fn get_projects_end_window_by_title<'e, E>(
-    ex: E,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE DESC
-LIMIT ?
-            ",
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
+    get_projects_window_start_end_impl(
+        ex,
+        order_by,
+        OrderDirection::Ascending,
+        limit
+    ).await
 }
 
 async fn get_projects_end_window<'e, E>(
@@ -681,92 +675,12 @@ async fn get_projects_end_window<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match order_by {
-        OrderBy::ProjectName => get_projects_end_window_by_project(ex, limit).await,
-        OrderBy::GameTitle => get_projects_end_window_by_title(ex, limit).await
-    }
-}
-
-async fn get_projects_after_window_by_project<'e, E>(
-    ex: E,
-    name: &str,
-    id: u32,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-WHERE projects.name > ?
-    OR (projects.name = ? AND projects.project_id > ?)
-ORDER BY projects.name COLLATE NOCASE ASC
-LIMIT ?
-            ",
-            name,
-            name,
-            id,
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
-}
-
-async fn get_projects_after_window_by_title<'e, E>(
-    ex: E,
-    name: &str,
-    id: u32,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-WHERE projects.game_title_sort > ?
-    OR (projects.game_title_sort = ? AND projects.project_id > ?)
-ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE ASC
-LIMIT ?
-            ",
-            name,
-            name,
-            id,
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
+    get_projects_window_start_end_impl(
+        ex,
+        order_by,
+        OrderDirection::Descending,
+        limit
+    ).await
 }
 
 async fn get_projects_after_window<'e, E>(
@@ -779,92 +693,14 @@ async fn get_projects_after_window<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match order_by {
-        OrderBy::ProjectName => get_projects_after_window_by_project(ex, name, id, limit).await,
-        OrderBy::GameTitle => get_projects_after_window_by_title(ex, name, id, limit).await
-    }
-}
-
-async fn get_projects_before_window_by_project<'e, E>(
-    ex: E,
-    name: &str,
-    id: u32,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-WHERE projects.name < ?
-    OR (projects.name = ? AND projects.project_id < ?)
-ORDER BY projects.name COLLATE NOCASE DESC
-LIMIT ?
-            ",
-            name,
-            name,
-            id,
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
-}
-
-async fn get_projects_before_window_by_title<'e, E>(
-    ex: E,
-    name: &str,
-    id: u32,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
-            "
-SELECT
-    projects.project_id,
-    projects.name,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.image
-FROM projects
-WHERE projects.game_title_sort < ?
-    OR (projects.game_title_sort = ? AND projects.project_id < ?)
-ORDER BY projects.game_title_sort, projects.project_id COLLATE NOCASE DESC
-LIMIT ?
-            ",
-            name,
-            name,
-            id,
-            limit
-        )
-        .fetch_all(ex)
-        .await?
-    )
+    get_projects_window_before_after_impl(
+        ex,
+        order_by,
+        name,
+        id,
+        OrderDirection::Ascending,
+        limit
+    ).await
 }
 
 async fn get_projects_before_window<'e, E>(
@@ -877,10 +713,14 @@ async fn get_projects_before_window<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match order_by {
-        OrderBy::ProjectName => get_projects_before_window_by_project(ex, name, id, limit).await,
-        OrderBy::GameTitle => get_projects_before_window_by_title(ex, name, id, limit).await
-    }
+    get_projects_window_before_after_impl(
+        ex,
+        order_by,
+        name,
+        id,
+        OrderDirection::Descending,
+        limit
+    ).await
 }
 
 async fn create_project_row<'e, E>(

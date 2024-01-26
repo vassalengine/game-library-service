@@ -1,5 +1,6 @@
 use axum::async_trait;
 use serde::Deserialize;
+use sqlx::FromRow;
 
 use crate::{
     errors::AppError,
@@ -8,7 +9,7 @@ use crate::{
     version::Version
 };
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
     pub project_id: i64,
     pub name: String,
