@@ -73,30 +73,20 @@ CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   created_at TEXT NOT NULL,
-
-  /* project data */
+  modified_at TEXT NOT NULL,
+  modified_by INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-
-  /* readme */
   readme TEXT NOT NULL,
-
-  /* image */
   image TEXT,
-
-  /* project revision */
-  modified_at TEXT NOT NULL,
-  modified_by INTEGER NOT NULL,
-  revision INTEGER NOT NULL,
-
   UNIQUE(name),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
   FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE project_revisions (
   project_id INTEGER NOT NULL,
@@ -107,28 +97,21 @@ CREATE TABLE project_revisions (
   revision INTEGER NOT NULL,
   project_data_id INTEGER NOT NULL,
   UNIQUE(project_id, revision),
-  FOREIGN KEY(project_id) REFERENCES projects(project_id)
-  FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id),
-  FOREIGN KEY(modified_by) REFERENCES users(user_id)
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(modified_by) REFERENCES users(user_id),
+  FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id)
 );
 
 CREATE TABLE project_data (
   project_data_id INTEGER PRIMARY KEY NOT NULL,
   project_id INTEGER NOT NULL,
-
-  /* project data */
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
   game_publisher TEXT NOT NULL,
   game_year TEXT NOT NULL,
-
-  /* readme */
   readme TEXT NOT NULL,
-
-  /* image */
   image TEXT,
-
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
