@@ -523,13 +523,13 @@ LIMIT 1
     )
 }
 
-// TODO: sort by most recent change?
-
 impl OrderBy {
     fn field(&self) -> &'static str {
         match self {
             OrderBy::ProjectName => "name",
-            OrderBy::GameTitle => "game_title_sort"
+            OrderBy::GameTitle => "game_title_sort",
+            OrderBy::ModificationTime => "modified_at",
+            OrderBy::CreationTime => "created_at"
         }
     }
 }

@@ -94,19 +94,25 @@ impl TryFrom<&str> for Anchor {
     }
 }
 
+// TODO: add tests for mtime, ctime
+
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub enum OrderBy {
     #[default]
     ProjectName,
-    GameTitle
+    GameTitle,
+    ModificationTime,
+    CreationTime
 }
 
 impl From<OrderBy> for String {
     fn from(value: OrderBy) -> Self {
         match value {
             OrderBy::ProjectName => "p".to_string(),
-            OrderBy::GameTitle => "t".to_string()
+            OrderBy::GameTitle => "t".to_string(),
+            OrderBy::ModificationTime => "m".to_string(),
+            OrderBy::CreationTime => "c".to_string()
         }
     }
 }
@@ -118,6 +124,8 @@ impl TryFrom<&str> for OrderBy {
         match value {
             "p" => Ok(OrderBy::ProjectName),
             "t" => Ok(OrderBy::GameTitle),
+            "m" => Ok(OrderBy::ModificationTime),
+            "c" => Ok(OrderBy::CreationTime),
             _ => Err(AppError::MalformedQuery)
         }
     }
