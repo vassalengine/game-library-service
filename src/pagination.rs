@@ -47,10 +47,9 @@ impl TryFrom<&str> for Limit {
     }
 }
 
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub enum Anchor {
-    #[default]
     Start,
     Before(u32, String),
     After(u32, String),
@@ -94,53 +93,69 @@ impl TryFrom<&str> for Anchor {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub enum OrderDirection {
+    Ascending,
+    Descending
+}
+
 // TODO: add tests for mtime, ctime
 
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
-pub enum OrderBy {
-    #[default]
+pub enum SortBy {
     ProjectName,
     GameTitle,
     ModificationTime,
     CreationTime
 }
 
-impl From<OrderBy> for String {
-    fn from(value: OrderBy) -> Self {
+impl From<SortBy> for String {
+    fn from(value: SortBy) -> Self {
         match value {
-            OrderBy::ProjectName => "p".to_string(),
-            OrderBy::GameTitle => "t".to_string(),
-            OrderBy::ModificationTime => "m".to_string(),
-            OrderBy::CreationTime => "c".to_string()
+            SortBy::ProjectName => "p".to_string(),
+            SortBy::GameTitle => "t".to_string(),
+            SortBy::ModificationTime => "m".to_string(),
+            SortBy::CreationTime => "c".to_string()
         }
     }
 }
 
-impl TryFrom<&str> for OrderBy {
+impl TryFrom<&str> for SortBy {
     type Error = AppError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "p" => Ok(OrderBy::ProjectName),
-            "t" => Ok(OrderBy::GameTitle),
-            "m" => Ok(OrderBy::ModificationTime),
-            "c" => Ok(OrderBy::CreationTime),
+            "p" => Ok(SortBy::ProjectName),
+            "t" => Ok(SortBy::GameTitle),
+            "m" => Ok(SortBy::ModificationTime),
+            "c" => Ok(SortBy::CreationTime),
             _ => Err(AppError::MalformedQuery)
         }
     }
 }
 
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+impl SortBy {
+    pub fn default_direction(&self) -> OrderDirection {
+        match self {
+            SortBy::ProjectName => OrderDirection::Ascending,
+            SortBy::GameTitle => OrderDirection::Ascending,
+            SortBy::ModificationTime => OrderDirection::Descending,
+            SortBy::CreationTime => OrderDirection::Descending
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub struct Seek {
     pub anchor: Anchor,
-    pub order_by: OrderBy
+    pub sort_by: SortBy
 }
 
 impl From<Seek> for String {
     fn from(value: Seek) -> Self {
-        let s = String::from(value.order_by) + &String::from(value.anchor);
+        let s = String::from(value.sort_by) + &String::from(value.anchor);
         base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s)
     }
 }
@@ -158,22 +173,16 @@ impl TryFrom<&str> for Seek {
 
         let mut i = d.chars();
         let c = i.next().ok_or(AppError::MalformedQuery)?.to_string();
-        let order_by = OrderBy::try_from(c.as_str())?;
+        let sort_by = SortBy::try_from(c.as_str())?;
         let anchor = Anchor::try_from(i.as_str())?;
 
         Ok(
             Seek {
                 anchor,
-                order_by
+                sort_by
             }
         )
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PaginationParams {
-    pub seek: Option<Seek>,
-    pub limit: Option<Limit>
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -242,7 +251,7 @@ mod test {
             &String::from(
                 Seek {
                     anchor: Anchor::Start,
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             ),
             "cHM"
@@ -256,7 +265,7 @@ mod test {
             &String::from(
                 Seek {
                     anchor: Anchor::Start,
-                    order_by: OrderBy::GameTitle
+                    sort_by: SortBy::GameTitle
                 }
             ),
             "cHM6"
@@ -270,7 +279,7 @@ mod test {
             &String::from(
                 Seek {
                     anchor: Anchor::End,
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             ),
             "cGU"
@@ -283,7 +292,7 @@ mod test {
             &String::from(
                 Seek {
                     anchor: Anchor::Before(0, "abc".into()),
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             ),
             "cGI6MDphYmM"
@@ -296,7 +305,7 @@ mod test {
             &String::from(
                 Seek {
                     anchor: Anchor::After(0, "abc".into()),
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             ),
             "cGE6MDphYmM"
@@ -309,7 +318,7 @@ mod test {
             Seek::try_from("cHM").unwrap(),
             Seek {
                 anchor: Anchor::Start,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
     }
@@ -320,7 +329,7 @@ mod test {
             Seek::try_from("cGU").unwrap(),
             Seek {
                 anchor: Anchor::End,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
     }
@@ -331,7 +340,7 @@ mod test {
             Seek::try_from("cGI6MDphYmM").unwrap(),
             Seek {
                 anchor: Anchor::Before(0, "abc".into()),
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
     }
@@ -342,7 +351,7 @@ mod test {
             Seek::try_from("cGE6MDphYmM").unwrap(),
             Seek {
                 anchor: Anchor::After(0, "abc".into()),
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
     }

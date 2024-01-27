@@ -27,6 +27,7 @@ mod handlers;
 mod jwt;
 mod model;
 mod pagination;
+mod params;
 mod prod_core;
 mod sqlite;
 mod version;
@@ -203,7 +204,8 @@ mod test {
         core::Core,
         jwt::{self, EncodingKey},
         model::{GameData, Owner, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
-        pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
+        pagination::{Anchor, SortBy, Pagination, Seek, SeekLink},
+        params::ProjectsParams,
         version::Version
     };
 
@@ -330,8 +332,7 @@ mod test {
 
         async fn get_projects(
             &self,
-            _from: Seek,
-            _limit: Limit
+            _params: ProjectsParams
         ) -> Result<Projects, AppError>
         {
             Ok(
@@ -345,7 +346,7 @@ mod test {
                             SeekLink::new(
                                 Seek {
                                     anchor: Anchor::Before(0, "project_a".into()),
-                                    order_by: OrderBy::ProjectName
+                                    sort_by: SortBy::ProjectName
                                 }
                             )
                         ),
@@ -353,7 +354,7 @@ mod test {
                             SeekLink::new(
                                 Seek {
                                     anchor: Anchor::After(0, "project_b".into()),
-                                    order_by: OrderBy::ProjectName
+                                    sort_by: SortBy::ProjectName
                                 }
                             )
                         ),
@@ -617,7 +618,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -625,7 +626,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -659,7 +660,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -667,7 +668,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -754,7 +755,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::Start,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -780,7 +781,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -788,7 +789,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -803,7 +804,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::End,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -829,7 +830,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -837,7 +838,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -852,7 +853,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::Before(0, "xyz".into()),
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -878,7 +879,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -886,7 +887,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -901,7 +902,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::After(0, "xyz".into()),
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -927,7 +928,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -935,7 +936,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -988,7 +989,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::Start,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -1014,7 +1015,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -1022,7 +1023,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -1037,7 +1038,7 @@ mod test {
         let seek = String::from(
             Seek {
                 anchor: Anchor::Start,
-                order_by: OrderBy::ProjectName
+                sort_by: SortBy::ProjectName
             }
         );
 
@@ -1063,7 +1064,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(0, "project_a".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -1071,7 +1072,7 @@ mod test {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(0, "project_b".into()),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),

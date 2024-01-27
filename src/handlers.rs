@@ -8,7 +8,7 @@ use crate::{
     errors::AppError,
     extractors::{ProjectIDAndPackageID, Wrapper},
     model::{Owned, PackageID, PackageDataPut, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, Users, User},
-    pagination::PaginationParams,
+    params::ProjectsParams,
     version::Version
 };
 
@@ -22,18 +22,11 @@ pub async fn root_get() -> &'static str {
 }
 
 pub async fn projects_get(
-    Wrapper(Query(params)): Wrapper<Query<PaginationParams>>,
+    Wrapper(Query(params)): Wrapper<Query<ProjectsParams>>,
     State(core): State<CoreArc>
 ) -> Result<Json<Projects>, AppError>
 {
-    Ok(
-        Json(
-            core.get_projects(
-                params.seek.unwrap_or_default(),
-                params.limit.unwrap_or_default()
-            ).await?
-        )
-    )
+    Ok(Json(core.get_projects(params).await?))
 }
 
 pub async fn project_get(

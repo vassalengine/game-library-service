@@ -8,7 +8,8 @@ use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
     errors::AppError,
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
-    pagination::{Anchor, Limit, OrderBy, Pagination, Seek, SeekLink},
+    pagination::{Anchor, Limit, OrderDirection, SortBy, Pagination, Seek, SeekLink},
+    params::{ProjectsParams, SortOrSeek},
     version::Version
 };
 
@@ -68,12 +69,15 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn get_projects(
         &self,
-        from: Seek,
-        limit: Limit
+        params: ProjectsParams
     ) -> Result<Projects, AppError>
     {
+        let query = params.q;
+        let from = params.from;
+        let limit = params.limit;
+
         let (prev_page, next_page, projects) = self.get_projects_from(
-            from, limit
+            query, from, limit
         ).await?;
 
         Ok(
@@ -312,25 +316,53 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_from(
         &self,
-        from: Seek,
+        query: Option<String>,
+        from: SortOrSeek,
         limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         let limit = limit.get() as u32;
 
-        Ok(
-            match from.anchor {
-                Anchor::Start => self.get_projects_start(&from.order_by, limit).await?,
-                Anchor::After(id, name) => self.get_projects_after(&from.order_by, &name, id, limit).await?,
-                Anchor::Before(id, name) => self.get_projects_before(&from.order_by, &name, id, limit).await?,
-                Anchor::End => self.get_projects_end(&from.order_by, limit).await?
-            }
-        )
+        match from {
+            SortOrSeek::Sort(sort, dir) => self.get_projects_sort(query, sort, dir, limit).await,
+            SortOrSeek::Seek(seek) => self.get_projects_seek(query, seek, limit).await
+        }
+    }
+
+    async fn get_projects_sort(
+        &self,
+        query: Option<String>,
+        sort: SortBy,
+        dir: OrderDirection,
+        limit: u32
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+//        Ok((None, None, vec![]))
+        match dir {
+            OrderDirection::Ascending => self.get_projects_start(query, &sort, limit).await,
+            OrderDirection::Descending => self.get_projects_end(query, &sort, limit).await
+        }
+    }
+
+    async fn get_projects_seek(
+        &self,
+        query: Option<String>,
+        seek: Seek,
+        limit: u32
+    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    {
+        match seek.anchor {
+            Anchor::Start => self.get_projects_start(query, &seek.sort_by, limit).await,
+            Anchor::After(id, name) => self.get_projects_after(query, &seek.sort_by, &name, id, limit).await,
+            Anchor::Before(id, name) => self.get_projects_before(query, &seek.sort_by, &name, id, limit).await,
+            Anchor::End => self.get_projects_end(query, &seek.sort_by, limit).await
+        }
     }
 
     async fn get_projects_start(
         &self,
-        order_by: &OrderBy,
+        query: Option<String>,
+        sort_by: &SortBy,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
@@ -338,7 +370,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit + 1;
 
         let mut projects = self.db.get_projects_start_window(
-            order_by, limit_extra
+            query, sort_by, limit_extra
         ).await?;
 
         Ok(
@@ -353,7 +385,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             SeekLink::new(
                                 Seek {
                                     anchor: Anchor::After(aid, aname),
-                                    order_by: OrderBy::ProjectName
+                                    sort_by: SortBy::ProjectName
                                 }
                             )
                         ),
@@ -373,7 +405,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_end(
         &self,
-        order_by: &OrderBy,
+        query: Option<String>,
+        sort_by: &SortBy,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
@@ -381,7 +414,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit + 1;
 
         let mut projects = self.db.get_projects_end_window(
-            order_by, limit_extra
+            query, sort_by, limit_extra
         ).await?;
 
         Ok(
@@ -395,7 +428,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(bid, bname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -416,7 +449,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_after(
         &self,
-        order_by: &OrderBy,
+        query: Option<String>,
+        sort_by: &SortBy,
         name: &str,
         id: u32,
         limit: u32
@@ -426,7 +460,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit + 1;
 
         let mut projects = self.db.get_projects_after_window(
-            order_by, name, id, limit_extra
+            query, sort_by, name, id, limit_extra
         ).await?;
 
         Ok(
@@ -441,7 +475,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(bid, bname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -449,7 +483,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(aid, aname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -462,7 +496,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::End,
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -478,7 +512,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(bid, bname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -491,7 +525,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_before(
         &self,
-        order_by: &OrderBy,
+        query: Option<String>,
+        sort_by: &SortBy,
         name: &str,
         id: u32,
         limit: u32
@@ -501,7 +536,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit + 1;
 
         let mut projects = self.db.get_projects_before_window(
-            order_by, name, id, limit_extra
+            query, sort_by, name, id, limit_extra
         ).await?;
 
         Ok(
@@ -517,7 +552,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(bid, bname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -525,7 +560,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(aid, aname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -539,7 +574,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Start,
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -556,7 +591,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::After(aid, aname),
-                                order_by: OrderBy::ProjectName
+                                sort_by: SortBy::ProjectName
                             }
                         )
                     ),
@@ -651,19 +686,24 @@ mod test {
             SeekLink::new(
                 Seek {
                     anchor: Anchor::After(5, "e".into()),
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             )
         );
 
-        let lp = Seek {
-            anchor: Anchor::Start,
-            order_by: OrderBy::ProjectName
+        let params = ProjectsParams {
+            from: SortOrSeek::Seek(
+                Seek {
+                    anchor: Anchor::Start,
+                    sort_by: SortBy::ProjectName
+                }
+            ),
+            limit: Limit::new(5).unwrap(),
+            ..Default::default()
         };
-        let limit = Limit::new(5).unwrap();
 
         assert_eq!(
-            core.get_projects(lp, limit).await.unwrap(),
+            core.get_projects(params).await.unwrap(),
             Projects {
                 projects,
                 meta: Pagination {
@@ -698,7 +738,7 @@ mod test {
                     SeekLink::new(
                         Seek {
                             anchor: Anchor::End,
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     )
                 )
@@ -712,7 +752,7 @@ mod test {
                                 (i + 2) as u32,
                                 p.name.clone()
                             ),
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     ))
             };
@@ -729,22 +769,27 @@ mod test {
                                 (i + lim + 1) as u32,
                                 p.name.clone()
                             ),
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     ))
             };
 
-            let lp = Seek {
-                anchor: Anchor::After(
-                    (i + 1) as u32,
-                    all_projects[i].name.clone()
+            let params = ProjectsParams {
+                from: SortOrSeek::Seek(
+                    Seek {
+                        anchor: Anchor::After(
+                            (i + 1) as u32,
+                            all_projects[i].name.clone()
+                        ),
+                        sort_by: SortBy::ProjectName
+                    }
                 ),
-                order_by: OrderBy::ProjectName
+                limit: Limit::new(lim as u8).unwrap(),
+                ..Default::default()
             };
-            let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
-                core.get_projects(lp, limit).await.unwrap(),
+                core.get_projects(params).await.unwrap(),
                 Projects {
                     projects,
                     meta: Pagination {
@@ -787,7 +832,7 @@ mod test {
                                 (i.saturating_sub(lim) + 1) as u32,
                                 p.name.clone()
                             ),
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     ))
             };
@@ -797,7 +842,7 @@ mod test {
                     SeekLink::new(
                         Seek {
                             anchor: Anchor::Start,
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     )
                 )
@@ -811,23 +856,28 @@ mod test {
                                 i as u32,
                                 p.name.clone()
                             ),
-                            order_by: OrderBy::ProjectName
+                            sort_by: SortBy::ProjectName
                         }
                     )
                 )
             };
 
-            let lp = Seek {
-                anchor: Anchor::Before(
-                    (i + 1) as u32,
-                    all_projects[i].name.clone()
+            let params = ProjectsParams {
+                from: SortOrSeek::Seek(
+                    Seek {
+                        anchor: Anchor::Before(
+                            (i + 1) as u32,
+                            all_projects[i].name.clone()
+                        ),
+                        sort_by: SortBy::ProjectName
+                    }
                 ),
-                order_by: OrderBy::ProjectName
+                limit: Limit::new(lim as u8).unwrap(),
+                ..Default::default()
             };
-            let limit = Limit::new(lim as u8).unwrap();
 
             assert_eq!(
-                core.get_projects(lp, limit).await.unwrap(),
+                core.get_projects(params).await.unwrap(),
                 Projects {
                     projects,
                     meta: Pagination {
@@ -852,20 +902,25 @@ mod test {
             SeekLink::new(
                 Seek {
                     anchor: Anchor::Before(6, "f".into()),
-                    order_by: OrderBy::ProjectName
+                    sort_by: SortBy::ProjectName
                 }
             )
         );
         let next_page = None;
 
-        let lp = Seek {
-            anchor: Anchor::End,
-            order_by: OrderBy::ProjectName
+        let params = ProjectsParams {
+            from: SortOrSeek::Seek(
+                Seek {
+                    anchor: Anchor::End,
+                    sort_by: SortBy::ProjectName
+                }
+            ),
+            limit: Limit::new(5).unwrap(),
+            ..Default::default()
         };
-        let limit = Limit::new(5).unwrap();
 
         assert_eq!(
-            core.get_projects(lp, limit).await.unwrap(),
+            core.get_projects(params).await.unwrap(),
             Projects {
                 projects,
                  meta: Pagination {

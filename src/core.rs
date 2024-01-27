@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     errors::AppError,
     model::{Owner, PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
-    pagination::{Limit, Seek},
+    params::ProjectsParams,
     version::Version
 };
 
@@ -72,8 +72,7 @@ pub trait Core {
 
     async fn get_projects(
         &self,
-        _from: Seek,
-        _limit: Limit
+        _params: ProjectsParams
     ) -> Result<Projects, AppError>
     {
         unimplemented!();
