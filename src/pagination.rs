@@ -51,8 +51,8 @@ impl TryFrom<&str> for Limit {
 #[serde(try_from = "&str")]
 pub enum Anchor {
     Start,
-    Before(u32, String),
-    After(u32, String),
+    Before(String, u32),
+    After(String, u32),
     End
 }
 
@@ -60,8 +60,8 @@ impl From<Anchor> for String {
     fn from(value: Anchor) -> Self {
         match value {
             Anchor::Start => "s".to_string(),
-            Anchor::Before(i, n) => format!("b:{}:{}", i, n),
-            Anchor::After(i, n) => format!("a:{}:{}", i, n),
+            Anchor::Before(n, i) => format!("b:{}:{}", i, n),
+            Anchor::After(n, i) => format!("a:{}:{}", i, n),
             Anchor::End => "e".to_string()
         }
     }
@@ -80,8 +80,8 @@ impl TryFrom<&str> for Anchor {
                     let i = v[1].parse::<u32>()
                         .or(Err(AppError::MalformedQuery))?;
                     match v[0] {
-                        "b" => Ok(Anchor::Before(i, v[2].into())),
-                        "a" => Ok(Anchor::After(i, v[2].into())),
+                        "b" => Ok(Anchor::Before(v[2].into(), i)),
+                        "a" => Ok(Anchor::After(v[2].into(), i)),
                         _ => Err(AppError::MalformedQuery)
                     }
                 }
@@ -291,7 +291,7 @@ mod test {
         assert_eq!(
             &String::from(
                 Seek {
-                    anchor: Anchor::Before(0, "abc".into()),
+                    anchor: Anchor::Before("abc".into(), 0),
                     sort_by: SortBy::ProjectName
                 }
             ),
@@ -304,7 +304,7 @@ mod test {
         assert_eq!(
             &String::from(
                 Seek {
-                    anchor: Anchor::After(0, "abc".into()),
+                    anchor: Anchor::After("abc".into(), 0),
                     sort_by: SortBy::ProjectName
                 }
             ),
@@ -339,7 +339,7 @@ mod test {
         assert_eq!(
             Seek::try_from("cGI6MDphYmM").unwrap(),
             Seek {
-                anchor: Anchor::Before(0, "abc".into()),
+                anchor: Anchor::Before("abc".into(), 0),
                 sort_by: SortBy::ProjectName
             }
         );
@@ -350,7 +350,7 @@ mod test {
         assert_eq!(
             Seek::try_from("cGE6MDphYmM").unwrap(),
             Seek {
-                anchor: Anchor::After(0, "abc".into()),
+                anchor: Anchor::After("abc".into(), 0),
                 sort_by: SortBy::ProjectName
             }
         );

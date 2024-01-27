@@ -345,7 +345,7 @@ mod test {
                         prev_page: Some(
                             SeekLink::new(
                                 Seek {
-                                    anchor: Anchor::Before(0, "project_a".into()),
+                                    anchor: Anchor::Before("project_a".into(), 0),
                                     sort_by: SortBy::ProjectName
                                 }
                             )
@@ -353,7 +353,7 @@ mod test {
                         next_page: Some(
                             SeekLink::new(
                                 Seek {
-                                    anchor: Anchor::After(0, "project_b".into()),
+                                    anchor: Anchor::After("project_b".into(), 0),
                                     sort_by: SortBy::ProjectName
                                 }
                             )
@@ -617,7 +617,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -625,7 +625,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -659,7 +659,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -667,7 +667,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -780,7 +780,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -788,7 +788,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -829,7 +829,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -837,7 +837,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -852,7 +852,7 @@ mod test {
     async fn get_projects_seek_before_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::Before(0, "xyz".into()),
+                anchor: Anchor::Before("xyz".into(), 0),
                 sort_by: SortBy::ProjectName
             }
         );
@@ -878,7 +878,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -886,7 +886,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -901,7 +901,7 @@ mod test {
     async fn get_projects_seek_after_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::After(0, "xyz".into()),
+                anchor: Anchor::After("xyz".into(), 0),
                 sort_by: SortBy::ProjectName
             }
         );
@@ -927,7 +927,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -935,7 +935,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -1014,7 +1014,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -1022,7 +1022,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -1063,7 +1063,7 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(0, "project_a".into()),
+                                anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -1071,7 +1071,7 @@ mod test {
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(0, "project_b".into()),
+                                anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName
                             }
                         )
