@@ -10,7 +10,7 @@ use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
     model::{Owner, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
-    pagination::SortBy,
+    pagination::{Direction, SortBy},
     version::Version
 };
 
@@ -536,11 +536,6 @@ impl SortBy {
             SortBy::CreationTime => "created_at"
         }
     }
-}
-
-enum Direction {
-    Ascending,
-    Descending
 }
 
 impl Direction {
