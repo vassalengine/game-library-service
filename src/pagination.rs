@@ -226,12 +226,7 @@ pub struct Seek {
 
 impl From<Seek> for String {
     fn from(value: Seek) -> Self {
-        let s = format!(
-            "{}{}{}",
-            value.sort_by,
-            value.dir,
-            value.anchor
-        );
+        let s = format!("{}{}{}", value.sort_by, value.dir, value.anchor);
         base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s)
     }
 }
