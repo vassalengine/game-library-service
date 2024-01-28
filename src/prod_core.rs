@@ -386,7 +386,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                                 Seek {
                                     anchor: Anchor::After(aname, aid),
                                     sort_by: SortBy::ProjectName,
-                                    dir: Direction::Ascending
+                                    dir
                                 }
                             )
                         ),
@@ -431,7 +431,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::Before(bname, bid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -480,7 +480,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::Before(bname, bid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -489,7 +489,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::After(aname, aid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -503,7 +503,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::End,
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -520,7 +520,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::Before(bname, bid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -562,7 +562,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::Before(bname, bid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -571,7 +571,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::After(aname, aid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -586,7 +586,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::Start,
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
@@ -604,7 +604,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             Seek {
                                 anchor: Anchor::After(aname, aid),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir
                             }
                         )
                     ),
