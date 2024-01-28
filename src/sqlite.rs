@@ -538,23 +538,23 @@ impl SortBy {
     }
 }
 
-enum OrderDirection {
+enum Direction {
     Ascending,
     Descending
 }
 
-impl OrderDirection {
+impl Direction {
     fn dir(&self) -> &'static str {
         match self {
-            OrderDirection::Ascending => "ASC",
-            OrderDirection::Descending => "DESC"
+            Direction::Ascending => "ASC",
+            Direction::Descending => "DESC"
         }
     }
 
     fn op(&self) -> &'static str {
         match self {
-            OrderDirection::Ascending => ">",
-            OrderDirection::Descending => "<"
+            Direction::Ascending => ">",
+            Direction::Descending => "<"
         }
     }
 }
@@ -562,7 +562,7 @@ impl OrderDirection {
 async fn get_projects_window_start_end_impl<'e, E>(
     ex: E,
     ord_by: &SortBy,
-    ord_dir: OrderDirection,
+    ord_dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -603,7 +603,7 @@ async fn get_projects_window_start_end_query_impl<'e, E>(
     ex: E,
     query: String,
     ord_by: &SortBy,
-    ord_dir: OrderDirection,
+    ord_dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -645,7 +645,7 @@ async fn get_projects_window_before_after_impl<'e, E>(
     ord_by: &SortBy,
     name: &str,
     id: u32,
-    ord_dir: OrderDirection,
+    ord_dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -710,13 +710,13 @@ where
             ex,
             q,
             sort_by,
-            OrderDirection::Ascending,
+            Direction::Ascending,
             limit
         ).await,
         None => get_projects_window_start_end_impl(
             ex,
             sort_by,
-            OrderDirection::Ascending,
+            Direction::Ascending,
             limit
         ).await
     }
@@ -734,7 +734,7 @@ where
     get_projects_window_start_end_impl(
         ex,
         sort_by,
-        OrderDirection::Descending,
+        Direction::Descending,
         limit
     ).await
 }
@@ -755,7 +755,7 @@ where
         sort_by,
         name,
         id,
-        OrderDirection::Ascending,
+        Direction::Ascending,
         limit
     ).await
 }
@@ -776,7 +776,7 @@ where
         sort_by,
         name,
         id,
-        OrderDirection::Descending,
+        Direction::Descending,
         limit
     ).await
 }

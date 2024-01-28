@@ -2,27 +2,27 @@ use serde::Deserialize;
 
 use crate::{
     errors::AppError,
-    pagination::{Limit, OrderDirection, SortBy, Seek}
+    pagination::{Limit, Direction, SortBy, Seek}
 };
 
 #[derive(Debug, Default, Deserialize)]
 pub struct MaybeProjectsParams {
     pub q: Option<String>,
     pub sort: Option<SortBy>,
-    pub order: Option<OrderDirection>,
+    pub order: Option<Direction>,
     pub seek: Option<Seek>,
     pub limit: Option<Limit>
 }
 
 #[derive(Debug, Deserialize)]
 pub enum SortOrSeek {
-    Sort(SortBy, OrderDirection),
+    Sort(SortBy, Direction),
     Seek(Seek)
 }
 
 impl Default for SortOrSeek {
     fn default() -> Self {
-        SortOrSeek::Sort(SortBy::ProjectName, OrderDirection::Ascending)
+        SortOrSeek::Sort(SortBy::ProjectName, Direction::Ascending)
     }
 }
 
