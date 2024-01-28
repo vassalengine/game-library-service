@@ -48,7 +48,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             }
             else {
                 let sort = m.sort.unwrap_or(SortBy::ProjectName);
-                let dir = sort.default_direction();
+                let dir = m.order.unwrap_or_else(|| sort.default_direction());
                 SortOrSeek::Sort(sort, dir)
             };
 
