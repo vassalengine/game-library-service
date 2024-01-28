@@ -556,7 +556,7 @@ impl Direction {
 
 async fn get_projects_window_start_end_impl<'e, E>(
     ex: E,
-    sort: SortBy,
+    sort_by: SortBy,
     dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -581,7 +581,7 @@ SELECT
 FROM projects
 ORDER BY "
         )
-        .push(sort.field())
+        .push(sort_by.field())
         .push(" COLLATE NOCASE ")
         .push(dir.dir())
         .push(", project_id ")
@@ -597,7 +597,7 @@ ORDER BY "
 async fn get_projects_window_start_end_query_impl<'e, E>(
     ex: E,
     query: String,
-    sort: SortBy,
+    sort_by: SortBy,
     dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -637,7 +637,7 @@ LIMIT ?
 
 async fn get_projects_window_before_after_impl<'e, E>(
     ex: E,
-    sort: SortBy,
+    sort_by: SortBy,
     dir: Direction,
     name: &str,
     id: u32,
@@ -664,13 +664,13 @@ SELECT
 FROM projects
 WHERE "
         )
-        .push(sort.field())
+        .push(sort_by.field())
         .push(" ")
         .push(dir.op())
         .push(" ")
         .push_bind(name)
         .push(" OR (")
-        .push(sort.field())
+        .push(sort_by.field())
         .push(" = ")
         .push_bind(name)
         .push(" AND project_id ")
@@ -678,7 +678,7 @@ WHERE "
         .push(" ")
         .push_bind(id)
         .push(") ORDER BY ")
-        .push(sort.field())
+        .push(sort_by.field())
         .push(" COLLATE NOCASE ")
         .push(dir.dir())
         .push(", project_id ")
@@ -694,7 +694,7 @@ WHERE "
 async fn get_projects_start_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort: SortBy,
+    sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -704,13 +704,13 @@ where
         Some(q) => get_projects_window_start_end_query_impl(
             ex,
             q,
-            sort,
+            sort_by,
             Direction::Ascending,
             limit
         ).await,
         None => get_projects_window_start_end_impl(
             ex,
-            sort,
+            sort_by,
             Direction::Ascending,
             limit
         ).await
@@ -720,7 +720,7 @@ where
 async fn get_projects_end_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort: SortBy,
+    sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -728,7 +728,7 @@ where
 {
     get_projects_window_start_end_impl(
         ex,
-        sort,
+        sort_by,
         Direction::Descending,
         limit
     ).await
@@ -737,7 +737,7 @@ where
 async fn get_projects_after_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort: SortBy,
+    sort_by: SortBy,
     name: &str,
     id: u32,
     limit: u32
@@ -747,7 +747,7 @@ where
 {
     get_projects_window_before_after_impl(
         ex,
-        sort,
+        sort_by,
         Direction::Ascending,
         name,
         id,
@@ -758,7 +758,7 @@ where
 async fn get_projects_before_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort: SortBy,
+    sort_by: SortBy,
     name: &str,
     id: u32,
     limit: u32
@@ -768,7 +768,7 @@ where
 {
     get_projects_window_before_after_impl(
         ex,
-        sort,
+        sort_by,
         Direction::Descending,
         name,
         id,

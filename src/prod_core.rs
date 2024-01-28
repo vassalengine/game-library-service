@@ -322,7 +322,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match from {
-            SortOrSeek::Sort(sort, dir) => self.get_projects_sort(query, sort, dir, limit).await,
+            SortOrSeek::Sort(sort_by, dir) => self.get_projects_sort(query, sort_by, dir, limit).await,
             SortOrSeek::Seek(seek) => self.get_projects_seek(query, seek, limit).await
         }
     }
@@ -330,14 +330,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn get_projects_sort(
         &self,
         query: Option<String>,
-        sort: SortBy,
+        sort_by: SortBy,
         dir: Direction,
         limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match dir {
-            Direction::Ascending => self.get_projects_start(query, sort, dir, limit).await,
-            Direction::Descending => self.get_projects_end(query, sort, dir, limit).await
+            Direction::Ascending => self.get_projects_start(query, sort_by, dir, limit).await,
+            Direction::Descending => self.get_projects_end(query, sort_by, dir, limit).await
         }
     }
 
