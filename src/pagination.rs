@@ -10,7 +10,7 @@ use crate::errors::AppError;
 
 // TODO: private fields various places
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 #[repr(transparent)]
 pub struct Limit(NonZeroU8);

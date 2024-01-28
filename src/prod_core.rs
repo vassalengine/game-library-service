@@ -321,8 +321,6 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
-        let limit = limit.get() as u32;
-
         match from {
             SortOrSeek::Sort(sort, dir) => self.get_projects_sort(query, sort, dir, limit).await,
             SortOrSeek::Seek(seek) => self.get_projects_seek(query, seek, limit).await
@@ -334,7 +332,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         query: Option<String>,
         sort: SortBy,
         dir: Direction,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match dir {
@@ -347,7 +345,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         &self,
         query: Option<String>,
         seek: Seek,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match seek.anchor {
@@ -363,11 +361,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         query: Option<String>,
         sort_by: SortBy,
         dir: Direction,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit + 1;
+        let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_start_window(
             query, sort_by, limit_extra
@@ -409,11 +407,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         query: Option<String>,
         sort_by: SortBy,
         dir: Direction,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit + 1;
+        let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_end_window(
             query, sort_by, limit_extra
@@ -457,11 +455,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         dir: Direction,
         name: &str,
         id: u32,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit + 1;
+        let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_after_window(
             query, sort_by, name, id, limit_extra
@@ -538,11 +536,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         dir: Direction,
         name: &str,
         id: u32,
-        limit: u32
+        limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit + 1;
+        let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_before_window(
             query, sort_by, name, id, limit_extra
