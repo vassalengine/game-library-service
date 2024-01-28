@@ -229,13 +229,7 @@ impl TryFrom<&str> for Seek {
         let dir = Direction::try_from(d.as_str())?;
         let anchor = Anchor::try_from(i.as_str())?;
 
-        Ok(
-            Seek {
-                anchor,
-                sort_by,
-                dir
-            }
-        )
+        Ok(Seek { anchor, sort_by, dir })
     }
 }
 
