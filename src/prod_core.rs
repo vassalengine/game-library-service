@@ -337,7 +337,6 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
-//        Ok((None, None, vec![]))
         match dir {
             OrderDirection::Ascending => self.get_projects_start(query, &sort, limit).await,
             OrderDirection::Descending => self.get_projects_end(query, &sort, limit).await
@@ -352,10 +351,10 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match seek.anchor {
-            Anchor::Start => self.get_projects_start(query, &seek.sort_by, limit).await,
-            Anchor::After(name, id) => self.get_projects_after(query, &seek.sort_by, &name, id, limit).await,
-            Anchor::Before(name, id) => self.get_projects_before(query, &seek.sort_by, &name, id, limit).await,
-            Anchor::End => self.get_projects_end(query, &seek.sort_by, limit).await
+            Anchor::Start(_) => self.get_projects_start(query, &seek.sort_by, limit).await,
+            Anchor::After(_, name, id) => self.get_projects_after(query, &seek.sort_by, &name, id, limit).await,
+            Anchor::Before(_, name, id) => self.get_projects_before(query, &seek.sort_by, &name, id, limit).await,
+            Anchor::End(_) => self.get_projects_end(query, &seek.sort_by, limit).await
         }
     }
 
@@ -384,7 +383,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         Some(
                             SeekLink::new(
                                 Seek {
-                                    anchor: Anchor::After(aname, aid),
+                                    anchor: Anchor::After(OrderDirection::Ascending, aname, aid),
                                     sort_by: SortBy::ProjectName
                                 }
                             )
@@ -427,7 +426,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(bname, bid),
+                                anchor: Anchor::Before(OrderDirection::Ascending, bname, bid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -474,7 +473,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(bname, bid),
+                                anchor: Anchor::Before(OrderDirection::Ascending, bname, bid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -482,7 +481,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(aname, aid),
+                                anchor: Anchor::After(OrderDirection::Ascending, aname, aid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -495,7 +494,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::End,
+                                anchor: Anchor::End(OrderDirection::Ascending),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -511,7 +510,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(bname, bid),
+                                anchor: Anchor::Before(OrderDirection::Ascending, bname, bid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -551,7 +550,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(bname, bid),
+                                anchor: Anchor::Before(OrderDirection::Ascending, bname, bid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -559,7 +558,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(aname, aid),
+                                anchor: Anchor::After(OrderDirection::Ascending, aname, aid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -573,7 +572,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Start,
+                                anchor: Anchor::Start(OrderDirection::Ascending),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -590,7 +589,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(aname, aid),
+                                anchor: Anchor::After(OrderDirection::Ascending, aname, aid),
                                 sort_by: SortBy::ProjectName
                             }
                         )
@@ -685,7 +684,7 @@ mod test {
         let next_page = Some(
             SeekLink::new(
                 Seek {
-                    anchor: Anchor::After("e".into(), 5),
+                    anchor: Anchor::After(OrderDirection::Ascending, "e".into(), 5),
                     sort_by: SortBy::ProjectName
                 }
             )
@@ -694,7 +693,7 @@ mod test {
         let params = ProjectsParams {
             from: SortOrSeek::Seek(
                 Seek {
-                    anchor: Anchor::Start,
+                    anchor: Anchor::Start(OrderDirection::Ascending),
                     sort_by: SortBy::ProjectName
                 }
             ),
@@ -737,7 +736,7 @@ mod test {
                 Some(
                     SeekLink::new(
                         Seek {
-                            anchor: Anchor::End,
+                            anchor: Anchor::End(OrderDirection::Ascending),
                             sort_by: SortBy::ProjectName
                         }
                     )
@@ -749,6 +748,7 @@ mod test {
                     .map(|p| SeekLink::new(
                         Seek {
                             anchor: Anchor::Before(
+                                OrderDirection::Ascending,
                                 p.name.clone(),
                                 (i + 2) as u32
                             ),
@@ -766,6 +766,7 @@ mod test {
                     .map(|p| SeekLink::new(
                         Seek {
                             anchor: Anchor::After(
+                                OrderDirection::Ascending,
                                 p.name.clone(),
                                 (i + lim + 1) as u32
                             ),
@@ -778,6 +779,7 @@ mod test {
                 from: SortOrSeek::Seek(
                     Seek {
                         anchor: Anchor::After(
+                            OrderDirection::Ascending,
                             all_projects[i].name.clone(),
                             (i + 1) as u32
                         ),
@@ -829,6 +831,7 @@ mod test {
                     .map(|p| SeekLink::new(
                         Seek {
                             anchor: Anchor::Before(
+                                OrderDirection::Ascending,
                                 p.name.clone(),
                                 (i.saturating_sub(lim) + 1) as u32
                             ),
@@ -841,7 +844,7 @@ mod test {
                 Some(
                     SeekLink::new(
                         Seek {
-                            anchor: Anchor::Start,
+                            anchor: Anchor::Start(OrderDirection::Ascending),
                             sort_by: SortBy::ProjectName
                         }
                     )
@@ -853,6 +856,7 @@ mod test {
                     .map(|p| SeekLink::new(
                         Seek {
                             anchor: Anchor::After(
+                                OrderDirection::Ascending,
                                 p.name.clone(),
                                 i as u32
                             ),
@@ -866,6 +870,7 @@ mod test {
                 from: SortOrSeek::Seek(
                     Seek {
                         anchor: Anchor::Before(
+                            OrderDirection::Ascending,
                             all_projects[i].name.clone(),
                             (i + 1) as u32
                         ),
@@ -901,7 +906,7 @@ mod test {
         let prev_page = Some(
             SeekLink::new(
                 Seek {
-                    anchor: Anchor::Before("f".into(), 6),
+                    anchor: Anchor::Before(OrderDirection::Ascending, "f".into(), 6),
                     sort_by: SortBy::ProjectName
                 }
             )
@@ -911,7 +916,7 @@ mod test {
         let params = ProjectsParams {
             from: SortOrSeek::Seek(
                 Seek {
-                    anchor: Anchor::End,
+                    anchor: Anchor::End(OrderDirection::Ascending),
                     sort_by: SortBy::ProjectName
                 }
             ),
