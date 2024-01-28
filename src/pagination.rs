@@ -113,6 +113,15 @@ pub enum Direction {
     Descending
 }
 
+impl Direction {
+    pub fn rev(&self) -> Direction {
+        match self {
+            Direction::Ascending => Direction::Descending,
+            Direction::Descending => Direction::Ascending
+        }
+    }
+}
+
 impl From<&Direction> for String {
     fn from(value: &Direction) -> Self {
         match value {
