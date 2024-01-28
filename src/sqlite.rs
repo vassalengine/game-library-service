@@ -114,7 +114,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_start_window(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
@@ -124,7 +124,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_end_window(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
@@ -134,7 +134,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_after_window(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         name: &str,
         id: u32,
         limit: u32
@@ -146,7 +146,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_before_window(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         name: &str,
         id: u32,
         limit: u32
@@ -556,7 +556,7 @@ impl Direction {
 
 async fn get_projects_window_start_end_impl<'e, E>(
     ex: E,
-    ord_by: &SortBy,
+    ord_by: SortBy,
     ord_dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -597,7 +597,7 @@ ORDER BY "
 async fn get_projects_window_start_end_query_impl<'e, E>(
     ex: E,
     query: String,
-    ord_by: &SortBy,
+    ord_by: SortBy,
     ord_dir: Direction,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -637,7 +637,7 @@ LIMIT ?
 
 async fn get_projects_window_before_after_impl<'e, E>(
     ex: E,
-    ord_by: &SortBy,
+    ord_by: SortBy,
     name: &str,
     id: u32,
     ord_dir: Direction,
@@ -694,7 +694,7 @@ WHERE "
 async fn get_projects_start_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort_by: &SortBy,
+    sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -720,7 +720,7 @@ where
 async fn get_projects_end_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort_by: &SortBy,
+    sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
@@ -737,7 +737,7 @@ where
 async fn get_projects_after_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort_by: &SortBy,
+    sort_by: SortBy,
     name: &str,
     id: u32,
     limit: u32
@@ -758,7 +758,7 @@ where
 async fn get_projects_before_window<'e, E>(
     ex: E,
     query: Option<String>,
-    sort_by: &SortBy,
+    sort_by: SortBy,
     name: &str,
     id: u32,
     limit: u32
@@ -1829,7 +1829,7 @@ mod test {
     async fn get_projects_start_window_empty(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
-                &pool, None, &SortBy::ProjectName, 3
+                &pool, None, SortBy::ProjectName, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1839,7 +1839,7 @@ mod test {
     async fn get_projects_start_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
-                &pool, None, &SortBy::ProjectName, 3
+                &pool, None, SortBy::ProjectName, 3
             ).await.unwrap(),
             "abc".char_indices()
                 .map(|(i, c)| fake_project_row(i + 1, c.into()))
@@ -1851,7 +1851,7 @@ mod test {
     async fn get_projects_start_window_past_end(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
-                &pool, None, &SortBy::ProjectName, 5
+                &pool, None, SortBy::ProjectName, 5
             ).await.unwrap(),
             "abcd".char_indices()
                 .map(|(i, c)| fake_project_row(i + 1, c.into()))
@@ -1863,7 +1863,7 @@ mod test {
     async fn get_projects_end_window_empty(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, &SortBy::ProjectName, 3
+                &pool, None, SortBy::ProjectName, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1873,7 +1873,7 @@ mod test {
     async fn get_projects_end_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, &SortBy::ProjectName, 3
+                &pool, None, SortBy::ProjectName, 3
             ).await.unwrap(),
             "dcb".char_indices()
                 .map(|(i, c)| fake_project_row(4 - i, c.into()))
@@ -1885,7 +1885,7 @@ mod test {
     async fn get_projects_end_window_past_start(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, &SortBy::ProjectName, 5
+                &pool, None, SortBy::ProjectName, 5
             ).await.unwrap(),
             "dcba".char_indices()
                 .map(|(i, c)| fake_project_row(4 - i, c.into()))
@@ -1897,7 +1897,7 @@ mod test {
     async fn get_projects_after_window_empty(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
-                &pool, None, &SortBy::ProjectName, "a", 1, 3
+                &pool, None, SortBy::ProjectName, "a", 1, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1907,7 +1907,7 @@ mod test {
     async fn get_projects_after_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
-                &pool, None, &SortBy::ProjectName, "b", 2, 3
+                &pool, None, SortBy::ProjectName, "b", 2, 3
             ).await.unwrap(),
             "cd".char_indices()
                 .map(|(i, c)| fake_project_row(i + 3, c.into()))
@@ -1919,7 +1919,7 @@ mod test {
     async fn get_projects_after_window_past_end(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
-                &pool, None, &SortBy::ProjectName, "d", 4, 3
+                &pool, None, SortBy::ProjectName, "d", 4, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1929,7 +1929,7 @@ mod test {
     async fn get_projects_before_window_empty(pool: Pool) {
         assert_eq!(
             get_projects_before_window(
-                &pool, None, &SortBy::ProjectName, "d", 4, 3
+                &pool, None, SortBy::ProjectName, "d", 4, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1939,7 +1939,7 @@ mod test {
     async fn get_projects_before_window_not_all(pool: Pool) {
         assert_eq!(
             get_projects_before_window(
-                &pool, None, &SortBy::ProjectName, "c", 3, 3
+                &pool, None, SortBy::ProjectName, "c", 3, 3
             ).await.unwrap(),
             "ba".char_indices()
                 .map(|(i, c)| fake_project_row(2 - i, c.into()))
@@ -1951,7 +1951,7 @@ mod test {
     async fn get_projects_before_window_past_start(pool: Pool) {
         assert_eq!(
             get_projects_before_window(
-                &pool, None, &SortBy::ProjectName, "a", 1, 3
+                &pool, None, SortBy::ProjectName, "a", 1, 3
             ).await.unwrap(),
             vec![]
         );
@@ -1961,7 +1961,7 @@ mod test {
     async fn get_projects_start_window_by_title(pool: Pool) {
         assert_eq!(
             get_projects_start_window(
-                &pool, None, &SortBy::GameTitle, 1
+                &pool, None, SortBy::GameTitle, 1
             ).await.unwrap(),
             vec![
                 ProjectSummaryRow {
@@ -1985,7 +1985,7 @@ mod test {
     async fn get_projects_after_window_by_title(pool: Pool) {
         assert_eq!(
             get_projects_after_window(
-                &pool, None, &SortBy::GameTitle, "a", 1, 1
+                &pool, None, SortBy::GameTitle, "a", 1, 1
             ).await.unwrap(),
             vec![
                 ProjectSummaryRow {

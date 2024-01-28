@@ -338,8 +338,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match dir {
-            Direction::Ascending => self.get_projects_start(query, &sort, dir, limit).await,
-            Direction::Descending => self.get_projects_end(query, &sort, dir, limit).await
+            Direction::Ascending => self.get_projects_start(query, sort, dir, limit).await,
+            Direction::Descending => self.get_projects_end(query, sort, dir, limit).await
         }
     }
 
@@ -351,17 +351,17 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         match seek.anchor {
-            Anchor::Start => self.get_projects_start(query, &seek.sort_by, seek.dir, limit).await,
-            Anchor::After(name, id) => self.get_projects_after(query, &seek.sort_by, seek.dir, &name, id, limit).await,
-            Anchor::Before(name, id) => self.get_projects_before(query, &seek.sort_by, seek.dir, &name, id, limit).await,
-            Anchor::End => self.get_projects_end(query, &seek.sort_by, seek.dir, limit).await
+            Anchor::Start => self.get_projects_start(query, seek.sort_by, seek.dir, limit).await,
+            Anchor::After(name, id) => self.get_projects_after(query, seek.sort_by, seek.dir, &name, id, limit).await,
+            Anchor::Before(name, id) => self.get_projects_before(query, seek.sort_by, seek.dir, &name, id, limit).await,
+            Anchor::End => self.get_projects_end(query, seek.sort_by, seek.dir, limit).await
         }
     }
 
     async fn get_projects_start(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
@@ -407,7 +407,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn get_projects_end(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
@@ -453,7 +453,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn get_projects_after(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         dir: Direction,
         name: &str,
         id: u32,
@@ -534,7 +534,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn get_projects_before(
         &self,
         query: Option<String>,
-        sort_by: &SortBy,
+        sort_by: SortBy,
         dir: Direction,
         name: &str,
         id: u32,

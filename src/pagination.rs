@@ -106,7 +106,7 @@ impl fmt::Display for Anchor {
 
 // TODO: add tests for mtime, ctime
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Direction {
     Ascending,
     Descending
@@ -139,7 +139,7 @@ impl fmt::Display for Direction {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub enum SortBy {
     ProjectName,
