@@ -60,10 +60,10 @@ pub enum Anchor {
 impl From<&Anchor> for String {
     fn from(value: &Anchor) -> Self {
         match value {
-            Anchor::Start => "s".to_string(),
+            Anchor::Start => "s".into(),
             Anchor::Before(n, i) => format!("b:{}:{}", i, n),
             Anchor::After(n, i) => format!("a:{}:{}", i, n),
-            Anchor::End =>  "e".to_string()
+            Anchor::End =>  "e".into()
         }
     }
 }
@@ -116,8 +116,8 @@ pub enum Direction {
 impl From<&Direction> for String {
     fn from(value: &Direction) -> Self {
         match value {
-            Direction::Ascending => "a".to_string(),
-            Direction::Descending => "d".to_string()
+            Direction::Ascending => "a".into(),
+            Direction::Descending => "d".into()
         }
     }
 }
@@ -163,10 +163,10 @@ pub enum SortBy {
 impl From<&SortBy> for String {
     fn from(value: &SortBy) -> Self {
         match value {
-            SortBy::ProjectName => "p".to_string(),
-            SortBy::GameTitle => "t".to_string(),
-            SortBy::ModificationTime => "m".to_string(),
-            SortBy::CreationTime => "c".to_string()
+            SortBy::ProjectName => "p".into(),
+            SortBy::GameTitle => "t".into(),
+            SortBy::ModificationTime => "m".into(),
+            SortBy::CreationTime => "c".into()
         }
     }
 }
