@@ -344,7 +344,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_start_window(
-            query, sort_by, limit_extra
+            query, sort_by, dir, limit_extra
         ).await?;
 
         let (prev, next) = match projects.len() {
@@ -388,7 +388,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_end_window(
-            query, sort_by, limit_extra
+            query, sort_by, dir, limit_extra
         ).await?;
 
         let (prev, next) = if projects.len() == limit_extra as usize {
@@ -434,7 +434,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_after_window(
-            query, sort_by, name, id, limit_extra
+            query, sort_by, dir, name, id, limit_extra
         ).await?;
 
         let (prev, next) = if projects.len() == limit_extra as usize {
@@ -512,7 +512,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         let mut projects = self.db.get_projects_before_window(
-            query, sort_by, name, id, limit_extra
+            query, sort_by, dir, name, id, limit_extra
         ).await?;
 
         let (prev, next) = if projects.len() == limit_extra as usize {
