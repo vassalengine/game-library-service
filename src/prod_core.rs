@@ -371,34 +371,38 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             query, sort_by, limit_extra
         ).await?;
 
-        Ok(
-            match projects.len() {
-                l if l == limit_extra as usize => {
-                    projects.pop();
-                    let aid = projects[projects.len() - 1].project_id as u32;
-                    let aname = projects[projects.len() - 1].name.clone();
-                    (
-                        None,
-                        Some(
-                            SeekLink::new(
-                                Seek {
-                                    anchor: Anchor::After(aname, aid),
-                                    sort_by: SortBy::ProjectName,
-                                    dir
-                                }
-                            )
-                        ),
-                        projects.into_iter().map(ProjectSummary::from).collect()
+        let (prev, next) = match projects.len() {
+            l if l == limit_extra as usize => {
+                projects.pop();
+                let aid = projects[projects.len() - 1].project_id as u32;
+                let aname = projects[projects.len() - 1].name.clone();
+                (
+                    None,
+                    Some(
+                        SeekLink::new(
+                            Seek {
+                                anchor: Anchor::After(aname, aid),
+                                sort_by: SortBy::ProjectName,
+                                dir
+                            }
+                        )
                     )
-                }
-                _ => {
-                    (
-                        None,
-                        None,
-                        projects.into_iter().map(ProjectSummary::from).collect()
-                    )
-                }
+                )
             }
+            _ => {
+                (
+                    None,
+                    None,
+                )
+            }
+        };
+
+        Ok(
+            (
+                prev,
+                next,
+                projects.into_iter().map(ProjectSummary::from).collect()
+            )
         )
     }
 
@@ -417,34 +421,38 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             query, sort_by, limit_extra
         ).await?;
 
+        let (prev, next) = if projects.len() == limit_extra as usize {
+            projects.pop();
+            projects.reverse();
+            let bid = projects[0].project_id as u32;
+            let bname = projects[0].name.clone();
+            (
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(bname, bid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                ),
+                None
+            )
+        }
+        else {
+            projects.reverse();
+            (
+                None,
+                None
+            )
+        };
+
         Ok(
-            if projects.len() == limit_extra as usize {
-                projects.pop();
-                projects.reverse();
-                let bid = projects[0].project_id as u32;
-                let bname = projects[0].name.clone();
-                (
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Before(bname, bid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    None,
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
-            else {
-                projects.reverse();
-                (
-                    None,
-                    None,
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
+            (
+                prev,
+                next,
+                projects.into_iter().map(ProjectSummary::from).collect()
+            )
         )
     }
 
@@ -465,67 +473,70 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             query, sort_by, name, id, limit_extra
         ).await?;
 
+        let (prev, next) = if projects.len() == limit_extra as usize {
+            projects.pop();
+            let bid = projects[0].project_id as u32;
+            let bname = projects[0].name.clone();
+            let aid = projects[projects.len() - 1].project_id as u32;
+            let aname = projects[projects.len() - 1].name.clone();
+            (
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(bname, bid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                ),
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::After(aname, aid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                )
+            )
+        }
+        else if projects.is_empty() {
+            (
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::End,
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                ),
+                None
+            )
+        }
+        else {
+            let bid = projects[0].project_id as u32;
+            let bname = projects[0].name.clone();
+            (
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(bname, bid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                ),
+                None
+            )
+        };
+
         Ok(
-            if projects.len() == limit_extra as usize {
-                projects.pop();
-                let bid = projects[0].project_id as u32;
-                let bname = projects[0].name.clone();
-                let aid = projects[projects.len() - 1].project_id as u32;
-                let aname = projects[projects.len() - 1].name.clone();
-                (
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Before(bname, bid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::After(aname, aid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
-            else if projects.is_empty() {
-                (
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::End,
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    None,
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
-            else {
-                let bid = projects[0].project_id as u32;
-                let bname = projects[0].name.clone();
-                (
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Before(bname, bid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    None,
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
+            (
+                prev,
+                next,
+                projects.into_iter().map(ProjectSummary::from).collect()
+            )
         )
     }
 
@@ -546,69 +557,72 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             query, sort_by, name, id, limit_extra
         ).await?;
 
+        let (prev, next) = if projects.len() == limit_extra as usize {
+            projects.pop();
+            projects.reverse();
+            let bid = projects[0].project_id as u32;
+            let bname = projects[0].name.clone();
+            let aid = projects[projects.len() - 1].project_id as u32;
+            let aname = projects[projects.len() - 1].name.clone();
+            (
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Before(bname, bid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                ),
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::After(aname, aid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                )
+            )
+        }
+        else if projects.is_empty() {
+            (
+                None,
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::Start,
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                )
+            )
+        }
+        else {
+            projects.reverse();
+            let aid = projects[projects.len() - 1].project_id as u32;
+            let aname = projects[projects.len() - 1].name.clone();
+            (
+                None,
+                Some(
+                    SeekLink::new(
+                        Seek {
+                            anchor: Anchor::After(aname, aid),
+                            sort_by: SortBy::ProjectName,
+                            dir
+                        }
+                    )
+                )
+            )
+        };
+
         Ok(
-            if projects.len() == limit_extra as usize {
-                projects.pop();
-                projects.reverse();
-                let bid = projects[0].project_id as u32;
-                let bname = projects[0].name.clone();
-                let aid = projects[projects.len() - 1].project_id as u32;
-                let aname = projects[projects.len() - 1].name.clone();
-                (
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Before(bname, bid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::After(aname, aid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
-            else if projects.is_empty() {
-                (
-                    None,
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Start,
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
-            else {
-                projects.reverse();
-                let aid = projects[projects.len() - 1].project_id as u32;
-                let aname = projects[projects.len() - 1].name.clone();
-                (
-                    None,
-                    Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::After(aname, aid),
-                                sort_by: SortBy::ProjectName,
-                                dir
-                            }
-                        )
-                    ),
-                    projects.into_iter().map(ProjectSummary::from).collect()
-                )
-            }
+            (
+                prev,
+                next,
+                projects.into_iter().map(ProjectSummary::from).collect()
+            )
         )
     }
 }
