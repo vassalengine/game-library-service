@@ -134,6 +134,17 @@ impl TryFrom<&str> for Direction {
     }
 }
 
+impl TryFrom<char> for Direction {
+    type Error = AppError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'a' => Ok(Direction::Ascending),
+            'd' => Ok(Direction::Descending),
+            _ => Err(AppError::MalformedQuery)
+        }
+    }
+}
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", String::from(self))
@@ -169,6 +180,20 @@ impl TryFrom<&str> for SortBy {
             "t" => Ok(SortBy::GameTitle),
             "m" => Ok(SortBy::ModificationTime),
             "c" => Ok(SortBy::CreationTime),
+            _ => Err(AppError::MalformedQuery)
+        }
+    }
+}
+
+impl TryFrom<char> for SortBy {
+    type Error = AppError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'p' => Ok(SortBy::ProjectName),
+            't' => Ok(SortBy::GameTitle),
+            'm' => Ok(SortBy::ModificationTime),
+            'c' => Ok(SortBy::CreationTime),
             _ => Err(AppError::MalformedQuery)
         }
     }
@@ -219,17 +244,17 @@ impl TryFrom<&str> for Seek {
             .decode(s)
             .map_err(|_| AppError::MalformedQuery)?;
 
-        let d = str::from_utf8(&buf)
-            .map_err(|_| AppError::MalformedQuery)?;
+        let mut i = str::from_utf8(&buf)
+            .map_err(|_| AppError::MalformedQuery)?
+            .chars();
 
-        let mut i = d.chars();
-        let c = i.next().ok_or(AppError::MalformedQuery)?.to_string();
-        let sort_by = SortBy::try_from(c.as_str())?;
-        let d = i.next().ok_or(AppError::MalformedQuery)?.to_string();
-        let dir = Direction::try_from(d.as_str())?;
-        let anchor = Anchor::try_from(i.as_str())?;
-
-        Ok(Seek { anchor, sort_by, dir })
+        Ok(
+            Seek {
+                sort_by: i.next().ok_or(AppError::MalformedQuery)?.try_into()?,
+                dir: i.next().ok_or(AppError::MalformedQuery)?.try_into()?,
+                anchor: i.as_str().try_into()?,
+            }
+        )
     }
 }
 
