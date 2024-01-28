@@ -5,7 +5,7 @@ use std::future::Future;
 
 use crate::{
     core::Core,
-    db::{DatabaseClient, PackageRow, ProjectRow, ReleaseRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Limit, Direction, SortBy, Pagination, Seek, SeekLink},
@@ -397,13 +397,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             }
         };
 
-        Ok(
-            (
-                prev,
-                next,
-                projects.into_iter().map(ProjectSummary::from).collect()
-            )
-        )
+        Ok((prev, next, summaries(projects, dir)))
     }
 
     async fn get_projects_end(
@@ -447,13 +441,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             )
         };
 
-        Ok(
-            (
-                prev,
-                next,
-                projects.into_iter().map(ProjectSummary::from).collect()
-            )
-        )
+        Ok((prev, next, summaries(projects, dir)))
     }
 
     async fn get_projects_after(
@@ -531,13 +519,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             )
         };
 
-        Ok(
-            (
-                prev,
-                next,
-                projects.into_iter().map(ProjectSummary::from).collect()
-            )
-        )
+        Ok((prev, next, summaries(projects, dir)))
     }
 
     async fn get_projects_before(
@@ -617,13 +599,19 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             )
         };
 
-        Ok(
-            (
-                prev,
-                next,
-                projects.into_iter().map(ProjectSummary::from).collect()
-            )
-        )
+        Ok((prev, next, summaries(projects, dir)))
+    }
+}
+
+fn summaries(
+    projects: Vec<ProjectSummaryRow>,
+    dir: Direction
+) -> Vec<ProjectSummary> {
+    if dir == Direction::Descending {
+        projects.into_iter().rev().map(ProjectSummary::from).collect()
+    }
+    else {
+        projects.into_iter().map(ProjectSummary::from).collect()
     }
 }
 
