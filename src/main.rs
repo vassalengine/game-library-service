@@ -345,16 +345,18 @@ mod test {
                         prev_page: Some(
                             SeekLink::new(
                                 Seek {
-                                    anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                    sort_by: SortBy::ProjectName
+                                    anchor: Anchor::Before("project_a".into(), 0),
+                                    sort_by: SortBy::ProjectName,
+                                    dir: Direction::Ascending
                                 }
                             )
                         ),
                         next_page: Some(
                             SeekLink::new(
                                 Seek {
-                                    anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                    sort_by: SortBy::ProjectName
+                                    anchor: Anchor::After("project_b".into(), 0),
+                                    sort_by: SortBy::ProjectName,
+                                    dir: Direction::Ascending
                                 }
                             )
                         ),
@@ -617,16 +619,19 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending  
+
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending  
                             }
                         )
                     ),
@@ -659,16 +664,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending  
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending  
                             }
                         )
                     ),
@@ -754,8 +761,9 @@ mod test {
     async fn get_projects_seek_start_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::Start(Direction::Ascending),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::Start,
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -780,16 +788,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
@@ -803,8 +813,9 @@ mod test {
     async fn get_projects_seek_end_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::End(Direction::Ascending),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::End,
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -829,16 +840,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
@@ -852,8 +865,9 @@ mod test {
     async fn get_projects_seek_before_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::Before(Direction::Ascending, "xyz".into(), 0),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::Before("xyz".into(), 0),
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -878,16 +892,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
@@ -901,8 +917,9 @@ mod test {
     async fn get_projects_seek_after_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::After(Direction::Ascending, "xyz".into(), 0),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::After("xyz".into(), 0),
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -927,16 +944,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
@@ -988,8 +1007,9 @@ mod test {
     async fn get_projects_seek_and_limit_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::Start(Direction::Ascending),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::Start,
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -1014,16 +1034,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
@@ -1037,8 +1059,9 @@ mod test {
     async fn get_projects_limit_and_seek_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::Start(Direction::Ascending),
-                sort_by: SortBy::ProjectName
+                anchor: Anchor::Start,
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
             }
         );
 
@@ -1063,16 +1086,18 @@ mod test {
                     prev_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::Before(Direction::Ascending, "project_a".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
                     next_page: Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(Direction::Ascending, "project_b".into(), 0),
-                                sort_by: SortBy::ProjectName
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
                             }
                         )
                     ),
