@@ -319,6 +319,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         limit: Limit
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>), AppError>
     {
+        let query = query.as_deref();
+
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
 

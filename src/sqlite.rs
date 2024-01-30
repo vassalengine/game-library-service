@@ -113,7 +113,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_start_window(
         &self,
-        query: Option<String>,
+        query: Option<&str>,
         sort_by: SortBy,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -123,7 +123,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_end_window(
         &self,
-        query: Option<String>,
+        query: Option<&str>,
         sort_by: SortBy,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -133,7 +133,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_after_window(
         &self,
-        query: Option<String>,
+        query: Option<&str>,
         sort_by: SortBy,
         name: &str,
         id: u32,
@@ -145,7 +145,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_before_window(
         &self,
-        query: Option<String>,
+        query: Option<&str>,
         sort_by: SortBy,
         name: &str,
         id: u32,
@@ -596,7 +596,7 @@ ORDER BY "
 
 async fn get_projects_window_start_end_query_impl<'e, E>(
     ex: E,
-    query: String,
+    query: &str,
     sort_by: SortBy,
     dir: Direction,
     limit: u32
@@ -693,7 +693,7 @@ WHERE "
 
 async fn get_projects_start_window<'e, E>(
     ex: E,
-    query: Option<String>,
+    query: Option<&str>,
     sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -719,7 +719,7 @@ where
 
 async fn get_projects_end_window<'e, E>(
     ex: E,
-    query: Option<String>,
+    query: Option<&str>,
     sort_by: SortBy,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -737,7 +737,7 @@ where
 
 async fn get_projects_after_window<'e, E>(
     ex: E,
-    query: Option<String>,
+    query: Option<&str>,
     sort_by: SortBy,
     name: &str,
     id: u32,
@@ -758,7 +758,7 @@ where
 
 async fn get_projects_before_window<'e, E>(
     ex: E,
-    query: Option<String>,
+    query: Option<&str>,
     sort_by: SortBy,
     name: &str,
     id: u32,

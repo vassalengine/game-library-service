@@ -174,7 +174,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_start_window(
         &self,
-        _query: Option<String>,
+        _query: Option<&str>,
         _sort_by: SortBy,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -184,7 +184,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_end_window(
         &self,
-        _query: Option<String>,
+        _query: Option<&str>,
         _sort_by: SortBy,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -194,7 +194,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_after_window(
         &self,
-        _query: Option<String>,
+        _query: Option<&str>,
         _sort_by: SortBy,
         _name: &str,
         _id: u32,
@@ -206,7 +206,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_before_window(
         &self,
-        _query: Option<String>,
+        _query: Option<&str>,
         _sort_by: SortBy,
         _name: &str,
         _id: u32,
