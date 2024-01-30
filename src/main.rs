@@ -813,7 +813,7 @@ mod test {
     async fn get_projects_seek_end_ok() {
         let seek = String::from(
             Seek {
-                anchor: Anchor::End,
+                anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending
             }

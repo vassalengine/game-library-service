@@ -327,20 +327,19 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             SortOrSeek::Sort(sort_by, dir) => Seek {
                 sort_by,
                 dir,
-                anchor: match dir {
-                    Direction::Ascending => Anchor::Start,
-                    Direction::Descending => Anchor::End
-                }
+                anchor: Anchor::Start
             },
             SortOrSeek::Seek(seek) => seek
         };
 
         let sort_by = seek.sort_by;
 
+        let dir = seek.dir;
+
         // reverse descending before and after
         let (anchor, orig_before) = match seek.anchor {
             Anchor::After(field, id) => {
-                if seek.dir == Direction::Descending {
+                if dir == Direction::Descending {
                     (Anchor::Before(field, id), false)
                 }
                 else {
@@ -348,7 +347,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 }
             }
             Anchor::Before(field, id) => {
-                if seek.dir == Direction::Descending {
+                if dir == Direction::Descending {
                     (Anchor::After(field, id), true)
                 }
                 else {
@@ -363,8 +362,10 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
         // get the window, seeking forward
         let mut projects = match anchor {
-            Anchor::Start => self.db.get_projects_start_window(query, sort_by, limit_extra).await,
-            Anchor::End => self.db.get_projects_end_window(query, sort_by, limit_extra).await,
+            Anchor::Start => match dir {
+                Direction::Ascending => self.db.get_projects_start_window(query, sort_by, limit_extra).await,
+                Direction::Descending => self.db.get_projects_end_window(query, sort_by, limit_extra).await
+            },
             Anchor::After(ref field, id) => self.db.get_projects_after_window(query, sort_by, &field, id, limit_extra).await,
             Anchor::Before(ref field, id) => self.db.get_projects_before_window(query, sort_by, &field, id, limit_extra).await
         }?;
@@ -406,7 +407,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }
         else {
             match anchor {
-                Anchor::Start | Anchor::End => None,
+                Anchor::Start => None,
                 _ => {
                     // the previous page is before the first item
                     let first = if orig_before {
@@ -576,7 +577,7 @@ mod test {
                 Seek {
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    anchor: Anchor::End
+                    anchor: Anchor::Start
                 }
             ),
             Limit::new(3).unwrap()

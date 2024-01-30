@@ -53,8 +53,7 @@ impl TryFrom<&str> for Limit {
 pub enum Anchor {
     Start,
     Before(String, u32),
-    After(String, u32),
-    End
+    After(String, u32)
 }
 
 impl From<&Anchor> for String {
@@ -62,8 +61,7 @@ impl From<&Anchor> for String {
         match value {
             Anchor::Start => "s".into(),
             Anchor::Before(f, i) => format!("b:{}:{}", i, f),
-            Anchor::After(f, i) => format!("a:{}:{}", i, f),
-            Anchor::End =>  "e".into()
+            Anchor::After(f, i) => format!("a:{}:{}", i, f)
         }
     }
 }
@@ -78,7 +76,6 @@ impl TryFrom<&str> for Anchor {
 
         match a {
             "s" => Ok(Anchor::Start),
-            "e" => Ok(Anchor::End),
             s => {
                 let id = i.next()
                     .ok_or(AppError::MalformedQuery)?
@@ -263,13 +260,7 @@ impl TryFrom<&str> for Seek {
             .map_err(|_| AppError::MalformedQuery)?
             .try_into()?;
 
-        if (anchor == Anchor::Start && dir == Direction::Descending) ||
-           (anchor == Anchor::End && dir == Direction::Ascending) {
-            Err(AppError::MalformedQuery)
-        }
-        else {
-            Ok(Seek { sort_by, dir, anchor })
-        }
+        Ok(Seek { sort_by, dir, anchor })
     }
 }
 
@@ -367,12 +358,12 @@ mod test {
         assert_eq!(
             &String::from(
                 Seek {
-                    anchor: Anchor::End,
+                    anchor: Anchor::Start,
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending
                 }
             ),
-            "cGRl"
+            "cGRz"
         );
     }
 
@@ -419,9 +410,9 @@ mod test {
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            Seek::try_from("cGRl").unwrap(),
+            Seek::try_from("cGRz").unwrap(),
             Seek {
-                anchor: Anchor::End,
+                anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending
             }
