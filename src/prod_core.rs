@@ -358,7 +358,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             let last = match anchor {
                 Anchor::Before(_, _) => projects.first(),
                 _ => projects.last()
-            }.expect("must exist");
+            }.expect("element must exist");
 
             Some(
                 Seek {
@@ -388,7 +388,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     let first = match anchor {
                         Anchor::Before(_, _) => projects.last(),
                         _ => projects.first()
-                    }.expect("must exist");
+                    }.expect("element must exist");
 
                     Some(
                         Seek {
