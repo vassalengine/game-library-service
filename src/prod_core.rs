@@ -322,15 +322,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
         // unpack the from
-        let Seek { sort_by, dir, anchor } = match from {
-            // convert sorts into seeks
-            SortOrSeek::Sort(sort_by, dir) => Seek {
-                sort_by,
-                dir,
-                anchor: Anchor::Start
-            },
-            SortOrSeek::Seek(seek) => seek
-        };
+        let Seek { sort_by, dir, anchor } = Seek::from(from);
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
