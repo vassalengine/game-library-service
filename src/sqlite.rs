@@ -605,8 +605,7 @@ where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        sqlx::query_as!(
-            ProjectSummaryRow,
+        QueryBuilder::new(
             "
 SELECT
     projects.project_id,
@@ -623,13 +622,16 @@ SELECT
 FROM projects
 JOIN projects_fts
 ON projects.project_id = projects_fts.rowid
-WHERE projects_fts MATCH ?
-ORDER BY projects_fts.rank
-LIMIT ?
-            ",
-            query,
-            limit
+WHERE projects_fts MATCH "
         )
+        .push_bind(query)
+        .push(" ORDER BY projects_fts.rank ")
+        .push(dir.dir())
+        .push(", projects.project_id ")
+        .push(dir.dir())
+        .push(" LIMIT ")
+        .push_bind(limit)
+        .build_query_as::<ProjectSummaryRow>()
         .fetch_all(ex)
         .await?
     )
