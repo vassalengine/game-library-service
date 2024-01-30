@@ -509,9 +509,9 @@ mod test {
         }
     }
 
-    fn fake_project_summary(name: String) -> ProjectSummary {
+    fn fake_project_summary(name: &str) -> ProjectSummary {
         ProjectSummary {
-            name,
+            name: name.into(),
             description: "".into(),
             revision: 1,
             created_at: "".into(),
@@ -545,9 +545,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("a".into()),
-                fake_project_summary("b".into()),
-                fake_project_summary("c".into())
+                fake_project_summary("a"),
+                fake_project_summary("b"),
+                fake_project_summary("c")
             ]
         );
 
@@ -586,9 +586,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("j".into()),
-                fake_project_summary("i".into()),
-                fake_project_summary("h".into())
+                fake_project_summary("j"),
+                fake_project_summary("i"),
+                fake_project_summary("h")
             ]
         );
 
@@ -627,9 +627,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("b".into()),
-                fake_project_summary("c".into()),
-                fake_project_summary("d".into())
+                fake_project_summary("b"),
+                fake_project_summary("c"),
+                fake_project_summary("d")
             ]
         );
 
@@ -679,9 +679,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("b".into()),
-                fake_project_summary("c".into()),
-                fake_project_summary("d".into())
+                fake_project_summary("b"),
+                fake_project_summary("c"),
+                fake_project_summary("d")
             ]
         );
 
@@ -731,9 +731,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("g".into()),
-                fake_project_summary("f".into()),
-                fake_project_summary("e".into())
+                fake_project_summary("g"),
+                fake_project_summary("f"),
+                fake_project_summary("e")
             ]
         );
 
@@ -783,9 +783,9 @@ mod test {
         assert_eq!(
             summaries,
             [
-                fake_project_summary("h".into()),
-                fake_project_summary("g".into()),
-                fake_project_summary("f".into())
+                fake_project_summary("h"),
+                fake_project_summary("g"),
+                fake_project_summary("f")
             ]
         );
 
