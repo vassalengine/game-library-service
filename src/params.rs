@@ -14,31 +14,6 @@ pub struct MaybeProjectsParams {
     pub limit: Option<Limit>
 }
 
-#[derive(Debug, Deserialize)]
-pub enum SortOrSeek {
-    Sort(SortBy, Direction),
-    Seek(Seek)
-}
-
-impl Default for SortOrSeek {
-    fn default() -> Self {
-        SortOrSeek::Sort(SortBy::ProjectName, Direction::Ascending)
-    }
-}
-
-impl From<SortOrSeek> for Seek {
-    fn from(value: SortOrSeek) -> Self {
-        match value {
-            SortOrSeek::Sort(sort_by, dir) => Seek {
-                sort_by,
-                dir,
-                anchor: Anchor::Start
-            },
-            SortOrSeek::Seek(seek) => seek
-        }
-    }
-}
-
 #[derive(Debug, Default, Deserialize)]
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
