@@ -61,8 +61,8 @@ impl From<&Anchor> for String {
     fn from(value: &Anchor) -> Self {
         match value {
             Anchor::Start => "s".into(),
-            Anchor::Before(n, i) => format!("b:{}:{}", i, n),
-            Anchor::After(n, i) => format!("a:{}:{}", i, n),
+            Anchor::Before(f, i) => format!("b:{}:{}", i, f),
+            Anchor::After(f, i) => format!("a:{}:{}", i, f),
             Anchor::End =>  "e".into()
         }
     }
@@ -84,13 +84,13 @@ impl TryFrom<&str> for Anchor {
                     .ok_or(AppError::MalformedQuery)?
                     .parse::<u32>()
                     .or(Err(AppError::MalformedQuery))?;
-                let name = i.next()
+                let field = i.next()
                     .ok_or(AppError::MalformedQuery)?
                     .to_string();
 
                 match s {
-                    "b" => Ok(Anchor::Before(name, id)),
-                    "a" => Ok(Anchor::After(name, id)),
+                    "b" => Ok(Anchor::Before(field, id)),
+                    "a" => Ok(Anchor::After(field, id)),
                     _ => Err(AppError::MalformedQuery)
                 }
             }
@@ -251,15 +251,25 @@ impl TryFrom<&str> for Seek {
 
         let mut i = buf.iter();
 
-        Ok(
-            Seek {
-                sort_by: i.next().ok_or(AppError::MalformedQuery)?.try_into()?,
-                dir: i.next().ok_or(AppError::MalformedQuery)?.try_into()?,
-                anchor: str::from_utf8(i.as_slice())
-                    .map_err(|_| AppError::MalformedQuery)?
-                    .try_into()?
-            }
-        )
+        let sort_by: SortBy = i.next()
+            .ok_or(AppError::MalformedQuery)?
+            .try_into()?;
+
+        let dir: Direction = i.next()
+            .ok_or(AppError::MalformedQuery)?
+            .try_into()?;
+
+        let anchor: Anchor = str::from_utf8(i.as_slice())
+            .map_err(|_| AppError::MalformedQuery)?
+            .try_into()?;
+
+        if (anchor == Anchor::Start && dir == Direction::Descending) ||
+           (anchor == Anchor::End && dir == Direction::Ascending) {
+            Err(AppError::MalformedQuery)
+        }
+        else {
+            Ok(Seek { sort_by, dir, anchor })
+        }
     }
 }
 
@@ -359,10 +369,10 @@ mod test {
                 Seek {
                     anchor: Anchor::End,
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Descending
                 }
             ),
-            "cGFl"
+            "cGRl"
         );
     }
 
@@ -409,11 +419,11 @@ mod test {
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            Seek::try_from("cGFl").unwrap(),
+            Seek::try_from("cGRl").unwrap(),
             Seek {
                 anchor: Anchor::End,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Descending
             }
         );
     }

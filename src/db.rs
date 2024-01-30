@@ -5,7 +5,7 @@ use sqlx::FromRow;
 use crate::{
     errors::AppError,
     model::{GameData, Owner, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
-    pagination::{Direction, SortBy},
+    pagination::SortBy,
     version::Version
 };
 
@@ -176,7 +176,6 @@ pub trait DatabaseClient {
         &self,
         _query: Option<String>,
         _sort_by: SortBy,
-        _dir: Direction,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
@@ -187,7 +186,6 @@ pub trait DatabaseClient {
         &self,
         _query: Option<String>,
         _sort_by: SortBy,
-        _dir: Direction,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
@@ -198,7 +196,6 @@ pub trait DatabaseClient {
         &self,
         _query: Option<String>,
         _sort_by: SortBy,
-        _dir: Direction,
         _name: &str,
         _id: u32,
         _limit: u32
@@ -211,7 +208,6 @@ pub trait DatabaseClient {
         &self,
         _query: Option<String>,
         _sort_by: SortBy,
-        _dir: Direction,
         _name: &str,
         _id: u32,
         _limit: u32

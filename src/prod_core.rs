@@ -321,273 +321,136 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
-        match from {
-            SortOrSeek::Sort(sort_by, dir) => self.get_projects_start(query, sort_by, dir, limit).await,
-            SortOrSeek::Seek(seek) => match seek.anchor {
-                Anchor::Start => self.get_projects_start(query, seek.sort_by, seek.dir, limit).await,
-                Anchor::After(name, id) => self.get_projects_after(query, seek.sort_by, seek.dir, &name, id, limit).await,
-                Anchor::Before(name, id) => self.get_projects_before(query, seek.sort_by, seek.dir, &name, id, limit).await,
-                Anchor::End => self.get_projects_end(query, seek.sort_by, seek.dir, limit).await
-            }
-        }
-    }
+        // unwrap the from into a seek
+        let seek = match from {
+            // convert sorts into seeks
+            SortOrSeek::Sort(sort_by, dir) => Seek {
+                sort_by,
+                dir,
+                anchor: match dir {
+                    Direction::Ascending => Anchor::Start,
+                    Direction::Descending => Anchor::End
+                }
+            },
+            SortOrSeek::Seek(seek) => seek
+        };
 
-    async fn get_projects_start(
-        &self,
-        query: Option<String>,
-        sort_by: SortBy,
-        dir: Direction,
-        limit: Limit
-    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-    {
+        let sort_by = seek.sort_by;
+
+        // reverse descending before and after
+        let (anchor, orig_before) = match seek.anchor {
+            Anchor::After(field, id) => {
+                if seek.dir == Direction::Descending {
+                    (Anchor::Before(field, id), false)
+                }
+                else {
+                    (Anchor::After(field, id), false)
+                }
+            }
+            Anchor::Before(field, id) => {
+                if seek.dir == Direction::Descending {
+                    (Anchor::After(field, id), true)
+                }
+                else {
+                    (Anchor::Before(field, id), true)
+                }
+            },
+            _ => (seek.anchor, false)
+        };
+
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
 
-        let mut projects = self.db.get_projects_start_window(
-            query, sort_by, dir, limit_extra
-        ).await?;
+        // get the window, seeking forward
+        let mut projects = match anchor {
+            Anchor::Start => self.db.get_projects_start_window(query, sort_by, limit_extra).await,
+            Anchor::End => self.db.get_projects_end_window(query, sort_by, limit_extra).await,
+            Anchor::After(ref field, id) => self.db.get_projects_after_window(query, sort_by, &field, id, limit_extra).await,
+            Anchor::Before(ref field, id) => self.db.get_projects_before_window(query, sort_by, &field, id, limit_extra).await
+        }?;
 
-        let (prev, next) = match projects.len() {
-            l if l == limit_extra as usize => {
-                projects.pop();
-                let aid = projects[projects.len() - 1].project_id as u32;
-                let aname = projects[projects.len() - 1].name.clone();
-                (
-                    None,
+        let next = if projects.len() == limit_extra as usize {
+            // there are more pages in the forward direction
+
+            // remove the "extra" item which proves we are not at the end
+            projects.pop();
+
+            // the next page is after the last item
+            let last = if orig_before {
+                projects.first()
+            }
+            else {
+                projects.last()
+            }.expect("must exist");
+
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After(
+                            last.sort_field(seek.sort_by).into(),
+                            last.project_id as u32
+                        ),
+                        sort_by: seek.sort_by,
+                        dir: seek.dir
+                    }
+                )
+            )
+        }
+        else {
+            // there are no pages in the forward direction
+            None
+        };
+
+        let prev = if projects.is_empty() {
+            None
+        }
+        else {
+            match anchor {
+                Anchor::Start | Anchor::End => None,
+                _ => {
+                    // the previous page is before the first item
+                    let first = if orig_before {
+                        projects.last()
+                    }
+                    else {
+                        projects.first()
+                    }.expect("must exist");
+
                     Some(
                         SeekLink::new(
                             Seek {
-                                anchor: Anchor::After(aname, aid),
-                                sort_by,
-                                dir
+                                anchor: Anchor::Before(
+                                    first.sort_field(seek.sort_by).into(),
+                                    first.project_id as u32
+                                ),
+                                sort_by: seek.sort_by,
+                                dir: seek.dir
                             }
                         )
                     )
-                )
-            }
-            _ => {
-                (
-                    None,
-                    None,
-                )
+                }
             }
         };
 
-        Ok((prev, next, summaries(projects, dir)))
-    }
-
-    async fn get_projects_end(
-        &self,
-        query: Option<String>,
-        sort_by: SortBy,
-        dir: Direction,
-        limit: Limit
-    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-    {
-        // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit.get() as u32 + 1;
-
-        let mut projects = self.db.get_projects_end_window(
-            query, sort_by, dir, limit_extra
-        ).await?;
-
-        let (prev, next) = if projects.len() == limit_extra as usize {
-            projects.pop();
-            projects.reverse();
-            let bid = projects[0].project_id as u32;
-            let bname = projects[0].name.clone();
-            (
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(bname, bid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                ),
-                None
-            )
+        let projects = if orig_before {
+            projects.into_iter().rev().map(ProjectSummary::from).collect()
         }
         else {
-            projects.reverse();
-            (
-                None,
-                None
-            )
-        };
+            projects.into_iter().map(ProjectSummary::from).collect()
+        }; 
 
-        Ok((prev, next, summaries(projects, dir)))
-    }
-
-    async fn get_projects_after(
-        &self,
-        query: Option<String>,
-        sort_by: SortBy,
-        dir: Direction,
-        name: &str,
-        id: u32,
-        limit: Limit
-    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-    {
-        // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit.get() as u32 + 1;
-
-        let mut projects = self.db.get_projects_after_window(
-            query, sort_by, dir, name, id, limit_extra
-        ).await?;
-
-        let (prev, next) = if projects.len() == limit_extra as usize {
-            projects.pop();
-            let bid = projects[0].project_id as u32;
-            let bname = projects[0].name.clone();
-            let aid = projects[projects.len() - 1].project_id as u32;
-            let aname = projects[projects.len() - 1].name.clone();
-            (
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(bname, bid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                ),
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::After(aname, aid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                )
-            )
-        }
-        else if projects.is_empty() {
-            (
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::End,
-                            sort_by,
-                            dir
-                        }
-                    )
-                ),
-                None
-            )
-        }
-        else {
-            let bid = projects[0].project_id as u32;
-            let bname = projects[0].name.clone();
-            (
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(bname, bid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                ),
-                None
-            )
-        };
-
-        Ok((prev, next, summaries(projects, dir)))
-    }
-
-    async fn get_projects_before(
-        &self,
-        query: Option<String>,
-        sort_by: SortBy,
-        dir: Direction,
-        name: &str,
-        id: u32,
-        limit: Limit
-    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
-    {
-        // try to get one extra so we can tell if we're at an endpoint
-        let limit_extra = limit.get() as u32 + 1;
-
-        let mut projects = self.db.get_projects_before_window(
-            query, sort_by, dir, name, id, limit_extra
-        ).await?;
-
-        let (prev, next) = if projects.len() == limit_extra as usize {
-            projects.pop();
-            projects.reverse();
-            let bid = projects[0].project_id as u32;
-            let bname = projects[0].name.clone();
-            let aid = projects[projects.len() - 1].project_id as u32;
-            let aname = projects[projects.len() - 1].name.clone();
-            (
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(bname, bid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                ),
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::After(aname, aid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                )
-            )
-        }
-        else if projects.is_empty() {
-            (
-                None,
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Start,
-                            sort_by,
-                            dir
-                        }
-                    )
-                )
-            )
-        }
-        else {
-            projects.reverse();
-            let aid = projects[projects.len() - 1].project_id as u32;
-            let aname = projects[projects.len() - 1].name.clone();
-            (
-                None,
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::After(aname, aid),
-                            sort_by,
-                            dir
-                        }
-                    )
-                )
-            )
-        };
-
-        Ok((prev, next, summaries(projects, dir)))
+        Ok((prev, next, projects)) 
     }
 }
 
-fn summaries(
-    projects: Vec<ProjectSummaryRow>,
-    dir: Direction
-) -> Vec<ProjectSummary> {
-    if dir == Direction::Descending {
-        projects.into_iter().rev().map(ProjectSummary::from).collect()
-    }
-    else {
-        projects.into_iter().map(ProjectSummary::from).collect()
+impl ProjectSummaryRow {
+    fn sort_field(&self, sort_by: SortBy) -> &str {
+        match sort_by {
+            SortBy::ProjectName => &self.name,
+            SortBy::GameTitle => &self.game_title_sort,
+            SortBy::ModificationTime => &self.modified_at,
+            SortBy::CreationTime => &self.created_at
+        }
     }
 }
 
@@ -666,270 +529,289 @@ mod test {
     async fn get_projects_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let projects: Vec<ProjectSummary> = "abcde".chars()
-            .map(|c| fake_project_summary(c.into()))
-            .collect();
-
-        let prev_page = None;
-        let next_page = Some(
-            SeekLink::new(
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
                 Seek {
-                    anchor: Anchor::After("e".into(), 5),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
-                }
-            )
-        );
-
-        let params = ProjectsParams {
-            from: SortOrSeek::Seek(
-                Seek {
-                    anchor: Anchor::Start,
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    anchor: Anchor::Start
                 }
             ),
-            limit: Limit::new(5).unwrap(),
-            ..Default::default()
-        };
+            Limit::new(3).unwrap()
+        ).await.unwrap();
 
         assert_eq!(
-            core.get_projects(params).await.unwrap(),
-            Projects {
-                projects,
-                meta: Pagination {
-                    prev_page,
-                    next_page,
-                    total: 10
-                }
-            }
+            summaries,
+            [
+                fake_project_summary("a".into()),
+                fake_project_summary("b".into()),
+                fake_project_summary("c".into())
+            ]
         );
-    }
 
-    #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_after_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
+        assert_eq!(prev, None);
 
-        let all_projects: Vec<ProjectSummary> = "abcdefghij".chars()
-            .map(|c| fake_project_summary(c.into()))
-            .collect();
-
-        let lim = 5;
-
-        // walk the limit window across the projects
-        for i in 0..all_projects.len() {
-            let projects: Vec<ProjectSummary> = all_projects.iter()
-                .skip(i + 1)
-                .take(lim)
-                .cloned()
-                .collect();
-
-            let prev_page = if i == all_projects.len() - 1 {
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::End,
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    )
-                )
-            }
-            else {
-                projects
-                    .first()
-                    .map(|p| SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(
-                                p.name.clone(),
-                                (i + 2) as u32
-                            ),
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    ))
-            };
-
-            let next_page = if i + lim + 1 >= all_projects.len() {
-                None
-            }
-            else {
-                projects
-                    .last()
-                    .map(|p| SeekLink::new(
-                        Seek {
-                            anchor: Anchor::After(
-                                p.name.clone(),
-                                (i + lim + 1) as u32
-                            ),
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    ))
-            };
-
-            let params = ProjectsParams {
-                from: SortOrSeek::Seek(
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
                     Seek {
-                        anchor: Anchor::After(
-                            all_projects[i].name.clone(),
-                            (i + 1) as u32
-                        ),
+                        anchor: Anchor::After("c".into(), 3),
                         sort_by: SortBy::ProjectName,
                         dir: Direction::Ascending
                     }
-                ),
-                limit: Limit::new(lim as u8).unwrap(),
-                ..Default::default()
-            };
-
-            assert_eq!(
-                core.get_projects(params).await.unwrap(),
-                Projects {
-                    projects,
-                    meta: Pagination {
-                        prev_page,
-                        next_page,
-                        total: 10
-                    }
-                }
-            );
-        }
-    }
-
-    #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_before_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-
-        let all_projects: Vec<ProjectSummary> = "abcdefghij".chars()
-            .map(|c| fake_project_summary(c.into()))
-            .collect();
-
-        let lim = 5;
-
-        // walk the limit window across the projects
-        for i in 0..all_projects.len() {
-            let projects: Vec<ProjectSummary> = all_projects.iter()
-                .skip(i.saturating_sub(lim))
-                .take(i - i.saturating_sub(lim))
-                .cloned()
-                .collect();
-
-            let prev_page = if i < lim + 1 {
-                None
-            }
-            else {
-                projects
-                    .first()
-                    .map(|p| SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Before(
-                                p.name.clone(),
-                                (i.saturating_sub(lim) + 1) as u32
-                            ),
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    ))
-            };
-
-            let next_page = if i == 0 {
-                Some(
-                    SeekLink::new(
-                        Seek {
-                            anchor: Anchor::Start,
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    )
                 )
-            }
-            else {
-                projects
-                    .last()
-                    .map(|p| SeekLink::new(
-                        Seek {
-                            anchor: Anchor::After(
-                                p.name.clone(),
-                                i as u32
-                            ),
-                            sort_by: SortBy::ProjectName,
-                            dir: Direction::Ascending
-                        }
-                    )
-                )
-            };
-
-            let params = ProjectsParams {
-                from: SortOrSeek::Seek(
-                    Seek {
-                        anchor: Anchor::Before(
-                            all_projects[i].name.clone(),
-                            (i + 1) as u32
-                        ),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                ),
-                limit: Limit::new(lim as u8).unwrap(),
-                ..Default::default()
-            };
-
-            assert_eq!(
-                core.get_projects(params).await.unwrap(),
-                Projects {
-                    projects,
-                    meta: Pagination {
-                        prev_page,
-                        next_page,
-                        total: 10
-                    }
-                }
-            );
-        }
+            )
+        );
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let projects: Vec<ProjectSummary> = "fghij".chars()
-            .map(|c| fake_project_summary(c.into()))
-            .collect();
-
-        let prev_page = Some(
-            SeekLink::new(
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
                 Seek {
-                    anchor: Anchor::Before("f".into(), 6),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
-                }
-            )
-        );
-        let next_page = None;
-
-        let params = ProjectsParams {
-            from: SortOrSeek::Seek(
-                Seek {
-                    anchor: Anchor::End,
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Descending,
+                    anchor: Anchor::End
                 }
             ),
-            limit: Limit::new(5).unwrap(),
-            ..Default::default()
-        };
+            Limit::new(3).unwrap()
+        ).await.unwrap();
 
         assert_eq!(
-            core.get_projects(params).await.unwrap(),
-            Projects {
-                projects,
-                 meta: Pagination {
-                    prev_page,
-                    next_page,
-                    total: 10
+            summaries,
+            [
+                fake_project_summary("j".into()),
+                fake_project_summary("i".into()),
+                fake_project_summary("h".into())
+            ]
+        );
+
+        assert_eq!(prev, None);
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("h".into(), 8),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_after_asc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending,
+                    anchor: Anchor::After("a".into(), 1)
                 }
-            }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("b".into()),
+                fake_project_summary("c".into()),
+                fake_project_summary("d".into())
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("b".into(), 2),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("d".into(), 4),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_before_asc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending,
+                    anchor: Anchor::Before("e".into(), 5)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("b".into()),
+                fake_project_summary("c".into()),
+                fake_project_summary("d".into())
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("b".into(), 2),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("d".into(), 4),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_after_desc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending,
+                    anchor: Anchor::After("h".into(), 8)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("g".into()),
+                fake_project_summary("f".into()),
+                fake_project_summary("e".into())
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("g".into(), 7),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("e".into(), 5),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_before_desc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending,
+                    anchor: Anchor::Before("e".into(), 5)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("h".into()),
+                fake_project_summary("g".into()),
+                fake_project_summary("f".into())
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("h".into(), 8),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("f".into(), 6),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
         );
     }
 

@@ -815,7 +815,7 @@ mod test {
             Seek {
                 anchor: Anchor::End,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Descending
             }
         );
 
