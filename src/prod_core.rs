@@ -351,18 +351,18 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             },
             Anchor::After(ref field, id) => match dir {
                 Direction::Ascending => self.db.get_projects_after_window(
-                    query, sort_by, &field, id, limit_extra
+                    query, sort_by, field, id, limit_extra
                 ).await,
                 Direction::Descending => self.db.get_projects_before_window(
-                    query, sort_by, &field, id, limit_extra
+                    query, sort_by, field, id, limit_extra
                 ).await
             }
             Anchor::Before(ref field, id) => match dir {
                 Direction::Ascending => self.db.get_projects_before_window(
-                    query, sort_by, &field, id, limit_extra
+                    query, sort_by, field, id, limit_extra
                 ).await,
                 Direction::Descending => self.db.get_projects_after_window(
-                    query, sort_by, &field, id, limit_extra
+                    query, sort_by, field, id, limit_extra
                 ).await
             }
         }?;
