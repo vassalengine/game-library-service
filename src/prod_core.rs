@@ -333,29 +333,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         };
 
         let sort_by = seek.sort_by;
-
         let dir = seek.dir;
-
-        // reverse descending before and after
-        let (anchor, orig_before) = match seek.anchor {
-            Anchor::After(field, id) => {
-                if dir == Direction::Descending {
-                    (Anchor::Before(field, id), false)
-                }
-                else {
-                    (Anchor::After(field, id), false)
-                }
-            }
-            Anchor::Before(field, id) => {
-                if dir == Direction::Descending {
-                    (Anchor::After(field, id), true)
-                }
-                else {
-                    (Anchor::Before(field, id), true)
-                }
-            },
-            _ => (seek.anchor, false)
-        };
+        let anchor = seek.anchor;
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
@@ -363,11 +342,29 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         // get the window, seeking forward
         let mut projects = match anchor {
             Anchor::Start => match dir {
-                Direction::Ascending => self.db.get_projects_start_window(query, sort_by, limit_extra).await,
-                Direction::Descending => self.db.get_projects_end_window(query, sort_by, limit_extra).await
+                Direction::Ascending => self.db.get_projects_start_window(
+                    query, sort_by, limit_extra
+                ).await,
+                Direction::Descending => self.db.get_projects_end_window(
+                    query, sort_by, limit_extra
+                ).await
             },
-            Anchor::After(ref field, id) => self.db.get_projects_after_window(query, sort_by, &field, id, limit_extra).await,
-            Anchor::Before(ref field, id) => self.db.get_projects_before_window(query, sort_by, &field, id, limit_extra).await
+            Anchor::After(ref field, id) => match dir {
+                Direction::Ascending => self.db.get_projects_after_window(
+                    query, sort_by, &field, id, limit_extra
+                ).await,
+                Direction::Descending => self.db.get_projects_before_window(
+                    query, sort_by, &field, id, limit_extra
+                ).await
+            }
+            Anchor::Before(ref field, id) => match dir {
+                Direction::Ascending => self.db.get_projects_before_window(
+                    query, sort_by, &field, id, limit_extra
+                ).await,
+                Direction::Descending => self.db.get_projects_after_window(
+                    query, sort_by, &field, id, limit_extra
+                ).await
+            }
         }?;
 
         // make the next link
@@ -378,22 +375,20 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             projects.pop();
 
             // the next page is after the last item
-            let last = if orig_before {
-                projects.first()
-            }
-            else {
-                projects.last()
+            let last = match anchor {
+                Anchor::Before(_, _) => projects.first(),
+                _ => projects.last()
             }.expect("must exist");
 
             Some(
                 SeekLink::new(
                     Seek {
                         anchor: Anchor::After(
-                            last.sort_field(seek.sort_by).into(),
+                            last.sort_field(sort_by).into(),
                             last.project_id as u32
                         ),
-                        sort_by: seek.sort_by,
-                        dir: seek.dir
+                        sort_by,
+                        dir
                     }
                 )
             )
@@ -412,22 +407,20 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 Anchor::Start => None,
                 _ => {
                     // the previous page is before the first item
-                    let first = if orig_before {
-                        projects.last()
-                    }
-                    else {
-                        projects.first()
+                    let first = match anchor {
+                        Anchor::Before(_, _) => projects.last(),
+                        _ => projects.first()
                     }.expect("must exist");
 
                     Some(
                         SeekLink::new(
                             Seek {
                                 anchor: Anchor::Before(
-                                    first.sort_field(seek.sort_by).into(),
+                                    first.sort_field(sort_by).into(),
                                     first.project_id as u32
                                 ),
-                                sort_by: seek.sort_by,
-                                dir: seek.dir
+                                sort_by,
+                                dir
                             }
                         )
                     )
@@ -436,11 +429,9 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         };
 
         let pi = projects.into_iter().map(ProjectSummary::from);
-        let psums = if orig_before {
-            pi.rev().collect()
-        }
-        else {
-            pi.collect()
+        let psums = match anchor {
+            Anchor::Before(_, _) => pi.rev().collect(),
+            _ => pi.collect()
         }; 
 
         Ok((prev, next, psums)) 
