@@ -9,7 +9,7 @@ use crate::{
     errors::AppError,
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Limit, Direction, SortBy, Pagination, Seek, SeekLink},
-    params::{ProjectsParams, SortOrSeek},
+    params::ProjectsParams,
     version::Version
 };
 
@@ -72,12 +72,10 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         params: ProjectsParams
     ) -> Result<Projects, AppError>
     {
-        let query = params.q;
-        let from = params.from;
-        let limit = params.limit;
+        let ProjectsParams { q: query, seek, limit } = params;
 
         let (prev_page, next_page, projects) = self.get_projects_from(
-            query, from, limit
+            query, seek, limit
         ).await?;
 
         Ok(
@@ -317,12 +315,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     async fn get_projects_from(
         &self,
         query: Option<String>,
-        from: SortOrSeek,
+        seek: Seek,
         limit: Limit
     ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
     {
-        // unpack the from
-        let Seek { sort_by, dir, anchor } = Seek::from(from);
+        // unpack the seek
+        let Seek { sort_by, dir, anchor } = seek;
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
@@ -511,13 +509,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Start
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::Start
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -552,13 +548,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Start
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::Start
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -593,13 +587,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::After("a".into(), 1)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::After("a".into(), 1)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -645,13 +637,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending,
-                    anchor: Anchor::After("h".into(), 8)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::After("h".into(), 8)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -697,13 +687,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Before("e".into(), 5)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::Before("e".into(), 5)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -749,13 +737,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Before("e".into(), 5)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::Before("e".into(), 5)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -801,13 +787,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Start
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ModificationTime,
+                dir: Direction::Descending,
+                anchor: Anchor::Start
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -842,13 +826,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Start
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::Start
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -883,13 +865,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::After("2024-01-01T13:51:50+00:00".into(), 1)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ModificationTime,
+                dir: Direction::Ascending,
+                anchor: Anchor::After("2024-01-01T13:51:50+00:00".into(), 1)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -935,13 +915,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending,
-                    anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ModificationTime,
+                dir: Direction::Descending,
+                anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -987,13 +965,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ModificationTime,
+                dir: Direction::Ascending,
+                anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 
@@ -1039,13 +1015,11 @@ mod test {
 
         let (prev, next, summaries) = core.get_projects_from(
             None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
-                }
-            ),
+            Seek {
+                sort_by: SortBy::ModificationTime,
+                dir: Direction::Descending,
+                anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+            },
             Limit::new(3).unwrap()
         ).await.unwrap();
 

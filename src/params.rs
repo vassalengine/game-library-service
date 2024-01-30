@@ -43,7 +43,7 @@ impl From<SortOrSeek> for Seek {
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
     pub q: Option<String>,
-    pub from: SortOrSeek,
+    pub seek: Seek,
     pub limit: Limit
 }
 
@@ -69,7 +69,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                 ProjectsParams {
                     q: m.q,
                     limit: m.limit.unwrap_or_default(),
-                    from
+                    seek: Seek::from(from)
                 }
             )
         }

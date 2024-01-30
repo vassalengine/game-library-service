@@ -231,6 +231,16 @@ pub struct Seek {
     pub dir: Direction
 }
 
+impl Default for Seek {
+    fn default() -> Self {
+        Seek {
+            anchor: Anchor::Start,
+            sort_by: SortBy::ProjectName,
+            dir: Direction::Ascending
+        }
+    }
+}
+
 impl From<Seek> for String {
     fn from(value: Seek) -> Self {
         let s = format!("{}{}{}", value.sort_by, value.dir, value.anchor);
