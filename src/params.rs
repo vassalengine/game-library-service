@@ -56,20 +56,27 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             Err(AppError::MalformedQuery)
         }
         else {
-            let from = if let Some(seek) = m.seek {
-                SortOrSeek::Seek(seek)
-            }
-            else {
-                let sort = m.sort.unwrap_or(SortBy::ProjectName);
-                let dir = m.order.unwrap_or_else(|| sort.default_direction());
-                SortOrSeek::Sort(sort, dir)
+            let seek = match m.seek {
+                Some(seek) => seek,
+                None => {
+                    // convert sort params into seek params
+                    let sort_by = m.sort.unwrap_or_default();
+                    let dir = m.order.unwrap_or_else(
+                        || sort_by.default_direction()
+                    );
+                    Seek {
+                        sort_by,
+                        dir,
+                        anchor: Anchor::Start
+                    }
+                }
             };
 
             Ok(
                 ProjectsParams {
                     q: m.q,
                     limit: m.limit.unwrap_or_default(),
-                    seek: Seek::from(from)
+                    seek
                 }
             )
         }

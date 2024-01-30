@@ -158,9 +158,10 @@ impl fmt::Display for Direction {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 pub enum SortBy {
+    #[default]
     ProjectName,
     GameTitle,
     ModificationTime,
