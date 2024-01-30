@@ -370,6 +370,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             Anchor::Before(ref field, id) => self.db.get_projects_before_window(query, sort_by, &field, id, limit_extra).await
         }?;
 
+        // make the next link
         let next = if projects.len() == limit_extra as usize {
             // there are more pages in the forward direction
 
@@ -402,6 +403,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             None
         };
 
+        // make the prev link
         let prev = if projects.is_empty() {
             None
         }
@@ -433,14 +435,15 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             }
         };
 
-        let projects = if orig_before {
-            projects.into_iter().rev().map(ProjectSummary::from).collect()
+        let pi = projects.into_iter().map(ProjectSummary::from);
+        let psums = if orig_before {
+            pi.rev().collect()
         }
         else {
-            projects.into_iter().map(ProjectSummary::from).collect()
+            pi.collect()
         }; 
 
-        Ok((prev, next, projects)) 
+        Ok((prev, next, psums)) 
     }
 }
 
@@ -515,7 +518,10 @@ mod test {
             description: "".into(),
             revision: 1,
             created_at: "".into(),
-            modified_at: "".into(),
+            modified_at: format!(
+                "2024-{:02}-01T13:51:50+00:00",
+                name.as_bytes()[0] - b'a' + 1
+            ),
             tags: vec![],
             game: GameData {
                 title: "".into(),
@@ -527,7 +533,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_start_ok(pool: Pool) {
+    async fn get_projects_pname_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
@@ -568,7 +574,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_end_ok(pool: Pool) {
+    async fn get_projects_pname_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
@@ -609,7 +615,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_after_asc_ok(pool: Pool) {
+    async fn get_projects_pname_after_asc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
@@ -661,59 +667,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_before_asc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-
-        let (prev, next, summaries) = core.get_projects_from(
-            None,
-            SortOrSeek::Seek(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Before("e".into(), 5)
-                }
-            ),
-            Limit::new(3).unwrap()
-        ).await.unwrap();
-
-        assert_eq!(
-            summaries,
-            [
-                fake_project_summary("b"),
-                fake_project_summary("c"),
-                fake_project_summary("d")
-            ]
-        );
-
-        assert_eq!(
-            prev,
-            Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("b".into(), 2),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
-            )
-        );
-
-        assert_eq!(
-            next,
-            Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("d".into(), 4),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
-            )
-        );
-    }
-
-    #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_after_desc_ok(pool: Pool) {
+    async fn get_projects_pname_after_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
@@ -765,7 +719,59 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
-    async fn get_projects_before_desc_ok(pool: Pool) {
+    async fn get_projects_pname_before_asc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending,
+                    anchor: Anchor::Before("e".into(), 5)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("b"),
+                fake_project_summary("c"),
+                fake_project_summary("d")
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("b".into(), 2),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("d".into(), 4),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_pname_before_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
@@ -809,6 +815,296 @@ mod test {
                     Seek {
                         anchor: Anchor::After("f".into(), 6),
                         sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_start_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending,
+                    anchor: Anchor::Start
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("j"),
+                fake_project_summary("i"),
+                fake_project_summary("h")
+            ]
+        );
+
+        assert_eq!(prev, None);
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_end_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending,
+                    anchor: Anchor::Start
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("j"),
+                fake_project_summary("i"),
+                fake_project_summary("h")
+            ]
+        );
+
+        assert_eq!(prev, None);
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("h".into(), 8),
+                        sort_by: SortBy::ProjectName,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_after_asc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending,
+                    anchor: Anchor::After("2024-01-01T13:51:50+00:00".into(), 1)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("b"),
+                fake_project_summary("c"),
+                fake_project_summary("d")
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_after_desc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending,
+                    anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("g"),
+                fake_project_summary("f"),
+                fake_project_summary("e")
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("2024-07-01T13:51:50+00:00".into(), 7),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("2024-05-01T13:51:50+00:00".into(), 5),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_before_asc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending,
+                    anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("b"),
+                fake_project_summary("c"),
+                fake_project_summary("d")
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Ascending
+                    }
+                )
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_mtime_before_desc_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries) = core.get_projects_from(
+            None,
+            SortOrSeek::Seek(
+                Seek {
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending,
+                    anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+                }
+            ),
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("h"),
+                fake_project_summary("g"),
+                fake_project_summary("f")
+            ]
+        );
+
+        assert_eq!(
+            prev,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::Before("2024-08-01T13:51:50+00:00".into(), 8),
+                        sort_by: SortBy::ModificationTime,
+                        dir: Direction::Descending
+                    }
+                )
+            )
+        );
+
+        assert_eq!(
+            next,
+            Some(
+                SeekLink::new(
+                    Seek {
+                        anchor: Anchor::After("2024-06-01T13:51:50+00:00".into(), 6),
+                        sort_by: SortBy::ModificationTime,
                         dir: Direction::Descending
                     }
                 )
