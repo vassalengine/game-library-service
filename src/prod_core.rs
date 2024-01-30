@@ -74,7 +74,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     {
         let ProjectsParams { q: query, seek, limit } = params;
 
-        let (prev_page, next_page, projects) = self.get_projects_from(
+        let (prev, next, projects) = self.get_projects_from(
             query, seek, limit
         ).await?;
 
@@ -82,8 +82,8 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             Projects {
                 projects,
                 meta: Pagination {
-                    prev_page,
-                    next_page,
+                    prev_page: prev.map(SeekLink::new),
+                    next_page: next.map(SeekLink::new),
                     total: self.db.get_project_count().await?
                 }
             },
@@ -317,7 +317,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         query: Option<String>,
         seek: Seek,
         limit: Limit
-    ) -> Result<(Option<SeekLink>, Option<SeekLink>, Vec<ProjectSummary>), AppError>
+    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>), AppError>
     {
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
@@ -361,16 +361,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             }.expect("must exist");
 
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After(
-                            last.sort_field(sort_by).into(),
-                            last.project_id as u32
-                        ),
-                        sort_by,
-                        dir
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After(
+                        last.sort_field(sort_by).into(),
+                        last.project_id as u32
+                    ),
+                    sort_by,
+                    dir
+                }
             )
         }
         else {
@@ -393,16 +391,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     }.expect("must exist");
 
                     Some(
-                        SeekLink::new(
-                            Seek {
-                                anchor: Anchor::Before(
-                                    first.sort_field(sort_by).into(),
-                                    first.project_id as u32
-                                ),
-                                sort_by,
-                                dir
-                            }
-                        )
+                        Seek {
+                            anchor: Anchor::Before(
+                                first.sort_field(sort_by).into(),
+                                first.project_id as u32
+                            ),
+                            sort_by,
+                            dir
+                        }
                     )
                 }
             }
@@ -531,13 +527,11 @@ mod test {
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("c".into(), 3),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("c".into(), 3),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
             )
         );
     }
@@ -570,13 +564,11 @@ mod test {
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("h".into(), 8),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("h".into(), 8),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -607,26 +599,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("b".into(), 2),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("b".into(), 2),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("d".into(), 4),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("d".into(), 4),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
             )
         );
     }
@@ -657,26 +645,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("g".into(), 7),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("g".into(), 7),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("e".into(), 5),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("e".into(), 5),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -707,26 +691,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("b".into(), 2),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("b".into(), 2),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("d".into(), 4),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("d".into(), 4),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
             )
         );
     }
@@ -757,26 +737,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("h".into(), 8),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("h".into(), 8),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("f".into(), 6),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("f".into(), 6),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -809,13 +785,11 @@ mod test {
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -848,13 +822,11 @@ mod test {
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("h".into(), 8),
-                        sort_by: SortBy::ProjectName,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("h".into(), 8),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -885,26 +857,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending
+                }
             )
         );
     }
@@ -935,26 +903,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("2024-07-01T13:51:50+00:00".into(), 7),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("2024-07-01T13:51:50+00:00".into(), 7),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("2024-05-01T13:51:50+00:00".into(), 5),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("2024-05-01T13:51:50+00:00".into(), 5),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending
+                }
             )
         );
     }
@@ -985,26 +949,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Ascending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Ascending
+                }
             )
         );
     }
@@ -1035,26 +995,22 @@ mod test {
         assert_eq!(
             prev,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::Before("2024-08-01T13:51:50+00:00".into(), 8),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::Before("2024-08-01T13:51:50+00:00".into(), 8),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending
+                }
             )
         );
 
         assert_eq!(
             next,
             Some(
-                SeekLink::new(
-                    Seek {
-                        anchor: Anchor::After("2024-06-01T13:51:50+00:00".into(), 6),
-                        sort_by: SortBy::ModificationTime,
-                        dir: Direction::Descending
-                    }
-                )
+                Seek {
+                    anchor: Anchor::After("2024-06-01T13:51:50+00:00".into(), 6),
+                    sort_by: SortBy::ModificationTime,
+                    dir: Direction::Descending
+                }
             )
         );
     }
