@@ -8,7 +8,7 @@ use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
-    pagination::{Anchor, Limit, Direction, SortBy, Pagination, Seek, SeekLink},
+    pagination::{Anchor, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     version::Version
 };
@@ -328,20 +328,31 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         // get the window, seeking forward
-        let mut projects = match (&anchor, dir) {
-            (Anchor::Start, dir) =>
+        let mut projects = match anchor {
+            Anchor::Start =>
                 self.db.get_projects_end_window(
-                    query, sort_by, dir, limit_extra
+                    query,
+                    sort_by,
+                    dir,
+                    limit_extra
                 ).await,
-            (Anchor::After(ref field, id), Direction::Ascending) |
-            (Anchor::Before(ref field, id), Direction::Descending) =>
+            Anchor::After(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    query, sort_by, Direction::Ascending, field, *id, limit_extra
+                    query,
+                    sort_by,
+                    dir,
+                    field,
+                    id,
+                    limit_extra
                 ).await,
-            (Anchor::After(ref field, id), Direction::Descending) |
-            (Anchor::Before(ref field, id), Direction::Ascending) =>
+            Anchor::Before(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    query, sort_by, Direction::Descending, field, *id, limit_extra
+                    query,
+                    sort_by,
+                    dir.rev(),
+                    field,
+                    id,
+                    limit_extra
                 ).await
         }?;
 
@@ -451,6 +462,7 @@ mod test {
 
     use crate::{
         model::GameDataPatch,
+        pagination::Direction,
         sqlite::{Pool, SqlxDatabaseClient}
     };
 
