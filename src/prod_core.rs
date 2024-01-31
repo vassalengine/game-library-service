@@ -329,23 +329,19 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
         // get the window, seeking forward
         let mut projects = match (&anchor, dir) {
-            (Anchor::Start, Direction::Ascending) =>
-                self.db.get_projects_start_window(
-                    query, sort_by, limit_extra
-                ).await,
-            (Anchor::Start, Direction::Descending) =>
+            (Anchor::Start, dir) =>
                 self.db.get_projects_end_window(
-                    query, sort_by, limit_extra
+                    query, sort_by, dir, limit_extra
                 ).await,
             (Anchor::After(ref field, id), Direction::Ascending) |
             (Anchor::Before(ref field, id), Direction::Descending) =>
-                self.db.get_projects_after_window(
-                    query, sort_by, field, *id, limit_extra
+                self.db.get_projects_mid_window(
+                    query, sort_by, Direction::Ascending, field, *id, limit_extra
                 ).await,
             (Anchor::After(ref field, id), Direction::Descending) |
             (Anchor::Before(ref field, id), Direction::Ascending) =>
-                self.db.get_projects_before_window(
-                    query, sort_by, field, *id, limit_extra
+                self.db.get_projects_mid_window(
+                    query, sort_by, Direction::Descending, field, *id, limit_extra
                 ).await
         }?;
 

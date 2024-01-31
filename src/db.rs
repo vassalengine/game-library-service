@@ -5,7 +5,7 @@ use sqlx::FromRow;
 use crate::{
     errors::AppError,
     model::{GameData, Owner, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
-    pagination::SortBy,
+    pagination::{Direction, SortBy},
     version::Version
 };
 
@@ -172,42 +172,22 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_projects_start_window(
-        &self,
-        _query: Option<&str>,
-        _sort_by: SortBy,
-        _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
-
     async fn get_projects_end_window(
         &self,
         _query: Option<&str>,
         _sort_by: SortBy,
+        _dir: Direction,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
         unimplemented!();
     }
 
-    async fn get_projects_after_window(
+    async fn get_projects_mid_window(
         &self,
         _query: Option<&str>,
         _sort_by: SortBy,
-        _name: &str,
-        _id: u32,
-        _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
-
-    async fn get_projects_before_window(
-        &self,
-        _query: Option<&str>,
-        _sort_by: SortBy,
+        _dir: Direction,
         _name: &str,
         _id: u32,
         _limit: u32
