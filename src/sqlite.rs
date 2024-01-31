@@ -113,18 +113,26 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_end_window(
         &self,
-        query: Option<&str>,
         sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
-        get_projects_end_window(&self.0, query, sort_by, dir, limit).await
+        get_projects_end_window(&self.0, sort_by, dir, limit).await
+    }
+
+    async fn get_projects_query_end_window(
+        &self,
+        query: &str,
+        dir: Direction,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    {
+        get_projects_query_end_window(&self.0, query, dir, limit).await
     }
 
     async fn get_projects_mid_window(
         &self,
-        query: Option<&str>,
         sort_by: SortBy,
         dir: Direction,
         field: &str,
@@ -132,7 +140,19 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
-        get_projects_mid_window(&self.0, query, sort_by, dir, field, id, limit).await
+        get_projects_mid_window(&self.0, sort_by, dir, field, id, limit).await
+    }
+
+    async fn get_projects_query_mid_window(
+        &self,
+        query: &str,
+        dir: Direction,
+        rank: f64,
+        id: u32,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    {
+        get_projects_query_mid_window(&self.0, query, dir, rank, id, limit).await
     }
 
     async fn create_project(
@@ -534,7 +554,7 @@ impl Direction {
     }
 }
 
-async fn get_projects_window_end_impl<'e, E>(
+async fn get_projects_end_window<'e, E>(
     ex: E,
     sort_by: SortBy,
     dir: Direction,
@@ -574,7 +594,7 @@ ORDER BY "
     )
 }
 
-async fn get_projects_window_end_query_impl<'e, E>(
+async fn get_projects_query_end_window<'e, E>(
     ex: E,
     query: &str,
     dir: Direction,
@@ -616,7 +636,7 @@ WHERE projects_fts MATCH "
     )
 }
 
-async fn get_projects_window_mid_impl<'e, E>(
+async fn get_projects_mid_window<'e, E>(
     ex: E,
     sort_by: SortBy,
     dir: Direction,
@@ -672,11 +692,11 @@ WHERE "
     )
 }
 
-async fn get_projects_window_mid_query_impl<'e, E>(
+async fn get_projects_query_mid_window<'e, E>(
     ex: E,
     query: &str,
     dir: Direction,
-    rank: i64,
+    rank: f64,
     id: u32,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -724,74 +744,6 @@ WHERE projects_fts MATCH "
         .fetch_all(ex)
         .await?
     )
-}
-
-async fn get_projects_end_window<'e, E>(
-    ex: E,
-    query: Option<&str>,
-    sort_by: SortBy,
-    dir: Direction,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    match query {
-        Some(q) => get_projects_window_end_query_impl(
-            ex,
-            q,
-            dir,
-            limit
-        ).await,
-        None => get_projects_window_end_impl(
-            ex,
-            sort_by,
-            dir,
-            limit
-        ).await
-    }
-}
-
-async fn get_projects_mid_window<'e, E>(
-    ex: E,
-    query: Option<&str>,
-    sort_by: SortBy,
-    dir: Direction,
-    name: &str,
-    id: u32,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-/*
-    match query {
-        Some(q) => get_projects_window_mid_query_impl(
-            ex,
-            q,
-            dir,
-            name,
-            id,
-            limit
-        ).await,
-        None => get_projects_window_mid_impl(
-            ex,
-            sort_by,
-            dir,
-            name,
-            id,
-            limit
-        ).await
-    }
-*/
-    get_projects_window_mid_impl(
-        ex,
-        sort_by,
-        dir,
-        name,
-        id,
-        limit
-     ).await
 }
 
 async fn create_project_row<'e, E>(
@@ -1847,7 +1799,7 @@ mod test {
     async fn get_projects_end_window_asc_empty(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, 3
             ).await.unwrap(),
             []
         );
@@ -1857,7 +1809,7 @@ mod test {
     async fn get_projects_end_window_asc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, 3
             ).await.unwrap(),
             [
                 fake_project_row("a", 1),
@@ -1871,7 +1823,7 @@ mod test {
     async fn get_projects_end_window_asc_past_end(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, 5
+                &pool, SortBy::ProjectName, Direction::Ascending, 5
             ).await.unwrap(),
             [
                 fake_project_row("a", 1),
@@ -1886,7 +1838,7 @@ mod test {
     async fn get_projects_end_window_desc_empty(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, 3
+                &pool, SortBy::ProjectName, Direction::Descending, 3
             ).await.unwrap(),
             []
         );
@@ -1896,7 +1848,7 @@ mod test {
     async fn get_projects_end_window_desc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, 3
+                &pool, SortBy::ProjectName, Direction::Descending, 3
             ).await.unwrap(),
             [
                 fake_project_row("d", 4),
@@ -1910,7 +1862,7 @@ mod test {
     async fn get_projects_end_window_desc_past_start(pool: Pool) {
         assert_eq!(
             get_projects_end_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, 5
+                &pool, SortBy::ProjectName, Direction::Descending, 5
             ).await.unwrap(),
             [
                 fake_project_row("d", 4),
@@ -1925,7 +1877,7 @@ mod test {
     async fn get_projects_mid_window_asc_empty(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, "a", 1, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, "a", 1, 3
             ).await.unwrap(),
             []
         );
@@ -1935,7 +1887,7 @@ mod test {
     async fn get_projects_mid_window_asc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, "b", 2, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, "b", 2, 3
             ).await.unwrap(),
             [
                 fake_project_row("c", 3),
@@ -1948,7 +1900,7 @@ mod test {
     async fn get_projects_mid_window_asc_past_end(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Ascending, "d", 4, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, "d", 4, 3
             ).await.unwrap(),
             []
         );
@@ -1958,7 +1910,7 @@ mod test {
     async fn get_projects_mid_window_desc_empty(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, "a", 1, 3
+                &pool, SortBy::ProjectName, Direction::Descending, "a", 1, 3
             ).await.unwrap(),
             []
         );
@@ -1968,7 +1920,7 @@ mod test {
     async fn get_projects_mid_window_desc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, "b", 2, 3
+                &pool, SortBy::ProjectName, Direction::Descending, "b", 2, 3
             ).await.unwrap(),
             [
                 fake_project_row("a", 1)
@@ -1980,7 +1932,7 @@ mod test {
     async fn get_projects_mid_window_desc_past_start(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, None, SortBy::ProjectName, Direction::Descending, "d", 4, 3
+                &pool, SortBy::ProjectName, Direction::Descending, "d", 4, 3
             ).await.unwrap(),
             [
                 fake_project_row("c", 3),

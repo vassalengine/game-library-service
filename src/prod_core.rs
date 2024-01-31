@@ -72,11 +72,8 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         params: ProjectsParams
     ) -> Result<Projects, AppError>
     {
-        let ProjectsParams { q: query, seek, limit } = params;
-
-        let (prev, next, projects) = self.get_projects_from(
-            query, seek, limit
-        ).await?;
+        let ProjectsParams { seek, limit } = params;
+        let (prev, next, projects) = self.get_projects_from(seek, limit).await?;
 
         Ok(
             Projects {
@@ -314,13 +311,10 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_projects_from(
         &self,
-        query: Option<String>,
         seek: Seek,
         limit: Limit
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>), AppError>
     {
-        let query = query.as_deref();
-
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
 
@@ -331,14 +325,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let mut projects = match anchor {
             Anchor::Start =>
                 self.db.get_projects_end_window(
-                    query,
                     sort_by,
                     dir,
                     limit_extra
                 ).await,
             Anchor::After(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    query,
                     sort_by,
                     dir,
                     field,
@@ -347,10 +339,31 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ).await,
             Anchor::Before(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    query,
                     sort_by,
                     dir.rev(),
                     field,
+                    id,
+                    limit_extra
+                ).await,
+            Anchor::StartQuery(ref query) =>
+                self.db.get_projects_query_end_window(
+                    query,
+                    dir,
+                    limit_extra
+                ).await,
+            Anchor::AfterQuery(ref query, rank, id) =>
+                self.db.get_projects_query_mid_window(
+                    query,
+                    dir,
+                    rank,
+                    id,
+                    limit_extra
+                ).await,
+            Anchor::BeforeQuery(ref query, rank, id) =>
+                self.db.get_projects_query_mid_window(
+                    query,
+                    dir.rev(),
+                    rank,
                     id,
                     limit_extra
                 ).await
@@ -514,7 +527,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -551,7 +563,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -588,7 +599,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -634,7 +644,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -680,7 +689,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -726,7 +734,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -772,7 +779,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
@@ -809,7 +815,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -846,7 +851,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
@@ -892,7 +896,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
@@ -938,7 +941,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
@@ -984,7 +986,6 @@ mod test {
         let core = make_core(pool, fake_now);
 
         let (prev, next, summaries) = core.get_projects_from(
-            None,
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,

@@ -53,15 +53,23 @@ impl TryFrom<&str> for Limit {
 pub enum Anchor {
     Start,
     Before(String, u32),
-    After(String, u32)
+    After(String, u32),
+    StartQuery(String),
+    BeforeQuery(String, f64, u32),
+    AfterQuery(String, f64, u32)
 }
+
+// TODO: add Query type to SortBy, move it out of Anchor
 
 impl From<&Anchor> for String {
     fn from(value: &Anchor) -> Self {
         match value {
             Anchor::Start => "s".into(),
             Anchor::Before(f, i) => format!("b:{}:{}", i, f),
-            Anchor::After(f, i) => format!("a:{}:{}", i, f)
+            Anchor::After(f, i) => format!("a:{}:{}", i, f),
+            Anchor::StartQuery(q) => format!("q:{}", q),
+            Anchor::BeforeQuery(q, r, i) => format!("p:{}:{}:{}", i, r, q),
+            Anchor::AfterQuery(q, r, i) => format!("r:{}:{}:{}", i, r, q)
         }
     }
 }
@@ -74,6 +82,7 @@ impl TryFrom<&str> for Anchor {
 
         let a = i.next().ok_or(AppError::MalformedQuery)?;
 
+// TODO: StartQuery, BeforeQuery, AfterQuery
         match a {
             "s" => Ok(Anchor::Start),
             s => {

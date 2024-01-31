@@ -17,41 +17,55 @@ pub struct MaybeProjectsParams {
 #[derive(Debug, Default, Deserialize)]
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
-    pub q: Option<String>,
     pub seek: Seek,
     pub limit: Limit
 }
+
+// TODO: tests
 
 impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = AppError;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        if (m.sort.is_some() || m.order.is_some()) && m.seek.is_some() {
-            // sort, order are incompatible with seek
+        if m.seek.is_some() && 
+            (m.sort.is_some() || m.order.is_some() || m.q.is_some()) {
+            // sort, order, query are incompatible with seek
+            Err(AppError::MalformedQuery)
+        }
+        else if m.sort.is_some() && m.q.is_some() {
+            // sort is incompatible with query
             Err(AppError::MalformedQuery)
         }
         else {
             let seek = match m.seek {
                 Some(seek) => seek,
-                None => {
-                    // convert sort params into seek params
-                    let sort_by = m.sort.unwrap_or_default();
-                    let dir = m.order.unwrap_or_else(
-                        || sort_by.default_direction()
-                    );
-                    Seek {
-                        sort_by,
-                        dir,
-                        anchor: Anchor::Start
+                None => match m.q {
+                    Some(query) => {
+                        Seek {
+                            sort_by: Default::default(), // FIXME
+                            dir: m.order.unwrap_or(Direction::Descending),
+                            anchor: Anchor::StartQuery(query)
+                        }
+                    },
+                    None => {
+                        // convert sort params into seek params
+                        let sort_by = m.sort.unwrap_or_default();
+                        let dir = m.order.unwrap_or_else(
+                            || sort_by.default_direction()
+                        );
+                        Seek {
+                            sort_by,
+                            dir,
+                            anchor: Anchor::Start
+                        }
                     }
                 }
             };
 
             Ok(
                 ProjectsParams {
-                    q: m.q,
-                    limit: m.limit.unwrap_or_default(),
-                    seek
+                    seek,
+                    limit: m.limit.unwrap_or_default()
                 }
             )
         }
