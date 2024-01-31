@@ -546,7 +546,7 @@ mod test {
             .get_all(header_name)
             .iter()
             .flat_map(|v| v.as_ref().split(|b| b == &b','))
-            .map(|v| if v[0] == b' ' { &v[1..] } else { &v })
+            .map(|v| if v[0] == b' ' { &v[1..] } else { v })
             .collect::<Vec<_>>();
 
         values.sort();
