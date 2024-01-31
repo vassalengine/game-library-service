@@ -188,7 +188,7 @@ pub trait DatabaseClient {
         _query: Option<&str>,
         _sort_by: SortBy,
         _dir: Direction,
-        _name: &str,
+        _field: &str,
         _id: u32,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>

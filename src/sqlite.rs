@@ -127,12 +127,12 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         query: Option<&str>,
         sort_by: SortBy,
         dir: Direction,
-        name: &str,
+        field: &str,
         id: u32,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
-        get_projects_mid_window(&self.0, query, sort_by, dir, name, id, limit).await
+        get_projects_mid_window(&self.0, query, sort_by, dir, field, id, limit).await
     }
 
     async fn create_project(
@@ -620,7 +620,7 @@ async fn get_projects_window_mid_impl<'e, E>(
     ex: E,
     sort_by: SortBy,
     dir: Direction,
-    name: &str,
+    field: &str,
     id: u32,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -649,11 +649,11 @@ WHERE "
         .push(" ")
         .push(dir.op())
         .push(" ")
-        .push_bind(name)
+        .push_bind(field)
         .push(" OR (")
         .push(sort_by.field())
         .push(" = ")
-        .push_bind(name)
+        .push_bind(field)
         .push(" AND project_id ")
         .push(dir.op())
         .push(" ")
