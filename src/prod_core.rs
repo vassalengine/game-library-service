@@ -97,7 +97,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
                 meta: Pagination {
                     prev_page,
                     next_page,
-                    total: self.db.get_project_count().await?
+                    total: self.db.get_projects_count().await?
                 }
             },
         )

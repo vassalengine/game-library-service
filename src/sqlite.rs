@@ -35,11 +35,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_project_id(&self.0, project).await
     }
 
-    async fn get_project_count(
+    async fn get_projects_count(
         &self,
     ) -> Result<i32, AppError>
     {
-        get_project_count(&self.0).await
+        get_project_counts(&self.0).await
     }
 
     async fn get_user_id(
@@ -310,7 +310,7 @@ WHERE name = ?
     .ok_or(AppError::NotAProject)
 }
 
-async fn get_project_count<'e, E>(
+async fn get_projects_count<'e, E>(
     ex: E
 ) -> Result<i32, AppError>
 where
@@ -1600,8 +1600,8 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_project_count_ok(pool: Pool) {
-        assert_eq!(get_project_count(&pool).await.unwrap(), 2);
+    async fn get_projects_count_ok(pool: Pool) {
+        assert_eq!(get_projects_count(&pool).await.unwrap(), 2);
     }
 
     #[sqlx::test(fixtures("users"))]

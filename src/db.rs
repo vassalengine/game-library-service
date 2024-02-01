@@ -97,7 +97,7 @@ pub trait DatabaseClient {
         unimplemented!();
     }
 
-    async fn get_project_count(
+    async fn get_projects_count(
         &self,
     ) -> Result<i32, AppError>
     {
