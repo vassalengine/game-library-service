@@ -98,6 +98,7 @@ impl TryFrom<&str> for AnchorTag {
 struct RawAnchor {
     tag: AnchorTag,
     field: Option<String>,
+    query: Option<String>,
     rank: Option<f64>,
     id: Option<u32>
 }
@@ -108,22 +109,22 @@ pub enum Anchor {
     Start,
     Before(String, u32),
     After(String, u32),
-    StartQuery,
-    BeforeQuery(f64, u32),
-    AfterQuery(f64, u32)
+    StartQuery(String),
+    BeforeQuery(String, f64, u32),
+    AfterQuery(String, f64, u32)
 }
 
 impl TryFrom<RawAnchor> for Anchor {
     type Error = AppError;
 
     fn try_from(ra: RawAnchor) -> Result<Self, Self::Error> {
-        match (ra.tag, ra.field, ra.rank, ra.id) {
-            (AnchorTag::Start, None, None, None) => Ok(Anchor::Start),
-            (AnchorTag::Before, Some(f), None, Some(i)) => Ok(Anchor::Before(f, i)),
-            (AnchorTag::After, Some(f), None, Some(i)) => Ok(Anchor::After(f, i)),
-            (AnchorTag::StartQuery, None, None, None) => Ok(Anchor::StartQuery),
-            (AnchorTag::BeforeQuery, None, Some(r), Some(i)) => Ok(Anchor::BeforeQuery(r, i)),
-            (AnchorTag::AfterQuery, None, Some(r), Some(i)) => Ok(Anchor::AfterQuery(r, i)),
+        match (ra.tag, ra.field, ra.query, ra.rank, ra.id) {
+            (AnchorTag::Start, None, None, None, None) => Ok(Anchor::Start),
+            (AnchorTag::Before, Some(f), None, None, Some(i)) => Ok(Anchor::Before(f, i)),
+            (AnchorTag::After, Some(f), None, None, Some(i)) => Ok(Anchor::After(f, i)),
+            (AnchorTag::StartQuery, None, Some(q), None, None) => Ok(Anchor::StartQuery(q)),
+            (AnchorTag::BeforeQuery, None, Some(q), Some(r), Some(i)) => Ok(Anchor::BeforeQuery(q, r, i)),
+            (AnchorTag::AfterQuery, None, Some(q), Some(r), Some(i)) => Ok(Anchor::AfterQuery(q, r, i)),
             _ => Err(AppError::MalformedQuery)
         }
     }
@@ -135,36 +136,42 @@ impl From<Anchor> for RawAnchor {
             Anchor::Start => RawAnchor {
                 tag: AnchorTag::Start,
                 field: None,
+                query: None,
                 rank: None,
                 id: None
             },
             Anchor::Before(field, id) => RawAnchor {
                 tag: AnchorTag::Before,
                 field: Some(field),
+                query: None,
                 rank: None,
                 id: Some(id)
             },
             Anchor::After(field, id) => RawAnchor {
                 tag: AnchorTag::After,
                 field: Some(field),
+                query: None,
                 rank: None,
                 id: Some(id)
             },
-            Anchor::StartQuery => RawAnchor {
+            Anchor::StartQuery(query) => RawAnchor {
                 tag: AnchorTag::StartQuery,
                 field: None,
+                query: Some(query),
                 rank: None,
                 id: None
             },
-            Anchor::BeforeQuery(rank, id) => RawAnchor {
+            Anchor::BeforeQuery(query, rank, id) => RawAnchor {
                 tag: AnchorTag::BeforeQuery,
                 field: None,
+                query: Some(query),
                 rank: Some(rank),
                 id: Some(id)
             },
-            Anchor::AfterQuery(rank, id) => RawAnchor {
+            Anchor::AfterQuery(query, rank, id) => RawAnchor {
                 tag: AnchorTag::AfterQuery,
                 field: None,
+                query: Some(query),
                 rank: Some(rank),
                 id: Some(id)
             }
@@ -211,7 +218,7 @@ impl TryFrom<&str> for Direction {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 pub enum SortBy {
     #[default]
@@ -219,23 +226,17 @@ pub enum SortBy {
     GameTitle,
     ModificationTime,
     CreationTime,
-    Query(String)
+    Relevance
 }
 
 impl From<SortBy> for String {
     fn from(value: SortBy) -> Self {
-        String::from(&value)
-    }
-}
-
-impl From<&SortBy> for String {
-    fn from(value: &SortBy) -> Self {
         match value {
             SortBy::ProjectName => "p".into(),
             SortBy::GameTitle => "t".into(),
             SortBy::ModificationTime => "m".into(),
             SortBy::CreationTime => "c".into(),
-            SortBy::Query(q) => format!("q{}", q)
+            SortBy::Relevance => "r".into()
         }
     }
 }
@@ -249,7 +250,7 @@ impl TryFrom<&str> for SortBy {
             "t" => Ok(SortBy::GameTitle),
             "m" => Ok(SortBy::ModificationTime),
             "c" => Ok(SortBy::CreationTime),
-            q if q.starts_with('q') => Ok(SortBy::Query(q[1..].into())),
+            "r" => Ok(SortBy::Relevance),
             _ => Err(AppError::MalformedQuery)
         }
     }
@@ -262,7 +263,7 @@ impl SortBy {
             SortBy::GameTitle => Direction::Ascending,
             SortBy::ModificationTime => Direction::Descending,
             SortBy::CreationTime => Direction::Descending,
-            SortBy::Query(_) => Direction::Ascending
+            SortBy::Relevance => Direction::Ascending
         }
     }
 }
@@ -318,13 +319,13 @@ impl FromStr for Seek {
         if let Some(result) = r.deserialize().next() {
             let seek: Seek = result.map_err(|_| AppError::MalformedQuery)?;
 
-            // Query must be paired with StartQuery, AfterQuery, BeforeQuery
+            // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
             // Other SortBy must be paired with Start, After, Before
             match seek.sort_by {
-                SortBy::Query(_) => match seek.anchor {
-                    Anchor::StartQuery |
-                    Anchor::AfterQuery(_, _) |
-                    Anchor::BeforeQuery(_, _) => Ok(seek),
+                SortBy::Relevance => match seek.anchor {
+                    Anchor::StartQuery(_) |
+                    Anchor::AfterQuery(_, _, _) |
+                    Anchor::BeforeQuery(_, _, _) => Ok(seek),
                     _ => Err(AppError::MalformedQuery)
                 },
                 _ => match seek.anchor {
@@ -435,7 +436,7 @@ mod test {
                     anchor: Anchor::Start
                 }
             ).unwrap(),
-            "p,a,s,,,"
+            "p,a,s,,,,"
         );
     }
 
@@ -464,7 +465,7 @@ mod test {
                     anchor: Anchor::Start
                 }
             ).unwrap(),
-            "p,d,s,,,"
+            "p,d,s,,,,"
         );
     }
 
@@ -478,7 +479,7 @@ mod test {
                     anchor: Anchor::Before("abc".into(), 0),
                 }
             ).unwrap(),
-            "p,a,b,abc,,0"
+            "p,a,b,abc,,,0"
         );
     }
 
@@ -492,14 +493,14 @@ mod test {
                     anchor: Anchor::After("abc".into(), 0)
                 }
             ).unwrap(),
-            "p,a,a,abc,,0"
+            "p,a,a,abc,,,0"
         );
     }
 
     #[test]
     fn string_to_seek_start() {
         assert_eq!(
-            "p,a,s,,,".parse::<Seek>().unwrap(),
+            "p,a,s,,,,".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -511,7 +512,7 @@ mod test {
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            "p,d,s,,,".parse::<Seek>().unwrap(),
+            "p,d,s,,,,".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -523,7 +524,7 @@ mod test {
     #[test]
     fn string_to_seek_before() {
         assert_eq!(
-            "p,a,b,abc,,0".parse::<Seek>().unwrap(),
+            "p,a,b,abc,,,0".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -535,7 +536,7 @@ mod test {
     #[test]
     fn string_to_seek_after() {
         assert_eq!(
-            "p,a,a,abc,,0".parse::<Seek>().unwrap(),
+            "p,a,a,abc,,,0".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,

@@ -337,13 +337,13 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let mut projects = match anchor {
             Anchor::Start =>
                 self.db.get_projects_end_window(
-                    &sort_by,
+                    sort_by,
                     dir,
                     limit_extra
                 ).await,
             Anchor::After(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    &sort_by,
+                    sort_by,
                     dir,
                     field,
                     id,
@@ -351,29 +351,32 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ).await,
             Anchor::Before(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    &sort_by,
+                    sort_by,
                     dir.rev(),
                     field,
                     id,
                     limit_extra
                 ).await,
-            Anchor::StartQuery =>
+            Anchor::StartQuery(ref query) =>
                 self.db.get_projects_query_end_window(
-                    &sort_by,
+                    &query,
+                    sort_by,
                     dir,
                     limit_extra
                 ).await,
-            Anchor::AfterQuery(rank, id) =>
+            Anchor::AfterQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    &sort_by,
+                    &query,
+                    sort_by,
                     dir,
                     rank,
                     id,
                     limit_extra
                 ).await,
-            Anchor::BeforeQuery(rank, id) =>
+            Anchor::BeforeQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    &sort_by,
+                    &query,
+                    sort_by,
                     dir.rev(),
                     rank,
                     id,
@@ -381,8 +384,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ).await
         }?;
 
-        let total = match sort_by {
-            SortBy::Query(ref q) => self.db.get_projects_query_count(&q).await?,
+        let total = match anchor {
+            Anchor::StartQuery(ref q) |
+            Anchor::AfterQuery(ref q, _, _) |
+            Anchor::BeforeQuery(ref q, _, _) =>
+                self.db.get_projects_query_count(&q).await?,
             _ => self.db.get_projects_count().await?
         };
 
@@ -396,14 +402,15 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             // the next page is after the last item
             let last = match anchor {
                 Anchor::Before(_, _) |
-                Anchor::BeforeQuery(_, _) => projects.first(),
+                Anchor::BeforeQuery(_, _, _) => projects.first(),
                 _ => projects.last()
             }.expect("element must exist");
 
             let next_anchor = match anchor {
-                Anchor::StartQuery |
-                Anchor::AfterQuery(_, _) |
-                Anchor::BeforeQuery(_, _) => Anchor::AfterQuery(
+                Anchor::StartQuery(ref q) |
+                Anchor::AfterQuery(ref q, _, _) |
+                Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
+                    q.clone(),
                     last.rank,
                     last.project_id as u32
                 ),
@@ -432,21 +439,22 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }
         else {
             match anchor {
-                Anchor::Start | Anchor::StartQuery => None,
+                Anchor::Start | Anchor::StartQuery(_) => None,
                 _ => {
                     // the previous page is before the first item
                     let first = match anchor {
-                        Anchor::Start | Anchor::StartQuery => unreachable!(),
+                        Anchor::Start | Anchor::StartQuery(_) => unreachable!(),
                         Anchor::Before(_, _) |
-                        Anchor::BeforeQuery(_, _) => projects.last(),
+                        Anchor::BeforeQuery(_, _, _) => projects.last(),
                         Anchor::After(_, _) |
-                        Anchor::AfterQuery(_, _) => projects.first()
+                        Anchor::AfterQuery(_, _, _) => projects.first()
                     }.expect("element must exist");
 
                     let prev_anchor = match anchor {
-                        Anchor::Start | Anchor::StartQuery => unreachable!(),
-                        Anchor::AfterQuery(_, _) |
-                        Anchor::BeforeQuery(_, _) => Anchor::BeforeQuery(
+                        Anchor::Start | Anchor::StartQuery(_) => unreachable!(),
+                        Anchor::AfterQuery(ref q, _, _) |
+                        Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
+                            q.clone(),
                             first.rank,
                             first.project_id as u32
                         ),
@@ -471,7 +479,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let pi = projects.into_iter().map(ProjectSummary::from);
         let psums = match anchor {
             Anchor::Before(_, _) |
-            Anchor::BeforeQuery(_, _) => pi.rev().collect(),
+            Anchor::BeforeQuery(_, _, _) => pi.rev().collect(),
             _ => pi.collect()
         };
 
@@ -486,7 +494,7 @@ impl ProjectSummaryRow {
             SortBy::GameTitle => &self.game_title_sort,
             SortBy::ModificationTime => &self.modified_at,
             SortBy::CreationTime => &self.created_at,
-            SortBy::Query(_) => unreachable!()
+            SortBy::Relevance => unreachable!()
         }
     }
 }

@@ -29,12 +29,10 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = AppError;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        if (m.seek.is_some() &&
-                (m.sort.is_some() || m.order.is_some() || m.q.is_some())) ||
-           (m.sort.is_some() && m.q.is_some())
+        if m.seek.is_some() &&
+                (m.sort.is_some() || m.order.is_some() || m.q.is_some())
         {
             // sort, order, query are incompatible with seek
-            // sort is incompatible with query
             Err(AppError::MalformedQuery)
         }
         else {
@@ -53,8 +51,8 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                 None => {
                     let (sort_by, anchor) = match m.q {
                         Some(query) => (
-                            SortBy::Query(query),
-                            Anchor::StartQuery
+                            m.sort.unwrap_or(SortBy::Relevance),
+                            Anchor::StartQuery(query)
                         ),
                         None => (
                             m.sort.unwrap_or_default(),
