@@ -55,7 +55,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         Seek {
                             sort_by: SortBy::Query(query),
                             dir: m.order.unwrap_or(Direction::Descending),
-                            anchor: Anchor::Start
+                            anchor: Anchor::StartQuery
                         }
                     },
                     None => {

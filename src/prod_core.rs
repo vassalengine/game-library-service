@@ -361,6 +361,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     id,
                     limit_extra
                 ).await,
+            Anchor::StartQuery =>
+                self.db.get_projects_query_end_window(
+                    &sort_by,
+                    dir,
+                    limit_extra
+                ).await,
             Anchor::AfterQuery(rank, id) =>
                 self.db.get_projects_query_mid_window(
                     &sort_by,
@@ -394,6 +400,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             }.expect("element must exist");
 
             let next_anchor = match anchor {
+                Anchor::StartQuery |
                 Anchor::AfterQuery(_, _) |
                 Anchor::BeforeQuery(_, _) => Anchor::AfterQuery(
                     last.rank,
@@ -434,6 +441,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     }.expect("element must exist");
 
                     let prev_anchor = match anchor {
+                        Anchor::StartQuery |
                         Anchor::AfterQuery(_, _) |
                         Anchor::BeforeQuery(_, _) => Anchor::BeforeQuery(
                             first.rank,
@@ -448,7 +456,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     Some(
                         Seek {
                             anchor: prev_anchor,
-                            sort_by: sort_by,
+                            sort_by,
                             dir
                         }
                     )

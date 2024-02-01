@@ -54,6 +54,7 @@ enum AnchorTag {
     Start,
     Before,
     After,
+    StartQuery,
     BeforeQuery,
     AfterQuery
 }
@@ -64,6 +65,7 @@ impl From<AnchorTag> for String {
             AnchorTag::Start => "s".into(),
             AnchorTag::Before => "b".into(),
             AnchorTag::After => "a".into(),
+            AnchorTag::StartQuery => "q".into(),
             AnchorTag::BeforeQuery => "p".into(),
             AnchorTag::AfterQuery => "r".into()
         }
@@ -78,6 +80,7 @@ impl TryFrom<&str> for AnchorTag {
             "s" => Ok(AnchorTag::Start),
             "b" => Ok(AnchorTag::Before),
             "a" => Ok(AnchorTag::After),
+            "q" => Ok(AnchorTag::StartQuery),
             "p" => Ok(AnchorTag::BeforeQuery),
             "r" => Ok(AnchorTag::AfterQuery),
             _ => Err(AppError::MalformedQuery)
@@ -99,6 +102,7 @@ pub enum Anchor {
     Start,
     Before(String, u32),
     After(String, u32),
+    StartQuery,
     BeforeQuery(f64, u32),
     AfterQuery(f64, u32)
 }
@@ -111,6 +115,7 @@ impl TryFrom<RawAnchor> for Anchor {
             (AnchorTag::Start, None, None, None) => Ok(Anchor::Start),
             (AnchorTag::Before, Some(f), None, Some(i)) => Ok(Anchor::Before(f, i)),
             (AnchorTag::After, Some(f), None, Some(i)) => Ok(Anchor::After(f, i)),
+            (AnchorTag::StartQuery, None, None, None) => Ok(Anchor::StartQuery),
             (AnchorTag::BeforeQuery, None, Some(r), Some(i)) => Ok(Anchor::BeforeQuery(r, i)),
             (AnchorTag::AfterQuery, None, Some(r), Some(i)) => Ok(Anchor::AfterQuery(r, i)),
             _ => Err(AppError::MalformedQuery)
@@ -138,6 +143,12 @@ impl From<Anchor> for RawAnchor {
                 field: Some(field),
                 rank: None,
                 id: Some(id)
+            },
+            Anchor::StartQuery => RawAnchor {
+                tag: AnchorTag::StartQuery,
+                field: None,
+                rank: None,
+                id: None
             },
             Anchor::BeforeQuery(rank, id) => RawAnchor {
                 tag: AnchorTag::BeforeQuery,
@@ -245,7 +256,7 @@ impl SortBy {
             SortBy::GameTitle => Direction::Ascending,
             SortBy::ModificationTime => Direction::Descending,
             SortBy::CreationTime => Direction::Descending,
-            SortBy::Query(_) => Direction::Descending // FIXME: check this
+            SortBy::Query(_) => Direction::Ascending
         }
     }
 }
@@ -301,18 +312,20 @@ impl FromStr for Seek {
         if let Some(result) = r.deserialize().next() {
             let seek: Seek = result.map_err(|_| AppError::MalformedQuery)?;
 
-            // Query must be paired with Start, AfterQuery, BeforeQuery
-            // Anything else must be paired with Start, After, Before
+            // Query must be paired with StartQuery, AfterQuery, BeforeQuery
+            // Other SortBy must be paired with Start, After, Before
             match seek.sort_by {
                 SortBy::Query(_) => match seek.anchor {
-                    Anchor::After(_, _) |
-                    Anchor::Before(_, _) => Err(AppError::MalformedQuery),
-                    _ => Ok(seek)
+                    Anchor::StartQuery |
+                    Anchor::AfterQuery(_, _) |
+                    Anchor::BeforeQuery(_, _) => Ok(seek),
+                    _ => Err(AppError::MalformedQuery)
                 },
                 _ => match seek.anchor {
-                    Anchor::AfterQuery(_, _) |
-                    Anchor::BeforeQuery(_, _) => Err(AppError::MalformedQuery),
-                    _ => Ok(seek)
+                    Anchor::Start |
+                    Anchor::After(_, _) |
+                    Anchor::Before(_, _) => Ok(seek),
+                    _ => Err(AppError::MalformedQuery),
                 }
             }
         }
