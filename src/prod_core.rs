@@ -340,7 +340,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     sort_by,
                     dir,
                     limit_extra
-                ).await,
+                ),
             Anchor::After(ref field, id) =>
                 self.db.get_projects_mid_window(
                     sort_by,
@@ -348,7 +348,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     field,
                     id,
                     limit_extra
-                ).await,
+                ),
             Anchor::Before(ref field, id) =>
                 self.db.get_projects_mid_window(
                     sort_by,
@@ -356,14 +356,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     field,
                     id,
                     limit_extra
-                ).await,
+                ),
             Anchor::StartQuery(ref query) =>
                 self.db.get_projects_query_end_window(
                     &query,
                     sort_by,
                     dir,
                     limit_extra
-                ).await,
+                ),
             Anchor::AfterQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
                     &query,
@@ -372,7 +372,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     rank,
                     id,
                     limit_extra
-                ).await,
+                ),
             Anchor::BeforeQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
                     &query,
@@ -381,16 +381,16 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     rank,
                     id,
                     limit_extra
-                ).await
-        }?;
+                )
+        }.await?;
 
         let total = match anchor {
             Anchor::StartQuery(ref q) |
             Anchor::AfterQuery(ref q, _, _) |
             Anchor::BeforeQuery(ref q, _, _) =>
-                self.db.get_projects_query_count(&q).await?,
-            _ => self.db.get_projects_count().await?
-        };
+                self.db.get_projects_query_count(&q),
+            _ => self.db.get_projects_count()
+        }.await?;
 
         // make the next link
         let next = if projects.len() == limit_extra as usize {
