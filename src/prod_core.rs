@@ -79,8 +79,8 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             Projects {
                 projects,
                 meta: Pagination {
-                    prev_page: prev.map(SeekLink::new),
-                    next_page: next.map(SeekLink::new),
+                    prev_page: prev.map(SeekLink::from),
+                    next_page: next.map(SeekLink::from),
                     total: self.db.get_project_count().await?
                 }
             },
@@ -325,13 +325,13 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let mut projects = match anchor {
             Anchor::Start =>
                 self.db.get_projects_end_window(
-                    sort_by,
+                    &sort_by,
                     dir,
                     limit_extra
                 ).await,
             Anchor::After(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    sort_by,
+                    &sort_by,
                     dir,
                     field,
                     id,
@@ -339,29 +339,23 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ).await,
             Anchor::Before(ref field, id) =>
                 self.db.get_projects_mid_window(
-                    sort_by,
+                    &sort_by,
                     dir.rev(),
                     field,
                     id,
                     limit_extra
                 ).await,
-            Anchor::StartQuery(ref query) =>
-                self.db.get_projects_query_end_window(
-                    query,
-                    dir,
-                    limit_extra
-                ).await,
-            Anchor::AfterQuery(ref query, rank, id) =>
+            Anchor::AfterQuery(rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    query,
+                    &sort_by,
                     dir,
                     rank,
                     id,
                     limit_extra
                 ).await,
-            Anchor::BeforeQuery(ref query, rank, id) =>
+            Anchor::BeforeQuery(rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    query,
+                    &sort_by,
                     dir.rev(),
                     rank,
                     id,
@@ -378,17 +372,27 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
             // the next page is after the last item
             let last = match anchor {
-                Anchor::Before(_, _) => projects.first(),
+                Anchor::Before(_, _) |
+                Anchor::BeforeQuery(_, _) => projects.first(),
                 _ => projects.last()
             }.expect("element must exist");
 
+            let next_anchor = match anchor {
+                Anchor::AfterQuery(_, _) |
+                Anchor::BeforeQuery(_, _) => Anchor::AfterQuery(
+                    last.rank,
+                    last.project_id as u32
+                ),
+                _ => Anchor::After(
+                    last.sort_field(&sort_by).into(),
+                    last.project_id as u32
+                )
+            };
+
             Some(
                 Seek {
-                    anchor: Anchor::After(
-                        last.sort_field(sort_by).into(),
-                        last.project_id as u32
-                    ),
-                    sort_by,
+                    anchor: next_anchor,
+                    sort_by: sort_by.clone(),
                     dir
                 }
             )
@@ -408,17 +412,27 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 _ => {
                     // the previous page is before the first item
                     let first = match anchor {
-                        Anchor::Before(_, _) => projects.last(),
+                        Anchor::Before(_, _) |
+                        Anchor::BeforeQuery(_, _) => projects.last(),
                         _ => projects.first()
                     }.expect("element must exist");
 
+                    let prev_anchor = match anchor {
+                        Anchor::AfterQuery(_, _) |
+                        Anchor::BeforeQuery(_, _) => Anchor::BeforeQuery(
+                            first.rank,
+                            first.project_id as u32
+                        ),
+                        _ => Anchor::Before(
+                            first.sort_field(&sort_by).into(),
+                            first.project_id as u32
+                        )
+                    };
+
                     Some(
                         Seek {
-                            anchor: Anchor::Before(
-                                first.sort_field(sort_by).into(),
-                                first.project_id as u32
-                            ),
-                            sort_by,
+                            anchor: prev_anchor,
+                            sort_by: sort_by,
                             dir
                         }
                     )
@@ -428,21 +442,23 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
         let pi = projects.into_iter().map(ProjectSummary::from);
         let psums = match anchor {
-            Anchor::Before(_, _) => pi.rev().collect(),
+            Anchor::Before(_, _) |
+            Anchor::BeforeQuery(_, _) => pi.rev().collect(),
             _ => pi.collect()
-        }; 
+        };
 
-        Ok((prev, next, psums)) 
+        Ok((prev, next, psums))
     }
 }
 
 impl ProjectSummaryRow {
-    fn sort_field(&self, sort_by: SortBy) -> &str {
+    fn sort_field(&self, sort_by: &SortBy) -> &str {
         match sort_by {
             SortBy::ProjectName => &self.name,
             SortBy::GameTitle => &self.game_title_sort,
             SortBy::ModificationTime => &self.modified_at,
-            SortBy::CreationTime => &self.created_at
+            SortBy::CreationTime => &self.created_at,
+            SortBy::Query(_) => unreachable!()
         }
     }
 }

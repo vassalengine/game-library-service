@@ -11,6 +11,7 @@ use crate::{
 
 #[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
+    pub rank: f64,
     pub project_id: i64,
     pub name: String,
     pub description: String,
@@ -174,7 +175,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_end_window(
         &self,
-        _sort_by: SortBy,
+        _sort_by: &SortBy,
         _dir: Direction,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -184,7 +185,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_query_end_window(
         &self,
-        _query: &str,
+        _sort_by: &SortBy,
         _dir: Direction,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
@@ -194,7 +195,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_mid_window(
         &self,
-        _sort_by: SortBy,
+        _sort_by: &SortBy,
         _dir: Direction,
         _field: &str,
         _id: u32,
@@ -206,7 +207,7 @@ pub trait DatabaseClient {
 
     async fn get_projects_query_mid_window(
         &self,
-        _query: &str,
+        _sort_by: &SortBy,
         _dir: Direction,
         _rank: f64,
         _id: u32,

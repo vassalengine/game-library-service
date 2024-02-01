@@ -1,4 +1,6 @@
+use base64::{Engine as _};
 use serde::Deserialize;
+use std::str;
 
 use crate::{
     errors::AppError,
@@ -10,7 +12,7 @@ pub struct MaybeProjectsParams {
     pub q: Option<String>,
     pub sort: Option<SortBy>,
     pub order: Option<Direction>,
-    pub seek: Option<Seek>,
+    pub seek: Option<String>,
     pub limit: Option<Limit>
 }
 
@@ -27,7 +29,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = AppError;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        if m.seek.is_some() && 
+        if m.seek.is_some() &&
             (m.sort.is_some() || m.order.is_some() || m.q.is_some()) {
             // sort, order, query are incompatible with seek
             Err(AppError::MalformedQuery)
@@ -38,13 +40,23 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         }
         else {
             let seek = match m.seek {
-                Some(seek) => seek,
+                Some(enc) => {
+                    // base64-decode the seek string
+                    let buf = base64::engine::general_purpose::URL_SAFE_NO_PAD
+                        .decode(enc)
+                        .map_err(|_| AppError::MalformedQuery)?;
+
+                    str::from_utf8(&buf)
+                        .map_err(|_| AppError::MalformedQuery)?
+                        .parse::<Seek>()
+                        .map_err(|_| AppError::MalformedQuery)?
+                },
                 None => match m.q {
                     Some(query) => {
                         Seek {
-                            sort_by: Default::default(), // FIXME
+                            sort_by: SortBy::Query(query),
                             dir: m.order.unwrap_or(Direction::Descending),
-                            anchor: Anchor::StartQuery(query)
+                            anchor: Anchor::Start
                         }
                     },
                     None => {
