@@ -1,5 +1,4 @@
 use base64::{Engine as _};
-use csv;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
@@ -233,7 +232,7 @@ impl TryFrom<&str> for SortBy {
             "t" => Ok(SortBy::GameTitle),
             "m" => Ok(SortBy::ModificationTime),
             "c" => Ok(SortBy::CreationTime),
-            q if q.starts_with("q") => Ok(SortBy::Query(q[1..].into())),
+            q if q.starts_with('q') => Ok(SortBy::Query(q[1..].into())),
             _ => Err(AppError::MalformedQuery)
         }
     }
