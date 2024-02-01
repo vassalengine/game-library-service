@@ -268,23 +268,26 @@ impl Default for Seek {
     }
 }
 
-impl From<&Seek> for String {
-    fn from(value: &Seek) -> Self {
+impl TryFrom<Seek> for String {
+    type Error = AppError;
+
+    fn try_from(s: Seek) -> Result<Self, Self::Error> {
+        String::try_from(&s)
+    }
+}
+
+impl TryFrom<&Seek> for String {
+    type Error = AppError;
+
+    fn try_from(s: &Seek) -> Result<Self, Self::Error> {
         let mut w = csv::WriterBuilder::new()
             .has_headers(false)
             .from_writer(vec![]);
 
-// FIXME: deal with errors
-        w.serialize(value).unwrap();
-        let mut b = w.into_inner().unwrap();
+        w.serialize(s).map_err(|_| AppError::MalformedQuery)?;
+        let mut b = w.into_inner().map_err(|_| AppError::MalformedQuery)?;
         b.pop(); // drop the terminator
-        String::from_utf8(b).unwrap()
-    }
-}
-
-impl From<Seek> for String {
-    fn from(value: Seek) -> Self {
-        String::from(&value)
+        String::from_utf8(b).map_err(|_| AppError::MalformedQuery)
     }
 }
 
@@ -323,11 +326,14 @@ impl FromStr for Seek {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct SeekLink(String);
 
-impl From<Seek> for SeekLink {
-    fn from(seek: Seek) -> Self {
-        let s = String::from(seek);
+impl TryFrom<Seek> for SeekLink {
+    type Error = AppError;
+
+    fn try_from(seek: Seek) -> Result<Self, Self::Error> {
+        let s = String::try_from(seek)
+            .map_err(|_| AppError::MalformedQuery)?;
         let s = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s);
-        SeekLink(format!("?seek={}", s))
+        Ok(SeekLink(format!("?seek={}", s)))
     }
 }
 
@@ -390,19 +396,25 @@ mod test {
             anchor: Anchor::Start,
         };
 
-        assert_eq!(String::from(&seek).parse::<Seek>().unwrap(), seek);
+        assert_eq!(
+            String::try_from(&seek)
+                .unwrap()
+                .parse::<Seek>()
+                .unwrap(),
+            seek
+        );
     }
 
     #[test]
     fn seek_to_string_start() {
         assert_eq!(
-            &String::from(
+            &String::try_from(
                 Seek {
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
                     anchor: Anchor::Start
                 }
-            ),
+            ).unwrap(),
             "p,a,s,,,"
         );
     }
@@ -425,13 +437,13 @@ mod test {
     #[test]
     fn seek_to_string_end() {
         assert_eq!(
-            &String::from(
+            &String::try_from(
                 Seek {
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
                     anchor: Anchor::Start
                 }
-            ),
+            ).unwrap(),
             "p,d,s,,,"
         );
     }
@@ -439,13 +451,13 @@ mod test {
     #[test]
     fn seek_to_string_before() {
         assert_eq!(
-            &String::from(
+            &String::try_from(
                 Seek {
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
                     anchor: Anchor::Before("abc".into(), 0),
                 }
-            ),
+            ).unwrap(),
             "p,a,b,abc,,0"
         );
     }
@@ -453,13 +465,13 @@ mod test {
     #[test]
     fn seek_to_string_after() {
         assert_eq!(
-            &String::from(
+            &String::try_from(
                 Seek {
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
                     anchor: Anchor::After("abc".into(), 0)
                 }
-            ),
+            ).unwrap(),
             "p,a,a,abc,,0"
         );
     }

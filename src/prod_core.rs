@@ -75,12 +75,28 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let ProjectsParams { seek, limit } = params;
         let (prev, next, projects) = self.get_projects_from(seek, limit).await?;
 
+        let prev_page = if let Some(prev) = prev {
+            Some(SeekLink::try_from(prev)?)
+        }
+        else {
+            None
+        };
+
+        let next_page = if let Some(next) = next {
+            Some(SeekLink::try_from(next)?)
+        }
+        else {
+            None
+        };
+
+// TODO: total should reflect number of responsive pages for queries
+
         Ok(
             Projects {
                 projects,
                 meta: Pagination {
-                    prev_page: prev.map(SeekLink::from),
-                    next_page: next.map(SeekLink::from),
+                    prev_page,
+                    next_page,
                     total: self.db.get_project_count().await?
                 }
             },
