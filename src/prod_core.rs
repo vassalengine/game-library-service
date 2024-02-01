@@ -73,7 +73,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     ) -> Result<Projects, AppError>
     {
         let ProjectsParams { seek, limit } = params;
-        let (prev, next, projects) = self.get_projects_from(seek, limit).await?;
+        let (prev, next, projects, total) = self.get_projects_from(seek, limit).await?;
 
         let prev_page = if let Some(prev) = prev {
             Some(SeekLink::try_from(prev)?)
@@ -89,15 +89,13 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             None
         };
 
-// TODO: total should reflect number of responsive pages for queries
-
         Ok(
             Projects {
                 projects,
                 meta: Pagination {
                     prev_page,
                     next_page,
-                    total: self.db.get_projects_count().await?
+                    total
                 }
             },
         )
@@ -329,7 +327,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         &self,
         seek: Seek,
         limit: Limit
-    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>), AppError>
+    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), AppError>
     {
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
@@ -384,6 +382,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     limit_extra
                 ).await
         }?;
+
+        let total = match sort_by {
+            SortBy::Query(ref q) => self.db.get_projects_query_count(&q).await?,
+            _ => self.db.get_projects_count().await?
+        };
 
         // make the next link
         let next = if projects.len() == limit_extra as usize {
@@ -471,7 +474,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             _ => pi.collect()
         };
 
-        Ok((prev, next, psums))
+        Ok((prev, next, psums, total))
     }
 }
 
@@ -566,7 +569,7 @@ mod test {
     async fn get_projects_pname_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -583,6 +586,8 @@ mod test {
                 fake_project_summary("c")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(prev, None);
 
@@ -602,7 +607,7 @@ mod test {
     async fn get_projects_pname_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -619,6 +624,8 @@ mod test {
                 fake_project_summary("h")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(prev, None);
 
@@ -638,7 +645,7 @@ mod test {
     async fn get_projects_pname_after_asc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -655,6 +662,8 @@ mod test {
                 fake_project_summary("d")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -683,7 +692,7 @@ mod test {
     async fn get_projects_pname_after_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -700,6 +709,8 @@ mod test {
                 fake_project_summary("e")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -728,7 +739,7 @@ mod test {
     async fn get_projects_pname_before_asc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -745,6 +756,8 @@ mod test {
                 fake_project_summary("d")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -773,7 +786,7 @@ mod test {
     async fn get_projects_pname_before_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -790,6 +803,8 @@ mod test {
                 fake_project_summary("f")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -818,7 +833,7 @@ mod test {
     async fn get_projects_mtime_start_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
@@ -835,6 +850,8 @@ mod test {
                 fake_project_summary("h")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(prev, None);
 
@@ -854,7 +871,7 @@ mod test {
     async fn get_projects_mtime_end_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -871,6 +888,8 @@ mod test {
                 fake_project_summary("h")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(prev, None);
 
@@ -890,7 +909,7 @@ mod test {
     async fn get_projects_mtime_after_asc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
@@ -907,6 +926,8 @@ mod test {
                 fake_project_summary("d")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -935,7 +956,7 @@ mod test {
     async fn get_projects_mtime_after_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
@@ -952,6 +973,8 @@ mod test {
                 fake_project_summary("e")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -980,7 +1003,7 @@ mod test {
     async fn get_projects_mtime_before_asc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
@@ -997,6 +1020,8 @@ mod test {
                 fake_project_summary("d")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,
@@ -1025,7 +1050,7 @@ mod test {
     async fn get_projects_mtime_before_desc_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let (prev, next, summaries) = core.get_projects_from(
+        let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
@@ -1042,6 +1067,8 @@ mod test {
                 fake_project_summary("f")
             ]
         );
+
+        assert_eq!(total, 10);
 
         assert_eq!(
             prev,

@@ -37,9 +37,17 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_count(
         &self,
-    ) -> Result<i32, AppError>
+    ) -> Result<i64, AppError>
     {
-        get_project_counts(&self.0).await
+        get_projects_count(&self.0).await
+    }
+
+    async fn get_projects_query_count(
+        &self,
+        query: &str
+    ) -> Result<i64, AppError>
+    {
+        get_projects_query_count(&self.0, query).await
     }
 
     async fn get_user_id(
@@ -312,7 +320,7 @@ WHERE name = ?
 
 async fn get_projects_count<'e, E>(
     ex: E
-) -> Result<i32, AppError>
+) -> Result<i64, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -322,6 +330,28 @@ where
 SELECT COUNT(1)
 FROM projects
             "
+        )
+        .fetch_one(ex)
+        .await?
+        .into()
+    )
+}
+
+async fn get_projects_query_count<'e, E>(
+    ex: E,
+    query: &str
+) -> Result<i64, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT COUNT(1)
+FROM projects_fts
+WHERE projects_fts MATCH ?
+            ",
+            query
         )
         .fetch_one(ex)
         .await?

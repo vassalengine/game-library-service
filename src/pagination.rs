@@ -359,7 +359,7 @@ impl fmt::Display for SeekLink {
 pub struct Pagination {
     pub prev_page: Option<SeekLink>,
     pub next_page: Option<SeekLink>,
-    pub total: i32
+    pub total: i64
 }
 
 #[cfg(test)]
