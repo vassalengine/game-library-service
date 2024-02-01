@@ -359,14 +359,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ),
             Anchor::StartQuery(ref query) =>
                 self.db.get_projects_query_end_window(
-                    &query,
+                    query,
                     sort_by,
                     dir,
                     limit_extra
                 ),
             Anchor::AfterQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    &query,
+                    query,
                     sort_by,
                     dir,
                     rank,
@@ -375,7 +375,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 ),
             Anchor::BeforeQuery(ref query, rank, id) =>
                 self.db.get_projects_query_mid_window(
-                    &query,
+                    query,
                     sort_by,
                     dir.rev(),
                     rank,
@@ -388,7 +388,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             Anchor::StartQuery(ref q) |
             Anchor::AfterQuery(ref q, _, _) |
             Anchor::BeforeQuery(ref q, _, _) =>
-                self.db.get_projects_query_count(&q),
+                self.db.get_projects_query_count(q),
             _ => self.db.get_projects_count()
         }.await?;
 
@@ -423,7 +423,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             Some(
                 Seek {
                     anchor: next_anchor,
-                    sort_by: sort_by.clone(),
+                    sort_by,
                     dir
                 }
             )
