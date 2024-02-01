@@ -73,15 +73,17 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     ) -> Result<Projects, AppError>
     {
         let ProjectsParams { seek, limit } = params;
-        let (prev, next, projects, total) = self.get_projects_from(seek, limit).await?;
+        let (prev, next, projects, total) = self.get_projects_from(
+            seek, limit.unwrap_or_default()
+        ).await?;
 
         let prev_page = match prev {
-            Some(prev) => Some(SeekLink::try_from(prev)?),
+            Some(prev) => Some(SeekLink::new(&prev, limit)?),
             None => None
         };
 
         let next_page = match next {
-            Some(next) => Some(SeekLink::try_from(next)?),
+            Some(next) => Some(SeekLink::new(&next, limit)?),
             None => None
         };
 
@@ -430,23 +432,26 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }
         else {
             match anchor {
-                Anchor::Start => None,
+                Anchor::Start | Anchor::StartQuery => None,
                 _ => {
                     // the previous page is before the first item
                     let first = match anchor {
+                        Anchor::Start | Anchor::StartQuery => unreachable!(),
                         Anchor::Before(_, _) |
                         Anchor::BeforeQuery(_, _) => projects.last(),
-                        _ => projects.first()
+                        Anchor::After(_, _) |
+                        Anchor::AfterQuery(_, _) => projects.first()
                     }.expect("element must exist");
 
                     let prev_anchor = match anchor {
-                        Anchor::StartQuery |
+                        Anchor::Start | Anchor::StartQuery => unreachable!(),
                         Anchor::AfterQuery(_, _) |
                         Anchor::BeforeQuery(_, _) => Anchor::BeforeQuery(
                             first.rank,
                             first.project_id as u32
                         ),
-                        _ => Anchor::Before(
+                        Anchor::Before(_, _) |
+                        Anchor::After(_, _) => Anchor::Before(
                             first.sort_field(&sort_by).into(),
                             first.project_id as u32
                         )

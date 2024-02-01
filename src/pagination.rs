@@ -48,6 +48,12 @@ impl TryFrom<&str> for Limit {
     }
 }
 
+impl fmt::Display for Limit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 enum AnchorTag {
@@ -338,14 +344,16 @@ impl FromStr for Seek {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct SeekLink(String);
 
-impl TryFrom<Seek> for SeekLink {
-    type Error = AppError;
-
-    fn try_from(seek: Seek) -> Result<Self, Self::Error> {
+impl SeekLink {
+    pub fn new(seek: &Seek, limit: Option<Limit>) -> Result<SeekLink, AppError> {
         let s = String::try_from(seek)
             .map_err(|_| AppError::MalformedQuery)?;
         let s = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s);
-        Ok(SeekLink(format!("?seek={}", s)))
+
+        match limit {
+            Some(l) => Ok(SeekLink(format!("?limit={}&seek={}", l, s))),
+            None => Ok(SeekLink(format!("?&seek={}", s)))
+        }
     }
 }
 

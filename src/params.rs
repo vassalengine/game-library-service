@@ -20,7 +20,7 @@ pub struct MaybeProjectsParams {
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
     pub seek: Seek,
-    pub limit: Limit
+    pub limit: Option<Limit>
 }
 
 // TODO: tests
@@ -73,7 +73,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             Ok(
                 ProjectsParams {
                     seek,
-                    limit: m.limit.unwrap_or_default()
+                    limit: m.limit
                 }
             )
         }

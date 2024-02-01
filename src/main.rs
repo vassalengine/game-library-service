@@ -204,7 +204,7 @@ mod test {
         core::Core,
         jwt::{self, EncodingKey},
         model::{GameData, Owner, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
-        pagination::{Anchor, Direction, SortBy, Pagination, Seek, SeekLink},
+        pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams,
         version::Version
     };
@@ -332,7 +332,7 @@ mod test {
 
         async fn get_projects(
             &self,
-            _params: ProjectsParams
+            params: ProjectsParams
         ) -> Result<Projects, AppError>
         {
             Ok(
@@ -343,21 +343,23 @@ mod test {
                     ],
                     meta: Pagination {
                         prev_page: Some(
-                            SeekLink::try_from(
-                                Seek {
+                            SeekLink::new(
+                                &Seek {
                                     anchor: Anchor::Before("project_a".into(), 0),
                                     sort_by: SortBy::ProjectName,
                                     dir: Direction::Ascending
-                                }
+                                },
+                                params.limit
                             ).unwrap()
                         ),
                         next_page: Some(
-                            SeekLink::try_from(
-                                Seek {
+                            SeekLink::new(
+                                &Seek {
                                     anchor: Anchor::After("project_b".into(), 0),
                                     sort_by: SortBy::ProjectName,
                                     dir: Direction::Ascending
-                                }
+                                },
+                                params.limit
                             ).unwrap()
                         ),
                         total: 1234
@@ -617,22 +619,24 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
 
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     total: 1234
@@ -662,21 +666,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     total: 1234
@@ -759,12 +765,13 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_start_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending
-            }
+            },
+            None
         ).unwrap();
 
         let response = try_request(
@@ -786,21 +793,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     total: 1234
@@ -811,12 +820,13 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_end_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending
-            }
+            },
+            None
         ).unwrap();
 
         let response = try_request(
@@ -838,21 +848,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     total: 1234
@@ -863,12 +875,13 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_before_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::Before("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending
-            }
+            },
+            None
         ).unwrap();
 
         let response = try_request(
@@ -890,21 +903,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     total: 1234
@@ -915,12 +930,13 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_after_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::After("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending
-            }
+            },
+            None
         ).unwrap();
 
         let response = try_request(
@@ -942,21 +958,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            None
                         ).unwrap()
                     ),
                     total: 1234
@@ -1005,18 +1023,19 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_seek_and_limit_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending
-            }
+            },
+            Limit::new(5)
         ).unwrap();
 
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}&limit=5"))
+                .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1032,21 +1051,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     total: 1234
@@ -1057,18 +1078,19 @@ mod test {
 
     #[tokio::test]
     async fn get_projects_limit_and_seek_ok() {
-        let query = SeekLink::try_from(
-            Seek {
+        let query = SeekLink::new(
+            &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending
-            }
+            },
+            Limit::new(5)
         ).unwrap();
 
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}&limit=5"))
+                .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -1084,21 +1106,23 @@ mod test {
                 ],
                 meta: Pagination {
                     prev_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     next_page: Some(
-                        SeekLink::try_from(
-                            Seek {
+                        SeekLink::new(
+                            &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending
-                            }
+                            },
+                            Limit::new(5)
                         ).unwrap()
                     ),
                     total: 1234
