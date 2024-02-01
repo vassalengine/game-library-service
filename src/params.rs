@@ -50,26 +50,23 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         .parse::<Seek>()
                         .map_err(|_| AppError::MalformedQuery)?
                 },
-                None => match m.q {
-                    Some(query) => {
-                        Seek {
-                            sort_by: SortBy::Query(query),
-                            dir: m.order.unwrap_or(Direction::Descending),
-                            anchor: Anchor::StartQuery
-                        }
-                    },
-                    None => {
-                        // convert sort params into seek params
-                        let sort_by = m.sort.unwrap_or_default();
-                        let dir = m.order.unwrap_or_else(
+                None => {
+                    let (sort_by, anchor) = match m.q {
+                        Some(query) => (
+                            SortBy::Query(query),
+                            Anchor::StartQuery
+                        ),
+                        None => (
+                            m.sort.unwrap_or_default(),
+                            Anchor::Start
+                        )
+                    };
+
+                    let dir = m.order.unwrap_or_else(
                             || sort_by.default_direction()
-                        );
-                        Seek {
-                            sort_by,
-                            dir,
-                            anchor: Anchor::Start
-                        }
-                    }
+                    );
+
+                    Seek { sort_by, dir, anchor }
                 }
             };
 
