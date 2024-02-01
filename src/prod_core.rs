@@ -75,18 +75,14 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let ProjectsParams { seek, limit } = params;
         let (prev, next, projects, total) = self.get_projects_from(seek, limit).await?;
 
-        let prev_page = if let Some(prev) = prev {
-            Some(SeekLink::try_from(prev)?)
-        }
-        else {
-            None
+        let prev_page = match prev {
+            Some(prev) => Some(SeekLink::try_from(prev)?),
+            None => None
         };
 
-        let next_page = if let Some(next) = next {
-            Some(SeekLink::try_from(next)?)
-        }
-        else {
-            None
+        let next_page = match next {
+            Some(next) => Some(SeekLink::try_from(next)?),
+            None => None
         };
 
         Ok(
