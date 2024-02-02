@@ -8,7 +8,7 @@ use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
-    pagination::{Anchor, Limit, SortBy, Pagination, Seek, SeekLink},
+    pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     version::Version
 };
@@ -321,6 +321,65 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         )
     }
 
+    async fn get_projects_window(
+        &self,
+        anchor: &Anchor,
+        sort_by: SortBy,
+        dir: Direction,
+        limit_extra: u32
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    {
+        match anchor {
+            Anchor::Start =>
+                self.db.get_projects_end_window(
+                    sort_by,
+                    dir,
+                    limit_extra
+                ),
+            Anchor::After(field, id) =>
+                self.db.get_projects_mid_window(
+                    sort_by,
+                    dir,
+                    field,
+                    *id,
+                    limit_extra
+                ),
+            Anchor::Before(field, id) =>
+                self.db.get_projects_mid_window(
+                    sort_by,
+                    dir.rev(),
+                    field,
+                    *id,
+                    limit_extra
+                ),
+            Anchor::StartQuery(query) =>
+                self.db.get_projects_query_end_window(
+                    query,
+                    sort_by,
+                    dir,
+                    limit_extra
+                ),
+            Anchor::AfterQuery(query, rank, id) =>
+                self.db.get_projects_query_mid_window(
+                    query,
+                    sort_by,
+                    dir,
+                    *rank,
+                    *id,
+                    limit_extra
+                ),
+            Anchor::BeforeQuery(query, rank, id) =>
+                self.db.get_projects_query_mid_window(
+                    query,
+                    sort_by,
+                    dir.rev(),
+                    *rank,
+                    *id,
+                    limit_extra
+                )
+        }.await
+    }
+
     async fn get_projects_from(
         &self,
         seek: Seek,
@@ -334,56 +393,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         let limit_extra = limit.get() as u32 + 1;
 
         // get the window, seeking forward
-        let mut projects = match anchor {
-            Anchor::Start =>
-                self.db.get_projects_end_window(
-                    sort_by,
-                    dir,
-                    limit_extra
-                ),
-            Anchor::After(ref field, id) =>
-                self.db.get_projects_mid_window(
-                    sort_by,
-                    dir,
-                    field,
-                    id,
-                    limit_extra
-                ),
-            Anchor::Before(ref field, id) =>
-                self.db.get_projects_mid_window(
-                    sort_by,
-                    dir.rev(),
-                    field,
-                    id,
-                    limit_extra
-                ),
-            Anchor::StartQuery(ref query) =>
-                self.db.get_projects_query_end_window(
-                    query,
-                    sort_by,
-                    dir,
-                    limit_extra
-                ),
-            Anchor::AfterQuery(ref query, rank, id) =>
-                self.db.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir,
-                    rank,
-                    id,
-                    limit_extra
-                ),
-            Anchor::BeforeQuery(ref query, rank, id) =>
-                self.db.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir.rev(),
-                    rank,
-                    id,
-                    limit_extra
-                )
-        }.await?;
+        let mut projects = self.get_projects_window(
+            &anchor,
+            sort_by,
+            dir,
+            limit_extra
+        ).await?;
 
+        // get the total number of responsive items
         let total = match anchor {
             Anchor::StartQuery(ref q) |
             Anchor::AfterQuery(ref q, _, _) |
@@ -392,90 +409,142 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             _ => self.db.get_projects_count()
         }.await?;
 
-        // make the next link
-        let next = if projects.len() == limit_extra as usize {
-            // there are more pages in the forward direction
+        let (prev, next) = match anchor {
+            Anchor::Before(_, _) |
+            Anchor::BeforeQuery(_, _, _) => {
+                // make the prev link
+                let prev = if projects.len() == limit_extra as usize {
+                    // there are more pages in the forward direction
 
-            // remove the "extra" item which proves we are not at the end
-            projects.pop();
+                    // remove the "extra" item which proves we are not at the end
+                    projects.pop();
 
-            // the next page is after the last item
-            let last = match anchor {
-                Anchor::Before(_, _) |
-                Anchor::BeforeQuery(_, _, _) => projects.first(),
-                _ => projects.last()
-            }.expect("element must exist");
-
-            let next_anchor = match anchor {
-                Anchor::StartQuery(ref q) |
-                Anchor::AfterQuery(ref q, _, _) |
-                Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
-                    q.clone(),
-                    last.rank,
-                    last.project_id as u32
-                ),
-                _ => Anchor::After(
-                    last.sort_field(&sort_by).into(),
-                    last.project_id as u32
-                )
-            };
-
-            Some(
-                Seek {
-                    anchor: next_anchor,
-                    sort_by,
-                    dir
-                }
-            )
-        }
-        else {
-            // there are no pages in the forward direction
-            None
-        };
-
-        // make the prev link
-        let prev = if projects.is_empty() {
-            None
-        }
-        else {
-            match anchor {
-                Anchor::Start | Anchor::StartQuery(_) => None,
-                _ => {
-                    // the previous page is before the first item
-                    let first = match anchor {
-                        Anchor::Start | Anchor::StartQuery(_) => unreachable!(),
-                        Anchor::Before(_, _) |
-                        Anchor::BeforeQuery(_, _, _) => projects.last(),
-                        Anchor::After(_, _) |
-                        Anchor::AfterQuery(_, _, _) => projects.first()
-                    }.expect("element must exist");
+                    // the prev page is after the last item
+                    let last = projects.last().expect("element must exist");
 
                     let prev_anchor = match anchor {
-                        Anchor::Start | Anchor::StartQuery(_) => unreachable!(),
-                        Anchor::AfterQuery(ref q, _, _) |
                         Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
+                            q.clone(),
+                            last.rank,
+                            last.project_id as u32
+                        ),
+                        Anchor::Before(_, _) => Anchor::Before(
+                            last.sort_field(&sort_by).into(),
+                            last.project_id as u32
+                        ),
+                        Anchor::Start |
+                        Anchor::StartQuery(_) |
+                        Anchor::After(_, _) |
+                        Anchor::AfterQuery(_, _, _) => unreachable!()
+                    };
+
+                    Some(Seek { anchor: prev_anchor, sort_by, dir })
+                }
+                else {
+                    // there are no pages in the forward direction
+                    None
+                };
+
+                // make the next link
+                let next = if projects.is_empty() {
+                    None
+                }
+                else {
+                    // the next page is before the first item
+                    let first = projects.first().expect("element must exist");
+
+                    let next_anchor = match anchor {
+                        Anchor::Start |
+                        Anchor::After(_, _) |
+                        Anchor::StartQuery(_) |
+                        Anchor::AfterQuery(_, _, _) => unreachable!(),
+                        Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
                             q.clone(),
                             first.rank,
                             first.project_id as u32
                         ),
-                        Anchor::Before(_, _) |
-                        Anchor::After(_, _) => Anchor::Before(
+                        Anchor::Before(_, _) => Anchor::After(
                             first.sort_field(&sort_by).into(),
                             first.project_id as u32
                         )
                     };
 
-                    Some(
-                        Seek {
-                            anchor: prev_anchor,
-                            sort_by,
-                            dir
-                        }
-                    )
+                    Some(Seek { anchor: next_anchor, sort_by, dir })
+                };
+
+                (prev, next)
+            },
+            _ => {
+                // make the next link
+                let next = if projects.len() == limit_extra as usize {
+                    // there are more pages in the forward direction
+
+                    // remove the "extra" item which proves we are not at the end
+                    projects.pop();
+
+                    // the next page is after the last item
+                    let last = projects.last().expect("element must exist");
+
+                    let next_anchor = match anchor {
+                        Anchor::StartQuery(ref q) |
+                        Anchor::AfterQuery(ref q, _, _) => Anchor::AfterQuery(
+                            q.clone(),
+                            last.rank,
+                            last.project_id as u32
+                        ),
+                        Anchor::Start |
+                        Anchor::After(_, _) => Anchor::After(
+                            last.sort_field(&sort_by).into(),
+                            last.project_id as u32
+                        ),
+                        Anchor::Before(_, _) |
+                        Anchor::BeforeQuery(_, _, _) => unreachable!()
+                    };
+
+                    Some(Seek { anchor: next_anchor, sort_by, dir })
                 }
+                else {
+                    // there are no pages in the forward direction
+                    None
+                };
+
+                // make the prev link
+                let prev = if projects.is_empty() {
+                    None
+                }
+                else {
+                    match anchor {
+                        Anchor::Start | Anchor::StartQuery(_) => None,
+                        _ => {
+                            // the previous page is before the first item
+                            let first = projects.first().expect("element must exist");
+
+                            let prev_anchor = match anchor {
+                                Anchor::Start |
+                                Anchor::Before(_, _) |
+                                Anchor::StartQuery(_) |
+                                Anchor::BeforeQuery(_, _, _) => unreachable!(),
+                                Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
+                                    q.clone(),
+                                    first.rank,
+                                    first.project_id as u32
+                                ),
+                                Anchor::After(_, _) => Anchor::Before(
+                                    first.sort_field(&sort_by).into(),
+                                    first.project_id as u32
+                                )
+                            };
+
+                            Some(Seek { anchor: prev_anchor, sort_by, dir })
+                        }
+                    }
+                };
+
+                (prev, next)
             }
         };
 
+        // convert the rows to summaries
         let pi = projects.into_iter().map(ProjectSummary::from);
         let psums = match anchor {
             Anchor::Before(_, _) |
@@ -836,6 +905,158 @@ mod test {
                 }
             )
         );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_pname_before_asc_no_prev_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries, total) = core.get_projects_from(
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::Before("d".into(), 4)
+            },
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("a"),
+                fake_project_summary("b"),
+                fake_project_summary("c")
+            ]
+        );
+
+        assert_eq!(total, 10);
+
+        assert_eq!(prev, None);
+
+        assert_eq!(
+            next,
+            Some(
+                Seek {
+                    anchor: Anchor::After("c".into(), 3),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_pname_after_desc_no_prev_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries, total) = core.get_projects_from(
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::Before("g".into(), 7)
+            },
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("j"),
+                fake_project_summary("i"),
+                fake_project_summary("h")
+            ]
+        );
+
+        assert_eq!(total, 10);
+
+        assert_eq!(prev, None);
+
+        assert_eq!(
+            next,
+            Some(
+                Seek {
+                    anchor: Anchor::After("h".into(), 8),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_pname_after_asc_no_next_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries, total) = core.get_projects_from(
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::After("g".into(), 7)
+            },
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("h"),
+                fake_project_summary("i"),
+                fake_project_summary("j")
+            ]
+        );
+
+        assert_eq!(total, 10);
+
+        assert_eq!(
+            prev,
+            Some(
+                Seek {
+                    anchor: Anchor::Before("h".into(), 8),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Ascending
+                }
+            )
+        );
+
+        assert_eq!(next, None);
+    }
+
+    #[sqlx::test(fixtures("users", "ten_projects"))]
+    async fn get_projects_pname_after_desc_no_next_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let (prev, next, summaries, total) = core.get_projects_from(
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Descending,
+                anchor: Anchor::After("d".into(), 4)
+            },
+            Limit::new(3).unwrap()
+        ).await.unwrap();
+
+        assert_eq!(
+            summaries,
+            [
+                fake_project_summary("c"),
+                fake_project_summary("b"),
+                fake_project_summary("a")
+            ]
+        );
+
+        assert_eq!(total, 10);
+
+        assert_eq!(
+            prev,
+            Some(
+                Seek {
+                    anchor: Anchor::Before("c".into(), 3),
+                    sort_by: SortBy::ProjectName,
+                    dir: Direction::Descending
+                }
+            )
+        );
+
+        assert_eq!(next, None);
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
