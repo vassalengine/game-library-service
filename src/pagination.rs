@@ -323,15 +323,15 @@ impl FromStr for Seek {
             // Other SortBy must be paired with Start, After, Before
             match seek.sort_by {
                 SortBy::Relevance => match seek.anchor {
-                    Anchor::StartQuery(_) |
-                    Anchor::AfterQuery(_, _, _) |
-                    Anchor::BeforeQuery(_, _, _) => Ok(seek),
+                    Anchor::StartQuery(..) |
+                    Anchor::AfterQuery(..) |
+                    Anchor::BeforeQuery(..) => Ok(seek),
                     _ => Err(AppError::MalformedQuery)
                 },
                 _ => match seek.anchor {
                     Anchor::Start |
-                    Anchor::After(_, _) |
-                    Anchor::Before(_, _) => Ok(seek),
+                    Anchor::After(..) |
+                    Anchor::Before(..) => Ok(seek),
                     _ => Err(AppError::MalformedQuery),
                 }
             }

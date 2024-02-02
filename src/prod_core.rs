@@ -410,8 +410,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }.await?;
 
         let (prev, next) = match anchor {
-            Anchor::Before(_, _) |
-            Anchor::BeforeQuery(_, _, _) => {
+            Anchor::Before(..) |
+            Anchor::BeforeQuery(..) => {
                 // make the prev link
                 let prev = if projects.len() == limit_extra as usize {
                     // there are more pages in the forward direction
@@ -428,14 +428,14 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             last.rank,
                             last.project_id as u32
                         ),
-                        Anchor::Before(_, _) => Anchor::Before(
+                        Anchor::Before(..) => Anchor::Before(
                             last.sort_field(&sort_by).into(),
                             last.project_id as u32
                         ),
                         Anchor::Start |
-                        Anchor::StartQuery(_) |
-                        Anchor::After(_, _) |
-                        Anchor::AfterQuery(_, _, _) => unreachable!()
+                        Anchor::StartQuery(..) |
+                        Anchor::After(..) |
+                        Anchor::AfterQuery(..) => unreachable!()
                     };
 
                     Some(Seek { anchor: prev_anchor, sort_by, dir })
@@ -455,15 +455,15 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
                     let next_anchor = match anchor {
                         Anchor::Start |
-                        Anchor::After(_, _) |
-                        Anchor::StartQuery(_) |
-                        Anchor::AfterQuery(_, _, _) => unreachable!(),
+                        Anchor::After(..) |
+                        Anchor::StartQuery(..) |
+                        Anchor::AfterQuery(..) => unreachable!(),
                         Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
                             q.clone(),
                             first.rank,
                             first.project_id as u32
                         ),
-                        Anchor::Before(_, _) => Anchor::After(
+                        Anchor::Before(..) => Anchor::After(
                             first.sort_field(&sort_by).into(),
                             first.project_id as u32
                         )
@@ -474,7 +474,10 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
                 (prev, next)
             },
-            _ => {
+            Anchor::Start |
+            Anchor::StartQuery(..) |
+            Anchor::After(..) |
+            Anchor::AfterQuery(..) => {
                 // make the next link
                 let next = if projects.len() == limit_extra as usize {
                     // there are more pages in the forward direction
@@ -493,12 +496,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             last.project_id as u32
                         ),
                         Anchor::Start |
-                        Anchor::After(_, _) => Anchor::After(
+                        Anchor::After(..) => Anchor::After(
                             last.sort_field(&sort_by).into(),
                             last.project_id as u32
                         ),
-                        Anchor::Before(_, _) |
-                        Anchor::BeforeQuery(_, _, _) => unreachable!()
+                        Anchor::Before(..) |
+                        Anchor::BeforeQuery(..) => unreachable!()
                     };
 
                     Some(Seek { anchor: next_anchor, sort_by, dir })
@@ -515,21 +518,24 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 else {
                     match anchor {
                         Anchor::Start | Anchor::StartQuery(_) => None,
-                        _ => {
+                        Anchor::Before(..) |
+                        Anchor::BeforeQuery(..) => unreachable!(),
+                        Anchor::After(..) |
+                        Anchor::AfterQuery(..) => {
                             // the previous page is before the first item
                             let first = projects.first().expect("element must exist");
 
                             let prev_anchor = match anchor {
                                 Anchor::Start |
-                                Anchor::Before(_, _) |
-                                Anchor::StartQuery(_) |
-                                Anchor::BeforeQuery(_, _, _) => unreachable!(),
+                                Anchor::Before(..) |
+                                Anchor::StartQuery(..) |
+                                Anchor::BeforeQuery(..) => unreachable!(),
                                 Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
                                     q.clone(),
                                     first.rank,
                                     first.project_id as u32
                                 ),
-                                Anchor::After(_, _) => Anchor::Before(
+                                Anchor::After(..) => Anchor::Before(
                                     first.sort_field(&sort_by).into(),
                                     first.project_id as u32
                                 )
@@ -547,8 +553,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         // convert the rows to summaries
         let pi = projects.into_iter().map(ProjectSummary::from);
         let psums = match anchor {
-            Anchor::Before(_, _) |
-            Anchor::BeforeQuery(_, _, _) => pi.rev().collect(),
+            Anchor::Before(..) |
+            Anchor::BeforeQuery(..) => pi.rev().collect(),
             _ => pi.collect()
         };
 
