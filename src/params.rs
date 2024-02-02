@@ -12,6 +12,7 @@ pub struct MaybeProjectsParams {
     pub q: Option<String>,
     pub sort: Option<SortBy>,
     pub order: Option<Direction>,
+    pub from: Option<String>,
     pub seek: Option<String>,
     pub limit: Option<Limit>
 }
@@ -29,10 +30,20 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = AppError;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        if m.seek.is_some() &&
-                (m.sort.is_some() || m.order.is_some() || m.q.is_some())
+        if (
+                m.seek.is_some() &&
+                (
+                     m.sort.is_some() ||
+                     m.order.is_some() ||
+                     m.from.is_some() ||
+                     m.q.is_some()
+                )
+            ) 
+            ||
+            (m.from.is_some() && m.q.is_some())
         {
-            // sort, order, query are incompatible with seek
+            // sort, order, query, from are incompatible with seek
+            // from is incompatible with query
             Err(AppError::MalformedQuery)
         }
         else {
@@ -49,6 +60,8 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         .map_err(|_| AppError::MalformedQuery)?
                 },
                 None => {
+
+
                     let (sort_by, anchor) = match m.q {
                         Some(query) => (
                             m.sort.unwrap_or(SortBy::Relevance),
@@ -56,7 +69,12 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         ),
                         None => (
                             m.sort.unwrap_or_default(),
-                            Anchor::Start
+                            match m.from {
+                                // id 0 is unused and sorts before all other
+                                // instances of the from string
+                                Some(from) => Anchor::After(from, 0),
+                                None => Anchor::Start
+                            }
                         )
                     };
 

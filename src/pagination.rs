@@ -353,7 +353,7 @@ impl SeekLink {
 
         match limit {
             Some(l) => Ok(SeekLink(format!("?limit={}&seek={}", l, s))),
-            None => Ok(SeekLink(format!("?&seek={}", s)))
+            None => Ok(SeekLink(format!("?seek={}", s)))
         }
     }
 }
