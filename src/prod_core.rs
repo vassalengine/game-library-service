@@ -380,222 +380,6 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }.await
     }
 
-    fn get_prev_for_before(
-        &self,
-        anchor: &Anchor,
-        sort_by: SortBy,
-        dir: Direction,
-        limit_extra: u32,
-        projects: &mut Vec<ProjectSummaryRow>
-    ) -> Option<Seek>
-    {
-        // make the prev link
-        if projects.len() == limit_extra as usize {
-            // there are more pages in the forward direction
-
-            // remove the "extra" item which proves we are not at the end
-            projects.pop();
-
-            // the prev page is after the last item
-            let last = projects.last().expect("element must exist");
-
-            let prev_anchor = match anchor {
-                Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
-                    q.clone(),
-                    last.rank,
-                    last.project_id as u32
-                ),
-                Anchor::Before(..) => Anchor::Before(
-                    last.sort_field(sort_by).into(),
-                    last.project_id as u32
-                ),
-                Anchor::Start |
-                Anchor::StartQuery(..) |
-                Anchor::After(..) |
-                Anchor::AfterQuery(..) => unreachable!()
-            };
-
-            Some(Seek { anchor: prev_anchor, sort_by, dir })
-        }
-        else {
-            // there are no pages in the forward direction
-            None
-        }
-    }
-
-    fn get_next_for_before(
-        &self,
-        anchor: &Anchor,
-        sort_by: SortBy,
-        dir: Direction,
-        projects: &Vec<ProjectSummaryRow>
-    ) -> Option<Seek>
-    {
-        // make the next link
-        if projects.is_empty() {
-            None
-        }
-        else {
-            // the next page is before the first item
-            let first = projects.first().expect("element must exist");
-
-            let next_anchor = match anchor {
-                Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
-                    q.clone(),
-                    first.rank,
-                    first.project_id as u32
-                ),
-                Anchor::Before(..) => Anchor::After(
-                    first.sort_field(sort_by).into(),
-                    first.project_id as u32
-                ),
-                Anchor::Start |
-                Anchor::After(..) |
-                Anchor::StartQuery(..) |
-                Anchor::AfterQuery(..) => unreachable!()
-            };
-
-            Some(Seek { anchor: next_anchor, sort_by, dir })
-        }
-    }
-
-    fn get_next_for_after(
-        &self,
-        anchor: &Anchor,
-        sort_by: SortBy,
-        dir: Direction,
-        limit_extra: u32,
-        projects: &mut Vec<ProjectSummaryRow>
-    ) -> Option<Seek>
-    {
-        // make the next link
-        if projects.len() == limit_extra as usize {
-            // there are more pages in the forward direction
-
-            // remove the "extra" item which proves we are not at the end
-            projects.pop();
-
-            // the next page is after the last item
-            let last = projects.last().expect("element must exist");
-
-            let next_anchor = match anchor {
-                Anchor::StartQuery(ref q) |
-                Anchor::AfterQuery(ref q, _, _) => Anchor::AfterQuery(
-                    q.clone(),
-                    last.rank,
-                    last.project_id as u32
-                ),
-                Anchor::Start |
-                Anchor::After(..) => Anchor::After(
-                    last.sort_field(sort_by).into(),
-                    last.project_id as u32
-                ),
-                Anchor::Before(..) |
-                Anchor::BeforeQuery(..) => unreachable!()
-            };
-
-            Some(Seek { anchor: next_anchor, sort_by, dir })
-        }
-        else {
-            // there are no pages in the forward direction
-            None
-        }
-    }
-
-    fn get_prev_for_after(
-        &self,
-        anchor: &Anchor,
-        sort_by: SortBy,
-        dir: Direction,
-        projects: &Vec<ProjectSummaryRow>
-    ) -> Option<Seek>
-    {
-        // make the prev link
-        match anchor {
-            _ if projects.is_empty() => None,
-            Anchor::Start |
-            Anchor::StartQuery(_) => None,
-            Anchor::After(..) |
-            Anchor::AfterQuery(..) => {
-                // the previous page is before the first item
-                let first = projects.first().expect("element must exist");
-
-                let prev_anchor = match anchor {
-                    Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
-                        q.clone(),
-                        first.rank,
-                        first.project_id as u32
-                    ),
-                    Anchor::After(..) => Anchor::Before(
-                        first.sort_field(sort_by).into(),
-                        first.project_id as u32
-                    ),
-                    Anchor::Start |
-                        Anchor::StartQuery(..) |
-                    Anchor::Before(..) |
-                    Anchor::BeforeQuery(..) => unreachable!()
-                };
-
-                Some(Seek { anchor: prev_anchor, sort_by, dir })
-            },
-            Anchor::Before(..) |
-            Anchor::BeforeQuery(..) => unreachable!()
-        }
-    }
-
-    fn get_links(
-        &self,
-        anchor: &Anchor,
-        sort_by: SortBy,
-        dir: Direction,
-        limit_extra: u32,
-        projects: &mut Vec<ProjectSummaryRow>
-    ) -> (Option<Seek>, Option<Seek>)
-    {
-        match anchor {
-            Anchor::Before(..) |
-            Anchor::BeforeQuery(..) => {
-                let prev = self.get_prev_for_before(
-                    anchor,
-                    sort_by,
-                    dir,
-                    limit_extra,
-                    projects
-                );
-
-                let next = self.get_next_for_before(
-                    anchor,
-                    sort_by,
-                    dir,
-                    projects
-                );
-
-                (prev, next)
-            },
-            Anchor::Start |
-            Anchor::StartQuery(..) |
-            Anchor::After(..) |
-            Anchor::AfterQuery(..) => {
-                let next = self.get_next_for_after(
-                    anchor,
-                    sort_by,
-                    dir,
-                    limit_extra,
-                    projects
-                );
-
-                let prev = self.get_prev_for_after(
-                    anchor,
-                    sort_by,
-                    dir,
-                    projects
-                );
-
-                (prev, next)
-            }
-        }
-    }
-
     async fn get_projects_from(
         &self,
         seek: Seek,
@@ -617,7 +401,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         ).await?;
 
         // get the prev, next links
-        let (prev, next) = self.get_links(
+        let (prev, next) = get_links(
             &anchor,
             sort_by,
             dir,
@@ -643,6 +427,217 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         };
 
         Ok((prev, next, psums, total))
+    }
+}
+
+fn get_prev_for_before(
+    anchor: &Anchor,
+    sort_by: SortBy,
+    dir: Direction,
+    limit_extra: u32,
+    projects: &mut Vec<ProjectSummaryRow>
+) -> Option<Seek>
+{
+    // make the prev link
+    if projects.len() == limit_extra as usize {
+        // there are more pages in the forward direction
+
+        // remove the "extra" item which proves we are not at the end
+        projects.pop();
+
+        // the prev page is after the last item
+        let last = projects.last().expect("element must exist");
+
+        let prev_anchor = match anchor {
+            Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
+                q.clone(),
+                last.rank,
+                last.project_id as u32
+            ),
+            Anchor::Before(..) => Anchor::Before(
+                last.sort_field(sort_by).into(),
+                last.project_id as u32
+            ),
+            Anchor::Start |
+            Anchor::StartQuery(..) |
+            Anchor::After(..) |
+            Anchor::AfterQuery(..) => unreachable!()
+        };
+
+        Some(Seek { anchor: prev_anchor, sort_by, dir })
+    }
+    else {
+        // there are no pages in the forward direction
+        None
+    }
+}
+
+fn get_next_for_before(
+    anchor: &Anchor,
+    sort_by: SortBy,
+    dir: Direction,
+    projects: &Vec<ProjectSummaryRow>
+) -> Option<Seek>
+{
+    // make the next link
+    if projects.is_empty() {
+        None
+    }
+    else {
+        // the next page is before the first item
+        let first = projects.first().expect("element must exist");
+
+        let next_anchor = match anchor {
+            Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
+                q.clone(),
+                first.rank,
+                first.project_id as u32
+            ),
+            Anchor::Before(..) => Anchor::After(
+                first.sort_field(sort_by).into(),
+                first.project_id as u32
+            ),
+            Anchor::Start |
+            Anchor::After(..) |
+            Anchor::StartQuery(..) |
+            Anchor::AfterQuery(..) => unreachable!()
+        };
+
+        Some(Seek { anchor: next_anchor, sort_by, dir })
+    }
+}
+
+fn get_next_for_after(
+    anchor: &Anchor,
+    sort_by: SortBy,
+    dir: Direction,
+    limit_extra: u32,
+    projects: &mut Vec<ProjectSummaryRow>
+) -> Option<Seek>
+{
+    // make the next link
+    if projects.len() == limit_extra as usize {
+        // there are more pages in the forward direction
+
+        // remove the "extra" item which proves we are not at the end
+        projects.pop();
+
+        // the next page is after the last item
+        let last = projects.last().expect("element must exist");
+
+        let next_anchor = match anchor {
+            Anchor::StartQuery(ref q) |
+            Anchor::AfterQuery(ref q, _, _) => Anchor::AfterQuery(
+                q.clone(),
+                last.rank,
+                last.project_id as u32
+            ),
+            Anchor::Start |
+            Anchor::After(..) => Anchor::After(
+                last.sort_field(sort_by).into(),
+                last.project_id as u32
+            ),
+            Anchor::Before(..) |
+            Anchor::BeforeQuery(..) => unreachable!()
+        };
+
+        Some(Seek { anchor: next_anchor, sort_by, dir })
+    }
+    else {
+        // there are no pages in the forward direction
+        None
+    }
+}
+
+fn get_prev_for_after(
+    anchor: &Anchor,
+    sort_by: SortBy,
+    dir: Direction,
+    projects: &Vec<ProjectSummaryRow>
+) -> Option<Seek>
+{
+    // make the prev link
+    match anchor {
+        _ if projects.is_empty() => None,
+        Anchor::Start |
+        Anchor::StartQuery(_) => None,
+        Anchor::After(..) |
+        Anchor::AfterQuery(..) => {
+            // the previous page is before the first item
+            let first = projects.first().expect("element must exist");
+
+            let prev_anchor = match anchor {
+                Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
+                    q.clone(),
+                    first.rank,
+                    first.project_id as u32
+                ),
+                Anchor::After(..) => Anchor::Before(
+                    first.sort_field(sort_by).into(),
+                    first.project_id as u32
+                ),
+                Anchor::Start |
+                    Anchor::StartQuery(..) |
+                Anchor::Before(..) |
+                Anchor::BeforeQuery(..) => unreachable!()
+            };
+
+            Some(Seek { anchor: prev_anchor, sort_by, dir })
+        },
+        Anchor::Before(..) |
+        Anchor::BeforeQuery(..) => unreachable!()
+    }
+}
+
+fn get_links(
+    anchor: &Anchor,
+    sort_by: SortBy,
+    dir: Direction,
+    limit_extra: u32,
+    projects: &mut Vec<ProjectSummaryRow>
+) -> (Option<Seek>, Option<Seek>)
+{
+    match anchor {
+        Anchor::Before(..) |
+        Anchor::BeforeQuery(..) => {
+            let prev = get_prev_for_before(
+                anchor,
+                sort_by,
+                dir,
+                limit_extra,
+                projects
+            );
+
+            let next = get_next_for_before(
+                anchor,
+                sort_by,
+                dir,
+                projects
+            );
+
+            (prev, next)
+        },
+        Anchor::Start |
+        Anchor::StartQuery(..) |
+        Anchor::After(..) |
+        Anchor::AfterQuery(..) => {
+            let next = get_next_for_after(
+                anchor,
+                sort_by,
+                dir,
+                limit_extra,
+                projects
+            );
+
+            let prev = get_prev_for_after(
+                anchor,
+                sort_by,
+                dir,
+                projects
+            );
+
+            (prev, next)
+        }
     }
 }
 
