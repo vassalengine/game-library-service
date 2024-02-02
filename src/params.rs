@@ -60,8 +60,6 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         .map_err(|_| AppError::MalformedQuery)?
                 },
                 None => {
-
-
                     let (sort_by, anchor) = match m.q {
                         Some(query) => (
                             m.sort.unwrap_or(SortBy::Relevance),
