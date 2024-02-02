@@ -429,7 +429,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                             last.project_id as u32
                         ),
                         Anchor::Before(..) => Anchor::Before(
-                            last.sort_field(&sort_by).into(),
+                            last.sort_field(sort_by).into(),
                             last.project_id as u32
                         ),
                         Anchor::Start |
@@ -454,19 +454,19 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     let first = projects.first().expect("element must exist");
 
                     let next_anchor = match anchor {
-                        Anchor::Start |
-                        Anchor::After(..) |
-                        Anchor::StartQuery(..) |
-                        Anchor::AfterQuery(..) => unreachable!(),
                         Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
                             q.clone(),
                             first.rank,
                             first.project_id as u32
                         ),
                         Anchor::Before(..) => Anchor::After(
-                            first.sort_field(&sort_by).into(),
+                            first.sort_field(sort_by).into(),
                             first.project_id as u32
-                        )
+                        ),
+                        Anchor::Start |
+                        Anchor::After(..) |
+                        Anchor::StartQuery(..) |
+                        Anchor::AfterQuery(..) => unreachable!()
                     };
 
                     Some(Seek { anchor: next_anchor, sort_by, dir })
@@ -497,7 +497,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                         ),
                         Anchor::Start |
                         Anchor::After(..) => Anchor::After(
-                            last.sort_field(&sort_by).into(),
+                            last.sort_field(sort_by).into(),
                             last.project_id as u32
                         ),
                         Anchor::Before(..) |
@@ -512,38 +512,35 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 };
 
                 // make the prev link
-                let prev = if projects.is_empty() {
-                    None
-                }
-                else {
-                    match anchor {
-                        Anchor::Start | Anchor::StartQuery(_) => None,
-                        Anchor::Before(..) |
-                        Anchor::BeforeQuery(..) => unreachable!(),
-                        Anchor::After(..) |
-                        Anchor::AfterQuery(..) => {
-                            // the previous page is before the first item
-                            let first = projects.first().expect("element must exist");
+                let prev = match anchor {
+                    _ if projects.is_empty() => None,
+                    Anchor::Start |
+                    Anchor::StartQuery(_) => None,
+                    Anchor::After(..) |
+                    Anchor::AfterQuery(..) => {
+                        // the previous page is before the first item
+                        let first = projects.first().expect("element must exist");
 
-                            let prev_anchor = match anchor {
-                                Anchor::Start |
-                                Anchor::Before(..) |
+                        let prev_anchor = match anchor {
+                            Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
+                                q.clone(),
+                                first.rank,
+                                first.project_id as u32
+                            ),
+                            Anchor::After(..) => Anchor::Before(
+                                first.sort_field(sort_by).into(),
+                                first.project_id as u32
+                            ),
+                            Anchor::Start |
                                 Anchor::StartQuery(..) |
-                                Anchor::BeforeQuery(..) => unreachable!(),
-                                Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
-                                    q.clone(),
-                                    first.rank,
-                                    first.project_id as u32
-                                ),
-                                Anchor::After(..) => Anchor::Before(
-                                    first.sort_field(&sort_by).into(),
-                                    first.project_id as u32
-                                )
-                            };
+                            Anchor::Before(..) |
+                            Anchor::BeforeQuery(..) => unreachable!()
+                        };
 
-                            Some(Seek { anchor: prev_anchor, sort_by, dir })
-                        }
-                    }
+                        Some(Seek { anchor: prev_anchor, sort_by, dir })
+                    },
+                    Anchor::Before(..) |
+                    Anchor::BeforeQuery(..) => unreachable!()
                 };
 
                 (prev, next)
@@ -563,7 +560,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 }
 
 impl ProjectSummaryRow {
-    fn sort_field(&self, sort_by: &SortBy) -> &str {
+    fn sort_field(&self, sort_by: SortBy) -> &str {
         match sort_by {
             SortBy::ProjectName => &self.name,
             SortBy::GameTitle => &self.game_title_sort,
