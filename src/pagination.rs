@@ -221,8 +221,8 @@ impl TryFrom<&str> for Direction {
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 pub enum SortBy {
-    #[default]
     ProjectName,
+    #[default]
     GameTitle,
     ModificationTime,
     CreationTime,
