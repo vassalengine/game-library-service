@@ -6,7 +6,7 @@ use crate::errors::AppError;
 pub fn nanos_to_rfc3339(ns: i64) -> Result<String, AppError> {
     Ok(
         DateTime::<Utc>::from_timestamp(
-            (ns / 1_000_000_000) as i64,
+            ns / 1_000_000_000,
             (ns % 1_000_000_000) as u32
         )
         .ok_or(AppError::InternalError)?
