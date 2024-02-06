@@ -1,6 +1,6 @@
 use axum::async_trait;
 use sqlx::{
-    Acquire, Database, Executor, QueryBuilder,
+    Acquire, Database, Encode, Executor, QueryBuilder, Type,
     sqlite::Sqlite
 };
 use serde::Deserialize;
@@ -11,6 +11,7 @@ use crate::{
     errors::AppError,
     model::{Owner, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
+    time::rfc3339_to_nanos,
     version::Version
 };
 
@@ -149,7 +150,25 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
-        get_projects_mid_window(&self.0, sort_by, dir, field, id, limit).await
+        match sort_by {
+            SortBy::CreationTime |
+            SortBy::ModificationTime => get_projects_mid_window(
+                &self.0,
+                sort_by,
+                dir,
+                &rfc3339_to_nanos(field)?,
+                id,
+                limit
+            ).await,
+            _ => get_projects_mid_window(
+                &self.0,
+                sort_by,
+                dir,
+                &field,
+                id,
+                limit
+            ).await
+        }
     }
 
     async fn get_projects_query_mid_window(
@@ -170,7 +189,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         user: &User,
         proj: &str,
         proj_data: &ProjectDataPost,
-        now: &str
+        now: i64
     ) -> Result<(), AppError>
     {
         create_project(&self.0, user, proj, proj_data, now).await
@@ -181,7 +200,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         owner: &Owner,
         proj_id: i64,
         proj_data: &ProjectDataPatch,
-        now: &str
+        now: i64
     ) -> Result<(), AppError>
     {
         update_project(&self.0, owner, proj_id, proj_data, now).await
@@ -215,7 +234,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_packages_at(
         &self,
         proj_id: i64,
-        date: &str,
+        date: i64,
     ) -> Result<Vec<PackageRow>, AppError>
     {
         get_packages_at(&self.0, proj_id, date).await
@@ -232,7 +251,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_releases_at(
         &self,
         pkg_id: i64,
-        date: &str
+        date: i64
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
         get_releases_at(&self.0, pkg_id, date).await
@@ -564,8 +583,8 @@ impl SortBy {
         match self {
             SortBy::ProjectName => "projects.name COLLATE NOCASE",
             SortBy::GameTitle => "projects.game_title_sort COLLATE NOCASE",
-            SortBy::ModificationTime => "projects.modified_at COLLATE NOCASE",
-            SortBy::CreationTime => "projects.created_at COLLATE NOCASE",
+            SortBy::ModificationTime => "projects.modified_at",
+            SortBy::CreationTime => "projects.created_at",
             SortBy::Relevance => "projects_fts.rank"
         }
     }
@@ -674,16 +693,17 @@ WHERE projects_fts MATCH "
     )
 }
 
-async fn get_projects_mid_window<'e, E>(
+async fn get_projects_mid_window<'e, 'f, E, F>(
     ex: E,
     sort_by: SortBy,
     dir: Direction,
-    field: &str,
+    field: &'f F,
     id: u32,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
-    E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>,
+    F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
 {
     Ok(
         QueryBuilder::new(
@@ -794,7 +814,7 @@ async fn create_project_row<'e, E>(
     user_id: i64,
     proj: &str,
     proj_data: &ProjectDataPost,
-    now: &str
+    now: i64
 ) -> Result<i64, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -890,8 +910,8 @@ RETURNING project_data_id
 struct ProjectRevisionRow<'a> {
     project_id: i64,
     name: &'a str,
-    created_at: &'a str,
-    modified_at: &'a str,
+    created_at: i64,
+    modified_at: i64,
     modified_by: i64,
     revision: i64,
     project_data_id: i64
@@ -936,7 +956,7 @@ async fn create_project<'a, A>(
     user: &User,
     proj: &str,
     pd: &ProjectDataPost,
-    now: &str
+    now: i64
 ) -> Result<(), AppError>
 where
     A: Acquire<'a, Database = Sqlite>
@@ -989,7 +1009,7 @@ async fn update_project_row<'e, E>(
     proj_id: i64,
     revision: i64,
     pd: &ProjectDataPatch,
-    now: &str
+    now: i64
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1053,7 +1073,7 @@ async fn update_project<'a, A>(
     owner: &Owner,
     proj_id: i64,
     pd: &ProjectDataPatch,
-    now: &str
+    now: i64
 ) -> Result<(), AppError>
 where
     A: Acquire<'a, Database = Sqlite>
@@ -1087,7 +1107,7 @@ where
     let rr = ProjectRevisionRow {
         project_id: proj_id,
         name: &row.name,
-        created_at: &row.created_at,
+        created_at: row.created_at,
         modified_at: now,
         modified_by: owner_id,
         revision,
@@ -1205,7 +1225,7 @@ ORDER BY name COLLATE NOCASE ASC
 async fn get_packages_at<'e, E>(
     ex: E,
     proj_id: i64,
-    date: &str
+    date: i64
 ) -> Result<Vec<PackageRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1313,7 +1333,7 @@ ORDER BY
 async fn get_releases_at<'e, E>(
     ex: E,
     pkg_id: i64,
-    date: &str
+    date: i64
 ) -> Result<Vec<ReleaseRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1767,8 +1787,8 @@ mod test {
             name: "test_game".into(),
             description: "Brian's Trademarked Game of Being a Test Case".into(),
             revision: 1,
-            created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-            modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+            created_at: 1699804206419538067,
+            modified_at: 1699804206419538067,
             modified_by: 1,
             game_title: "A Game of Tests".into(),
             game_title_sort: "Game of Tests, A".into(),
@@ -1801,7 +1821,7 @@ mod test {
             &user,
             &row.name,
             &cdata,
-            &row.created_at
+            row.created_at
         ).await.unwrap();
 
         let proj_id = get_project_id(&pool, &row.name).await.unwrap();
@@ -1829,8 +1849,8 @@ mod test {
             name: name.into(),
             description: "".into(),
             revision: 1,
-            created_at: "".into(),
-            modified_at: "".into(),
+            created_at: 0,
+            modified_at: 0,
             game_title: "".into(),
             game_title_sort: "".into(),
             game_publisher: "".into(),
@@ -1921,7 +1941,7 @@ mod test {
     async fn get_projects_mid_window_asc_empty(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, "a", 1, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
             ).await.unwrap(),
             []
         );
@@ -1931,7 +1951,7 @@ mod test {
     async fn get_projects_mid_window_asc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, "b", 2, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
             ).await.unwrap(),
             [
                 fake_project_row("c", 3),
@@ -1944,7 +1964,7 @@ mod test {
     async fn get_projects_mid_window_asc_past_end(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, "d", 4, 3
+                &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
             ).await.unwrap(),
             []
         );
@@ -1954,7 +1974,7 @@ mod test {
     async fn get_projects_mid_window_desc_empty(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, "a", 1, 3
+                &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
             ).await.unwrap(),
             []
         );
@@ -1964,7 +1984,7 @@ mod test {
     async fn get_projects_mid_window_desc_not_all(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, "b", 2, 3
+                &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
             ).await.unwrap(),
             [
                 fake_project_row("a", 1)
@@ -1976,7 +1996,7 @@ mod test {
     async fn get_projects_mid_window_desc_past_start(pool: Pool) {
         assert_eq!(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, "d", 4, 3
+                &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
             ).await.unwrap(),
             [
                 fake_project_row("c", 3),
@@ -1995,8 +2015,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
+                created_at: 1699804206419538067,
+                modified_at: 1702569006419538067,
                 modified_by: 1,
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
@@ -2025,8 +2045,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
+                created_at: 1699804206419538067,
+                modified_at: 1702569006419538067,
                 modified_by: 1,
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
@@ -2047,8 +2067,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 1,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                created_at: 1699804206419538067,
+                modified_at: 1699804206419538067,
                 modified_by: 1,
                 game_title: "A Game of Tests".into(),
                 game_title_sort: "Game of Tests, A".into(),
@@ -2085,17 +2105,17 @@ mod test {
                 PackageRow {
                     package_id: 1,
                     name: "a_package".into(),
-                    created_at: "2023-12-09T15:56:29.180282477+00:00".into()
+                    created_at: 1702137389180282477
                 },
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
-                    created_at: "2022-11-06T15:56:29.180282477+00:00".into()
+                    created_at: 1667750189180282477
                 },
                 PackageRow {
                     package_id: 3,
                     name: "c_package".into(),
-                    created_at: "2023-11-06T15:56:29.180282477+00:00".into()
+                    created_at: 1699286189180282477
                 }
             ]
         );
@@ -2112,7 +2132,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_none(pool: Pool) {
-        let date = "1970-01-01T00:00:00.000000000+00:00";
+        let date = 0;
         assert_eq!(
             get_packages_at(&pool, 42, date).await.unwrap(),
             vec![]
@@ -2121,14 +2141,14 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_some(pool: Pool) {
-        let date = "2023-01-01T00:00:00.000000000+00:00";
+        let date = 1672531200000000000;
         assert_eq!(
             get_packages_at(&pool, 42, date).await.unwrap(),
             vec![
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
-                    created_at: "2022-11-06T15:56:29.180282477+00:00".into()
+                    created_at: 1667750189180282477
                 }
             ]
         );
@@ -2137,7 +2157,7 @@ mod test {
     // TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_not_a_project(pool: Pool) {
-        let date = "2022-01-01T00:00:00.000000000+00:00";
+        let date = 16409952000000000;
         assert_eq!(
             get_packages_at(&pool, 0, date).await.unwrap(),
             vec![]
@@ -2177,7 +2197,7 @@ mod test {
                     filename: "a_package-1.2.4".into(),
                     size: 5678,
                     checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                    published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                    published_at: 1702223789180282477,
                     published_by: "alice".into()
                 },
                 ReleaseRow {
@@ -2192,7 +2212,7 @@ mod test {
                     filename: "a_package-1.2.3".into(),
                     size: 1234,
                     checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                    published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                    published_at: 1702137389180282477,
                     published_by: "bob".into()
                 }
             ]

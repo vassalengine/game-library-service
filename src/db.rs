@@ -4,7 +4,7 @@ use sqlx::FromRow;
 
 use crate::{
     errors::AppError,
-    model::{GameData, Owner, ProjectID, ProjectDataPatch, ProjectDataPost, ProjectSummary, User, Users},
+    model::{Owner, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -16,32 +16,13 @@ pub struct ProjectSummaryRow {
     pub name: String,
     pub description: String,
     pub revision: i64,
-    pub created_at: String,
-    pub modified_at: String,
+    pub created_at: i64,
+    pub modified_at: i64,
     pub game_title: String,
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String,
     pub image: Option<String>
-}
-
-impl From<ProjectSummaryRow> for ProjectSummary {
-    fn from(r: ProjectSummaryRow) -> Self {
-        ProjectSummary {
-            name: r.name,
-            description: r.description,
-            revision: r.revision,
-            created_at: r.created_at,
-            modified_at: r.modified_at,
-            tags: vec![],
-            game: GameData {
-                title: r.game_title,
-                title_sort_key: r.game_title_sort,
-                publisher: r.game_publisher,
-                year: r.game_year
-            }
-        }
-    }
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -50,8 +31,8 @@ pub struct ProjectRow {
     pub name: String,
     pub description: String,
     pub revision: i64,
-    pub created_at: String,
-    pub modified_at: String,
+    pub created_at: i64,
+    pub modified_at: i64,
     pub modified_by: i64,
     pub game_title: String,
     pub game_title_sort: String,
@@ -65,7 +46,7 @@ pub struct ProjectRow {
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
-    pub created_at: String
+    pub created_at: i64
 //    description: String
 }
 
@@ -82,7 +63,7 @@ pub struct ReleaseRow {
     pub url: String,
     pub size: i64,
     pub checksum: String,
-    pub published_at: String,
+    pub published_at: i64,
     pub published_by: String
 //    requires: String
 }
@@ -232,7 +213,7 @@ pub trait DatabaseClient {
         _user: &User,
         _proj: &str,
         _proj_data: &ProjectDataPost,
-        _now: &str
+        _now: i64
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -243,7 +224,7 @@ pub trait DatabaseClient {
         _owner: &Owner,
         _proj_id: i64,
         _proj_data: &ProjectDataPatch,
-        _now: &str
+        _now: i64
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -277,7 +258,7 @@ pub trait DatabaseClient {
     async fn get_packages_at(
         &self,
         _proj_id: i64,
-        _date: &str,
+        _date: i64,
     ) -> Result<Vec<PackageRow>, AppError>
     {
         unimplemented!();
@@ -294,7 +275,7 @@ pub trait DatabaseClient {
     async fn get_releases_at(
         &self,
         _pkg_id: i64,
-        _date: &str
+        _date: i64
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
         unimplemented!();

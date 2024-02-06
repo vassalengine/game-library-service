@@ -10,6 +10,7 @@ use crate::{
     model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
+    time::nanos_to_rfc3339,
     version::Version
 };
 
@@ -125,11 +126,13 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         proj_data: &ProjectDataPost
     ) -> Result<(), AppError>
     {
-        let now = (self.now)().to_rfc3339();
+        let now = (self.now)()
+            .timestamp_nanos_opt()
+            .ok_or(AppError::InternalError)?;
 // FIXME: generate a sort key?
 //        let mut proj_data = proj_data;
 //        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
-        self.db.create_project(user, proj, proj_data, &now).await
+        self.db.create_project(user, proj, proj_data, now).await
     }
 
     async fn update_project(
@@ -139,8 +142,10 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
     {
-        let now = (self.now)().to_rfc3339();
-        self.db.update_project(owner, proj_id, proj_data, &now).await
+        let now = (self.now)()
+            .timestamp_nanos_opt()
+            .ok_or(AppError::InternalError)?;
+        self.db.update_project(owner, proj_id, proj_data, now).await
     }
 
     async fn get_project_revision(
@@ -153,17 +158,17 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             proj_id, revision
         ).await?;
 
-        let mtime = proj_row.modified_at.clone();
+        let mtime = proj_row.modified_at;
 
         let package_rows = self.db.get_packages_at(
-            proj_id, &mtime
+            proj_id, mtime
         ).await?;
 
         self.get_project_impl(
             proj_id,
             proj_row,
             package_rows,
-            |pc, pkgid| pc.db.get_releases_at(pkgid, &mtime)
+            |pc, pkgid| pc.db.get_releases_at(pkgid, mtime)
         ).await
     }
 
@@ -242,7 +247,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 url: rr.url,
                 size: rr.size,
                 checksum: rr.checksum,
-                published_at: rr.published_at,
+                published_at: nanos_to_rfc3339(rr.published_at)?,
                 published_by: rr.published_by,
                 requires: "".into(),
                 authors
@@ -304,8 +309,8 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                 name: proj_row.name,
                 description: proj_row.description,
                 revision: proj_row.revision,
-                created_at: proj_row.created_at,
-                modified_at: proj_row.modified_at,
+                created_at: nanos_to_rfc3339(proj_row.created_at)?,
+                modified_at: nanos_to_rfc3339(proj_row.modified_at)?,
                 tags: vec![],
                 game: GameData {
                     title: proj_row.game_title,
@@ -407,7 +412,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
             dir,
             limit_extra,
             &mut projects
-        );
+        )?;
 
         // get the total number of responsive items
         let total = match anchor {
@@ -419,12 +424,12 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         }.await?;
 
         // convert the rows to summaries
-        let pi = projects.into_iter().map(ProjectSummary::from);
+        let pi = projects.into_iter().map(ProjectSummary::try_from);
         let psums = match anchor {
             Anchor::Before(..) |
-            Anchor::BeforeQuery(..) => pi.rev().collect(),
-            _ => pi.collect()
-        };
+            Anchor::BeforeQuery(..) => pi.rev().collect::<Result<Vec<_>, _>>(),
+            _ => pi.collect::<Result<Vec<_>, _>>()
+        }?;
 
         Ok((prev, next, psums, total))
     }
@@ -436,7 +441,7 @@ fn get_prev_for_before(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Option<Seek>
+) -> Result<Option<Seek>, AppError>
 {
     // make the prev link
     if projects.len() == limit_extra as usize {
@@ -455,7 +460,7 @@ fn get_prev_for_before(
                 last.project_id as u32
             ),
             Anchor::Before(..) => Anchor::Before(
-                last.sort_field(sort_by).into(),
+                last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
             Anchor::Start |
@@ -464,11 +469,11 @@ fn get_prev_for_before(
             Anchor::AfterQuery(..) => unreachable!()
         };
 
-        Some(Seek { anchor: prev_anchor, sort_by, dir })
+        Ok(Some(Seek { anchor: prev_anchor, sort_by, dir }))
     }
     else {
         // there are no pages in the forward direction
-        None
+        Ok(None)
     }
 }
 
@@ -477,11 +482,11 @@ fn get_next_for_before(
     sort_by: SortBy,
     dir: Direction,
     projects: &Vec<ProjectSummaryRow>
-) -> Option<Seek>
+) -> Result<Option<Seek>, AppError>
 {
     // make the next link
     if projects.is_empty() {
-        None
+        Ok(None)
     }
     else {
         // the next page is before the first item
@@ -494,7 +499,7 @@ fn get_next_for_before(
                 first.project_id as u32
             ),
             Anchor::Before(..) => Anchor::After(
-                first.sort_field(sort_by).into(),
+                first.sort_field(sort_by)?,
                 first.project_id as u32
             ),
             Anchor::Start |
@@ -503,7 +508,7 @@ fn get_next_for_before(
             Anchor::AfterQuery(..) => unreachable!()
         };
 
-        Some(Seek { anchor: next_anchor, sort_by, dir })
+        Ok(Some(Seek { anchor: next_anchor, sort_by, dir }))
     }
 }
 
@@ -513,7 +518,7 @@ fn get_next_for_after(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Option<Seek>
+) -> Result<Option<Seek>, AppError>
 {
     // make the next link
     if projects.len() == limit_extra as usize {
@@ -534,18 +539,18 @@ fn get_next_for_after(
             ),
             Anchor::Start |
             Anchor::After(..) => Anchor::After(
-                last.sort_field(sort_by).into(),
+                last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
             Anchor::Before(..) |
             Anchor::BeforeQuery(..) => unreachable!()
         };
 
-        Some(Seek { anchor: next_anchor, sort_by, dir })
+        Ok(Some(Seek { anchor: next_anchor, sort_by, dir }))
     }
     else {
         // there are no pages in the forward direction
-        None
+        Ok(None)
     }
 }
 
@@ -554,13 +559,13 @@ fn get_prev_for_after(
     sort_by: SortBy,
     dir: Direction,
     projects: &Vec<ProjectSummaryRow>
-) -> Option<Seek>
+) -> Result<Option<Seek>, AppError>
 {
     // make the prev link
     match anchor {
-        _ if projects.is_empty() => None,
+        _ if projects.is_empty() => Ok(None),
         Anchor::Start |
-        Anchor::StartQuery(_) => None,
+        Anchor::StartQuery(_) => Ok(None),
         Anchor::After(..) |
         Anchor::AfterQuery(..) => {
             // the previous page is before the first item
@@ -573,7 +578,7 @@ fn get_prev_for_after(
                     first.project_id as u32
                 ),
                 Anchor::After(..) => Anchor::Before(
-                    first.sort_field(sort_by).into(),
+                    first.sort_field(sort_by)?,
                     first.project_id as u32
                 ),
                 Anchor::Start |
@@ -582,7 +587,7 @@ fn get_prev_for_after(
                 Anchor::BeforeQuery(..) => unreachable!()
             };
 
-            Some(Seek { anchor: prev_anchor, sort_by, dir })
+            Ok(Some(Seek { anchor: prev_anchor, sort_by, dir }))
         },
         Anchor::Before(..) |
         Anchor::BeforeQuery(..) => unreachable!()
@@ -595,7 +600,7 @@ fn get_links(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> (Option<Seek>, Option<Seek>)
+) -> Result<(Option<Seek>, Option<Seek>), AppError>
 {
     match anchor {
         Anchor::Before(..) |
@@ -606,16 +611,16 @@ fn get_links(
                 dir,
                 limit_extra,
                 projects
-            );
+            )?;
 
             let next = get_next_for_before(
                 anchor,
                 sort_by,
                 dir,
                 projects
-            );
+            )?;
 
-            (prev, next)
+            Ok((prev, next))
         },
         Anchor::Start |
         Anchor::StartQuery(..) |
@@ -627,29 +632,52 @@ fn get_links(
                 dir,
                 limit_extra,
                 projects
-            );
+            )?;
 
             let prev = get_prev_for_after(
                 anchor,
                 sort_by,
                 dir,
                 projects
-            );
+            )?;
 
-            (prev, next)
+            Ok((prev, next))
         }
     }
 }
 
 impl ProjectSummaryRow {
-    fn sort_field(&self, sort_by: SortBy) -> &str {
+    fn sort_field(&self, sort_by: SortBy) -> Result<String, AppError> {
         match sort_by {
-            SortBy::ProjectName => &self.name,
-            SortBy::GameTitle => &self.game_title_sort,
-            SortBy::ModificationTime => &self.modified_at,
-            SortBy::CreationTime => &self.created_at,
+            SortBy::ProjectName => Ok(self.name.clone()),
+            SortBy::GameTitle => Ok(self.game_title_sort.clone()),
+            SortBy::ModificationTime => nanos_to_rfc3339(self.modified_at),
+            SortBy::CreationTime => nanos_to_rfc3339(self.created_at),
             SortBy::Relevance => unreachable!()
         }
+    }
+}
+
+impl TryFrom<ProjectSummaryRow> for ProjectSummary {
+    type Error = AppError;
+
+    fn try_from(r: ProjectSummaryRow) -> Result<Self, Self::Error> {
+        Ok(
+            ProjectSummary {
+                name: r.name,
+                description: r.description,
+                revision: r.revision,
+                created_at: nanos_to_rfc3339(r.created_at)?,
+                modified_at: nanos_to_rfc3339(r.modified_at)?,
+                tags: vec![],
+                game: GameData {
+                    title: r.game_title,
+                    title_sort_key: r.game_title_sort,
+                    publisher: r.game_publisher,
+                    year: r.game_year
+                }
+            }
+        )
     }
 }
 
@@ -713,9 +741,9 @@ mod test {
             name: name.into(),
             description: "".into(),
             revision: 1,
-            created_at: "".into(),
+            created_at: "1970-01-01T00:00:00+00:00".into(),
             modified_at: format!(
-                "2024-{:02}-01T13:51:50+00:00",
+                "1970-01-01T00:00:00.0000000{:02}+00:00",
                 name.as_bytes()[0] - b'a' + 1
             ),
             tags: vec![],
@@ -1174,7 +1202,10 @@ mod test {
             next,
             Some(
                 Seek {
-                    anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8),
+                    anchor: Anchor::After(
+                        "1970-01-01T00:00:00.000000008+00:00".into(),
+                        8
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending
                 }
@@ -1228,7 +1259,10 @@ mod test {
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
-                anchor: Anchor::After("2024-01-01T13:51:50+00:00".into(), 1)
+                anchor: Anchor::After(
+                    "1970-01-01T00:00:00.000000001+00:00".into(),
+                    1
+                )
             },
             Limit::new(3).unwrap()
         ).await.unwrap();
@@ -1248,7 +1282,10 @@ mod test {
             prev,
             Some(
                 Seek {
-                    anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                    anchor: Anchor::Before(
+                        "1970-01-01T00:00:00.000000002+00:00".into(),
+                        2
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending
                 }
@@ -1259,7 +1296,10 @@ mod test {
             next,
             Some(
                 Seek {
-                    anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                    anchor: Anchor::After(
+                        "1970-01-01T00:00:00.000000004+00:00".into(),
+                        4
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending
                 }
@@ -1275,7 +1315,10 @@ mod test {
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
-                anchor: Anchor::After("2024-08-01T13:51:50+00:00".into(), 8)
+                anchor: Anchor::After(
+                    "1970-01-01T00:00:00.000000008+00:00".into(),
+                    8
+                )
             },
             Limit::new(3).unwrap()
         ).await.unwrap();
@@ -1295,7 +1338,10 @@ mod test {
             prev,
             Some(
                 Seek {
-                    anchor: Anchor::Before("2024-07-01T13:51:50+00:00".into(), 7),
+                    anchor: Anchor::Before(
+                        "1970-01-01T00:00:00.000000007+00:00".into(),
+                        7
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending
                 }
@@ -1306,7 +1352,10 @@ mod test {
             next,
             Some(
                 Seek {
-                    anchor: Anchor::After("2024-05-01T13:51:50+00:00".into(), 5),
+                    anchor: Anchor::After(
+                        "1970-01-01T00:00:00.000000005+00:00".into(),
+                        5
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending
                 }
@@ -1322,7 +1371,10 @@ mod test {
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
-                anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+                anchor: Anchor::Before(
+                    "1970-01-01T00:00:00.000000005+00:00".into(),
+                    5
+                )
             },
             Limit::new(3).unwrap()
         ).await.unwrap();
@@ -1342,7 +1394,10 @@ mod test {
             prev,
             Some(
                 Seek {
-                    anchor: Anchor::Before("2024-02-01T13:51:50+00:00".into(), 2),
+                    anchor: Anchor::Before(
+                        "1970-01-01T00:00:00.000000002+00:00".into(),
+                        2
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending
                 }
@@ -1353,7 +1408,10 @@ mod test {
             next,
             Some(
                 Seek {
-                    anchor: Anchor::After("2024-04-01T13:51:50+00:00".into(), 4),
+                    anchor: Anchor::After(
+                        "1970-01-01T00:00:00.000000004+00:00".into(),
+                        4
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending
                 }
@@ -1369,7 +1427,10 @@ mod test {
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
-                anchor: Anchor::Before("2024-05-01T13:51:50+00:00".into(), 5)
+                anchor: Anchor::Before(
+                    "1970-01-01T00:00:00.000000006+00:00".into(),
+                    5
+                )
             },
             Limit::new(3).unwrap()
         ).await.unwrap();
@@ -1389,7 +1450,10 @@ mod test {
             prev,
             Some(
                 Seek {
-                    anchor: Anchor::Before("2024-08-01T13:51:50+00:00".into(), 8),
+                    anchor: Anchor::Before(
+                        "1970-01-01T00:00:00.000000008+00:00".into(),
+                        8
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending
                 }
@@ -1400,7 +1464,10 @@ mod test {
             next,
             Some(
                 Seek {
-                    anchor: Anchor::After("2024-06-01T13:51:50+00:00".into(), 6),
+                    anchor: Anchor::After(
+                        "1970-01-01T00:00:00.000000006+00:00".into(),
+                        6
+                    ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending
                 }
