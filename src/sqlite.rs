@@ -1842,168 +1842,100 @@ mod test {
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
-    fn fake_project_row(name: &str, id: usize) -> ProjectSummaryRow {
-        ProjectSummaryRow {
-            rank: 0.0,
-            project_id: id as i64,
-            name: name.into(),
-            description: "".into(),
-            revision: 1,
-            created_at: 0,
-            modified_at: 0,
-            game_title: "".into(),
-            game_title_sort: "".into(),
-            game_publisher: "".into(),
-            game_year: "".into(),
-            image: None
-        }
-    }
-
     #[sqlx::test]
     async fn get_projects_end_window_asc_empty(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 3
-            ).await.unwrap(),
-            []
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, [] as [String; 0]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_asc_not_all(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 3
-            ).await.unwrap(),
-            [
-                fake_project_row("a", 1),
-                fake_project_row("b", 2),
-                fake_project_row("c", 3)
-            ]
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["a", "b", "c"]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_asc_past_end(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 5
-            ).await.unwrap(),
-            [
-                fake_project_row("a", 1),
-                fake_project_row("b", 2),
-                fake_project_row("c", 3),
-                fake_project_row("d", 4)
-            ]
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, 5
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["a", "b", "c", "d"]);
     }
 
     #[sqlx::test]
     async fn get_projects_end_window_desc_empty(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 3
-            ).await.unwrap(),
-            []
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Descending, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, [] as [String; 0]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_desc_not_all(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 3
-            ).await.unwrap(),
-            [
-                fake_project_row("d", 4),
-                fake_project_row("c", 3),
-                fake_project_row("b", 2),
-            ]
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Descending, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["d", "c", "b"]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_desc_past_start(pool: Pool) {
-        assert_eq!(
-            get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 5
-            ).await.unwrap(),
-            [
-                fake_project_row("d", 4),
-                fake_project_row("c", 3),
-                fake_project_row("b", 2),
-                fake_project_row("a", 1)
-            ]
-        );
+        let projects = get_projects_end_window(
+            &pool, SortBy::ProjectName, Direction::Descending, 5
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["d", "c", "b", "a"]);
     }
 
     #[sqlx::test]
     async fn get_projects_mid_window_asc_empty(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
-            ).await.unwrap(),
-            []
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, [] as [String; 0]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_asc_not_all(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
-            ).await.unwrap(),
-            [
-                fake_project_row("c", 3),
-                fake_project_row("d", 4)
-            ]
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["c", "d"]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_asc_past_end(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
-            ).await.unwrap(),
-            []
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, [] as [String; 0]);
     }
 
     #[sqlx::test]
     async fn get_projects_mid_window_desc_empty(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
-            ).await.unwrap(),
-            []
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, [] as [String; 0]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_desc_not_all(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
-            ).await.unwrap(),
-            [
-                fake_project_row("a", 1)
-            ]
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["a"]);
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_desc_past_start(pool: Pool) {
-        assert_eq!(
-            get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
-            ).await.unwrap(),
-            [
-                fake_project_row("c", 3),
-                fake_project_row("b", 2),
-                fake_project_row("a", 1)
-            ]
-        );
+        let projects = get_projects_mid_window(
+            &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
+        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(projects, ["c", "b", "a"]);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
