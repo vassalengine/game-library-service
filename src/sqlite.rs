@@ -1842,100 +1842,135 @@ mod test {
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
+    fn assert_projects_window(
+        act: Result<Vec<ProjectSummaryRow>, AppError>,
+        exp: &[&str]
+    )
+    {
+        assert_eq!(
+            act.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>(),
+            exp
+        );
+    }
+
     #[sqlx::test]
     async fn get_projects_end_window_asc_empty(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, [] as [String; 0]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, 3
+            ).await,
+            &[]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_asc_not_all(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["a", "b", "c"]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, 3
+            ).await,
+            &["a", "b", "c"]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_asc_past_end(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, 5
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["a", "b", "c", "d"]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, 5
+            ).await,
+            &["a", "b", "c", "d"]
+        );
     }
 
     #[sqlx::test]
     async fn get_projects_end_window_desc_empty(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Descending, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, [] as [String; 0]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Descending, 3
+            ).await,
+            &[]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_desc_not_all(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Descending, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["d", "c", "b"]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Descending, 3
+            ).await,
+            &["d", "c", "b"]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_end_window_desc_past_start(pool: Pool) {
-        let projects = get_projects_end_window(
-            &pool, SortBy::ProjectName, Direction::Descending, 5
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["d", "c", "b", "a"]);
+        assert_projects_window(
+            get_projects_end_window(
+                &pool, SortBy::ProjectName, Direction::Descending, 5
+            ).await,
+            &["d", "c", "b", "a"]
+        );
     }
 
     #[sqlx::test]
     async fn get_projects_mid_window_asc_empty(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, [] as [String; 0]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
+            ).await,
+            &[]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_asc_not_all(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["c", "d"]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
+            ).await,
+            &["c", "d"]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_asc_past_end(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, [] as [String; 0]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
+            ).await,
+            &[]
+        );
     }
 
     #[sqlx::test]
     async fn get_projects_mid_window_desc_empty(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, [] as [String; 0]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
+            ).await,
+            &[]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_desc_not_all(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["a"]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
+            ).await,
+            &["a"]
+        );
     }
 
     #[sqlx::test(fixtures("users", "proj_window"))]
     async fn get_projects_mid_window_desc_past_start(pool: Pool) {
-        let projects = get_projects_mid_window(
-            &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
-        ).await.unwrap().into_iter().map(|r| r.name).collect::<Vec<_>>();
-        assert_eq!(projects, ["c", "b", "a"]);
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
+            ).await,
+            &["c", "b", "a"]
+        );
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
