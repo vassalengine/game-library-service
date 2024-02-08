@@ -176,12 +176,41 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         query: &str,
         sort_by: SortBy,
         dir: Direction,
-        rank: f64,
+        field: &str,
         id: u32,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
     {
-        get_projects_query_mid_window(&self.0, query, sort_by, dir, rank, id, limit).await
+        match sort_by {
+            SortBy::CreationTime |
+            SortBy::ModificationTime => get_projects_query_mid_window(
+                &self.0,
+                query,
+                sort_by,
+                dir,
+                &rfc3339_to_nanos(field)?,
+                id,
+                limit
+            ).await,
+            SortBy::Relevance => get_projects_query_mid_window(
+                &self.0,
+                query,
+                sort_by,
+                dir,
+                &field.parse::<f64>().map_err(|_| AppError::MalformedQuery)?,
+                id,
+                limit
+            ).await,
+            _ => get_projects_query_mid_window(
+                &self.0,
+                query,
+                sort_by,
+                dir,
+                &field,
+                id,
+                limit
+            ).await
+        }
     }
 
     async fn create_project(
@@ -579,13 +608,14 @@ LIMIT 1
 }
 
 impl SortBy {
-    fn field(&self) -> &str {
+    fn field(&self) -> &'static str {
         match self {
             SortBy::ProjectName => "projects.name COLLATE NOCASE",
             SortBy::GameTitle => "projects.game_title_sort COLLATE NOCASE",
             SortBy::ModificationTime => "projects.modified_at",
             SortBy::CreationTime => "projects.created_at",
-            SortBy::Relevance => "projects_fts.rank"
+            // NB: "fts" is the table alias for the subquery
+            SortBy::Relevance => "fts.rank"
         }
     }
 }
@@ -661,7 +691,7 @@ where
         QueryBuilder::new(
             "
 SELECT
-    projects_fts.rank,
+    fts.rank,
     projects.project_id,
     projects.name,
     projects.description,
@@ -674,8 +704,8 @@ SELECT
     projects.game_year,
     projects.image
 FROM projects
-JOIN projects_fts
-ON projects.project_id = projects_fts.rowid
+JOIN projects_fts AS fts
+ON projects.project_id = fts.rowid
 WHERE projects_fts MATCH "
         )
         .push_bind(query)
@@ -751,23 +781,27 @@ WHERE "
     )
 }
 
-async fn get_projects_query_mid_window<'e, E>(
+async fn get_projects_query_mid_window<'e, 'f, E, F>(
     ex: E,
-    query: &str,
+    query: &'f str,
     sort_by: SortBy,
     dir: Direction,
-    rank: f64,
+    field: &'f F,
     id: u32,
     limit: u32
 ) -> Result<Vec<ProjectSummaryRow>, AppError>
 where
-    E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>,
+    F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
 {
+    // We get rows from the FTS table in a subquery because the sqlite
+    // query planner is confused by MATCH when it's used with boolean
+    // connectives.
     Ok(
         QueryBuilder::new(
             "
 SELECT
-    projects_fts.rank,
+    fts.rank,
     projects.project_id,
     projects.name,
     projects.description,
@@ -780,18 +814,24 @@ SELECT
     projects.game_year,
     projects.image
 FROM projects
-JOIN projects_fts
-ON projects.project_id = projects_fts.rowid
-WHERE projects_fts MATCH "
+JOIN (
+    SELECT
+        projects_fts.rowid,
+        projects_fts.rank
+    FROM projects_fts
+    WHERE projects_fts MATCH "
         )
         .push_bind(query)
-        .push(" AND projects_fts.rank ")
+        .push(") AS fts ON fts.rowid = projects.project_id WHERE ")
+        .push(sort_by.field())
         .push(dir.op())
         .push(" ")
-        .push_bind(rank)
-        .push(" OR (projects_fts.rank = ")
-        .push_bind(rank)
-        .push(" AND projects.project_id ")
+        .push_bind(field)
+        .push(" OR (")
+        .push(sort_by.field())
+        .push(" = ")
+        .push_bind(field)
+        .push(" AND project_id ")
         .push(dir.op())
         .push(" ")
         .push_bind(id)
@@ -799,7 +839,7 @@ WHERE projects_fts MATCH "
         .push(sort_by.field())
         .push(" ")
         .push(dir.dir())
-        .push(", projects.project_id ")
+        .push(", project_id ")
         .push(dir.dir())
         .push(" LIMIT ")
         .push_bind(limit)
@@ -1842,6 +1882,7 @@ mod test {
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
+    #[track_caller]
     fn assert_projects_window(
         act: Result<Vec<ProjectSummaryRow>, AppError>,
         exp: &[&str]
@@ -1970,6 +2011,126 @@ mod test {
                 &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
             ).await,
             &["c", "b", "a"]
+        );
+    }
+
+    #[sqlx::test]
+    async fn get_projects_query_end_window_asc_empty(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, 3
+            ).await,
+            &[]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_end_window_asc_not_all(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, 1
+            ).await,
+            &["a"]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_end_window_asc_past_end(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, 5
+            ).await,
+            &["a", "c", "d"]
+        );
+    }
+
+    #[sqlx::test]
+    async fn get_projects_query_end_window_desc_empty(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, 3
+            ).await,
+            &[]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_end_window_desc_not_all(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, 1
+            ).await,
+            &["d"]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_end_window_desc_past_start(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_end_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, 5
+            ).await,
+            &["d", "c", "a"]
+        );
+    }
+
+    #[sqlx::test]
+    async fn get_projects_query_mid_window_asc_empty(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
+            ).await,
+            &[]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_mid_window_asc_not_all(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
+            ).await,
+            &["c", "d"]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_mid_window_asc_past_end(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
+            ).await,
+            &[]
+        );
+    }
+
+    #[sqlx::test]
+    async fn get_projects_query_mid_window_desc_empty(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, &"a", 1, 3
+            ).await,
+            &[]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_mid_window_desc_not_all(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, &"d", 4, 1
+            ).await,
+            &["c"]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_query_window"))]
+    async fn get_projects_query_mid_window_desc_past_start(pool: Pool) {
+        assert_projects_window(
+            get_projects_query_mid_window(
+                &pool, "abc", SortBy::ProjectName, Direction::Descending, &"d", 4, 5
+            ).await,
+            &["c", "a"]
         );
     }
 

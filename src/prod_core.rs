@@ -364,21 +364,21 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
                     dir,
                     limit_extra
                 ),
-            Anchor::AfterQuery(query, rank, id) =>
+            Anchor::AfterQuery(query, field, id) =>
                 self.db.get_projects_query_mid_window(
                     query,
                     sort_by,
                     dir,
-                    *rank,
+                    field,
                     *id,
                     limit_extra
                 ),
-            Anchor::BeforeQuery(query, rank, id) =>
+            Anchor::BeforeQuery(query, field, id) =>
                 self.db.get_projects_query_mid_window(
                     query,
                     sort_by,
                     dir.rev(),
-                    *rank,
+                    field,
                     *id,
                     limit_extra
                 )
@@ -456,7 +456,7 @@ fn get_prev_for_before(
         let prev_anchor = match anchor {
             Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
                 q.clone(),
-                last.rank,
+                last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
             Anchor::Before(..) => Anchor::Before(
@@ -495,7 +495,7 @@ fn get_next_for_before(
         let next_anchor = match anchor {
             Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
                 q.clone(),
-                first.rank,
+                first.sort_field(sort_by)?,
                 first.project_id as u32
             ),
             Anchor::Before(..) => Anchor::After(
@@ -534,7 +534,7 @@ fn get_next_for_after(
             Anchor::StartQuery(ref q) |
             Anchor::AfterQuery(ref q, _, _) => Anchor::AfterQuery(
                 q.clone(),
-                last.rank,
+                last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
             Anchor::Start |
@@ -574,7 +574,7 @@ fn get_prev_for_after(
             let prev_anchor = match anchor {
                 Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
                     q.clone(),
-                    first.rank,
+                    first.sort_field(sort_by)?,
                     first.project_id as u32
                 ),
                 Anchor::After(..) => Anchor::Before(
@@ -653,7 +653,7 @@ impl ProjectSummaryRow {
             SortBy::GameTitle => Ok(self.game_title_sort.clone()),
             SortBy::ModificationTime => nanos_to_rfc3339(self.modified_at),
             SortBy::CreationTime => nanos_to_rfc3339(self.created_at),
-            SortBy::Relevance => unreachable!()
+            SortBy::Relevance => Ok(self.rank.to_string())
         }
     }
 }

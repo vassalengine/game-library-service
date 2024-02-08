@@ -99,7 +99,6 @@ struct RawAnchor {
     tag: AnchorTag,
     field: Option<String>,
     query: Option<String>,
-    rank: Option<f64>,
     id: Option<u32>
 }
 
@@ -110,21 +109,21 @@ pub enum Anchor {
     Before(String, u32),
     After(String, u32),
     StartQuery(String),
-    BeforeQuery(String, f64, u32),
-    AfterQuery(String, f64, u32)
+    BeforeQuery(String, String, u32),
+    AfterQuery(String, String, u32)
 }
 
 impl TryFrom<RawAnchor> for Anchor {
     type Error = AppError;
 
     fn try_from(ra: RawAnchor) -> Result<Self, Self::Error> {
-        match (ra.tag, ra.field, ra.query, ra.rank, ra.id) {
-            (AnchorTag::Start, None, None, None, None) => Ok(Anchor::Start),
-            (AnchorTag::Before, Some(f), None, None, Some(i)) => Ok(Anchor::Before(f, i)),
-            (AnchorTag::After, Some(f), None, None, Some(i)) => Ok(Anchor::After(f, i)),
-            (AnchorTag::StartQuery, None, Some(q), None, None) => Ok(Anchor::StartQuery(q)),
-            (AnchorTag::BeforeQuery, None, Some(q), Some(r), Some(i)) => Ok(Anchor::BeforeQuery(q, r, i)),
-            (AnchorTag::AfterQuery, None, Some(q), Some(r), Some(i)) => Ok(Anchor::AfterQuery(q, r, i)),
+        match (ra.tag, ra.field, ra.query, ra.id) {
+            (AnchorTag::Start, None, None, None) => Ok(Anchor::Start),
+            (AnchorTag::Before, Some(f), None, Some(i)) => Ok(Anchor::Before(f, i)),
+            (AnchorTag::After, Some(f), None, Some(i)) => Ok(Anchor::After(f, i)),
+            (AnchorTag::StartQuery, None, Some(q), None) => Ok(Anchor::StartQuery(q)),
+            (AnchorTag::BeforeQuery, Some(f), Some(q), Some(i)) => Ok(Anchor::BeforeQuery(q, f, i)),
+            (AnchorTag::AfterQuery, Some(f), Some(q), Some(i)) => Ok(Anchor::AfterQuery(q, f, i)),
             _ => Err(AppError::MalformedQuery)
         }
     }
@@ -137,49 +136,41 @@ impl From<Anchor> for RawAnchor {
                 tag: AnchorTag::Start,
                 field: None,
                 query: None,
-                rank: None,
                 id: None
             },
             Anchor::Before(field, id) => RawAnchor {
                 tag: AnchorTag::Before,
                 field: Some(field),
                 query: None,
-                rank: None,
                 id: Some(id)
             },
             Anchor::After(field, id) => RawAnchor {
                 tag: AnchorTag::After,
                 field: Some(field),
                 query: None,
-                rank: None,
                 id: Some(id)
             },
             Anchor::StartQuery(query) => RawAnchor {
                 tag: AnchorTag::StartQuery,
                 field: None,
                 query: Some(query),
-                rank: None,
                 id: None
             },
-            Anchor::BeforeQuery(query, rank, id) => RawAnchor {
+            Anchor::BeforeQuery(query, field, id) => RawAnchor {
                 tag: AnchorTag::BeforeQuery,
-                field: None,
+                field: Some(field),
                 query: Some(query),
-                rank: Some(rank),
                 id: Some(id)
             },
-            Anchor::AfterQuery(query, rank, id) => RawAnchor {
+            Anchor::AfterQuery(query, field, id) => RawAnchor {
                 tag: AnchorTag::AfterQuery,
-                field: None,
+                field: Some(field),
                 query: Some(query),
-                rank: Some(rank),
                 id: Some(id)
             }
         }
     }
 }
-
-// TODO: add tests for mtime, ctime
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
@@ -320,7 +311,6 @@ impl FromStr for Seek {
             let seek: Seek = result.map_err(|_| AppError::MalformedQuery)?;
 
             // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
-            // Other SortBy must be paired with Start, After, Before
             match seek.sort_by {
                 SortBy::Relevance => match seek.anchor {
                     Anchor::StartQuery(..) |
@@ -328,12 +318,7 @@ impl FromStr for Seek {
                     Anchor::BeforeQuery(..) => Ok(seek),
                     _ => Err(AppError::MalformedQuery)
                 },
-                _ => match seek.anchor {
-                    Anchor::Start |
-                    Anchor::After(..) |
-                    Anchor::Before(..) => Ok(seek),
-                    _ => Err(AppError::MalformedQuery),
-                }
+                _ => Ok(seek)
             }
         }
         else {
@@ -370,6 +355,8 @@ pub struct Pagination {
     pub next_page: Option<SeekLink>,
     pub total: i64
 }
+
+// TODO: many more tests
 
 #[cfg(test)]
 mod test {
@@ -436,7 +423,7 @@ mod test {
                     anchor: Anchor::Start
                 }
             ).unwrap(),
-            "p,a,s,,,,"
+            "p,a,s,,,"
         );
     }
 
@@ -465,7 +452,7 @@ mod test {
                     anchor: Anchor::Start
                 }
             ).unwrap(),
-            "p,d,s,,,,"
+            "p,d,s,,,"
         );
     }
 
@@ -479,7 +466,7 @@ mod test {
                     anchor: Anchor::Before("abc".into(), 0),
                 }
             ).unwrap(),
-            "p,a,b,abc,,,0"
+            "p,a,b,abc,,0"
         );
     }
 
@@ -493,14 +480,14 @@ mod test {
                     anchor: Anchor::After("abc".into(), 0)
                 }
             ).unwrap(),
-            "p,a,a,abc,,,0"
+            "p,a,a,abc,,0"
         );
     }
 
     #[test]
     fn string_to_seek_start() {
         assert_eq!(
-            "p,a,s,,,,".parse::<Seek>().unwrap(),
+            "p,a,s,,,".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -512,7 +499,7 @@ mod test {
     #[test]
     fn string_to_seek_end() {
         assert_eq!(
-            "p,d,s,,,,".parse::<Seek>().unwrap(),
+            "p,d,s,,,".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
@@ -524,7 +511,7 @@ mod test {
     #[test]
     fn string_to_seek_before() {
         assert_eq!(
-            "p,a,b,abc,,,0".parse::<Seek>().unwrap(),
+            "p,a,b,abc,,0".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
@@ -536,7 +523,7 @@ mod test {
     #[test]
     fn string_to_seek_after() {
         assert_eq!(
-            "p,a,a,abc,,,0".parse::<Seek>().unwrap(),
+            "p,a,a,abc,,0".parse::<Seek>().unwrap(),
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,

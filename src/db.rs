@@ -200,7 +200,7 @@ pub trait DatabaseClient {
         _query: &str,
         _sort_by: SortBy,
         _dir: Direction,
-        _rank: f64,
+        _field: &str,
         _id: u32,
         _limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, AppError>
