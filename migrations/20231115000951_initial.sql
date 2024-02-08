@@ -121,31 +121,40 @@ CREATE TABLE project_data (
 /* Full-text search */
 
 CREATE VIRTUAL TABLE projects_fts USING fts5(
-  description,
   game_title,
   game_publisher,
   game_year,
+  description,
   readme,
   content="projects",
   content_rowid="project_id"
+);
+
+/* Set weight for game title to 100 */
+INSERT INTO projects_fts(
+  projects_fts,
+  rank
+) VALUES(
+  'rank',
+  'bm25(100.0)'
 );
 
 CREATE TRIGGER projects_ai AFTER INSERT ON projects
 BEGIN
   INSERT INTO projects_fts (
     rowid,
-    description,
     game_title,
     game_publisher,
     game_year,
+    description,
     readme
   )
   VALUES (
     new.project_id,
-    new.description,
     new.game_title,
     new.game_publisher,
     new.game_year,
+    new.description,
     new.readme
   );
 END;
@@ -155,19 +164,19 @@ BEGIN
   INSERT INTO projects_fts (
     projects_fts,
     rowid,
-    description,
     game_title,
     game_publisher,
     game_year,
+    description,
     readme
   )
   VALUES (
     'delete',
     old.project_id,
-    old.description,
     old.game_title,
     old.game_publisher,
     old.game_year,
+    old.description,
     old.readme
   );
 END;
@@ -177,37 +186,35 @@ BEGIN
   INSERT INTO projects_fts (
     projects_fts,
     rowid,
-    description,
     game_title,
     game_publisher,
     game_year,
+    description,
     readme
   )
   VALUES (
     'delete',
     old.project_id,
-    old.description,
     old.game_title,
     old.game_publisher,
     old.game_year,
+    old.description,
     old.readme
   );
   INSERT INTO projects_fts (
     rowid,
-    description,
     game_title,
     game_publisher,
     game_year,
+    description,
     readme
   )
   VALUES (
     new.project_id,
-    new.description,
     new.game_title,
     new.game_publisher,
     new.game_year,
+    new.description,
     new.readme
   );
 END;
-
-/* SELECT rowid, * FROM projects_fts WHERE projects_fts MATCH 'Afrika' ORDER BY rank; */
