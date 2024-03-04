@@ -73,104 +73,68 @@ pub trait DatabaseClient {
     async fn get_project_id(
         &self,
         _project: &str
-    ) -> Result<ProjectID, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<ProjectID, AppError>;
 
     async fn get_projects_count(
         &self,
-    ) -> Result<i64, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<i64, AppError>;
 
     async fn get_projects_query_count(
         &self,
         _query: &str
-    ) -> Result<i64, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<i64, AppError>;
 
     async fn get_user_id(
         &self,
         _user: &str
-    ) -> Result<i64, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<i64, AppError>;
 
     async fn get_owners(
         &self,
         _proj_id: i64
-    ) -> Result<Users, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Users, AppError>;
 
     async fn user_is_owner(
         &self,
         _user: &User,
         _proj_id: i64
-    ) -> Result<bool, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<bool, AppError>;
 
     async fn add_owner(
         &self,
         _user_id: i64,
         _proj_id: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn add_owners(
         &self,
         _owners: &Users,
         _proj_id: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn remove_owner(
         &self,
         _user_id: i64,
         _proj_id: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn remove_owners(
         &self,
         _owners: &Users,
         _proj_id: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn has_owner(
         &self,
         _proj_id: i64,
-    ) -> Result<bool, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<bool, AppError>;
 
     async fn get_projects_end_window(
         &self,
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
 
     async fn get_projects_query_end_window(
         &self,
@@ -178,10 +142,7 @@ pub trait DatabaseClient {
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
 
     async fn get_projects_mid_window(
         &self,
@@ -190,10 +151,7 @@ pub trait DatabaseClient {
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
 
     async fn get_projects_query_mid_window(
         &self,
@@ -203,10 +161,7 @@ pub trait DatabaseClient {
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
 
     async fn create_project(
         &self,
@@ -214,10 +169,7 @@ pub trait DatabaseClient {
         _proj: &str,
         _proj_data: &ProjectDataPost,
         _now: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn update_project(
         &self,
@@ -225,119 +177,77 @@ pub trait DatabaseClient {
         _proj_id: i64,
         _proj_data: &ProjectDataPatch,
         _now: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn get_project_row(
         &self,
         _proj_id: i64
-    ) -> Result<ProjectRow, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<ProjectRow, AppError>;
 
     async fn get_project_row_revision(
         &self,
         _proj_id: i64,
         _revision: i64
-    ) -> Result<ProjectRow, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<ProjectRow, AppError>;
 
     async fn get_packages(
         &self,
         _proj_id: i64
-    ) -> Result<Vec<PackageRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<PackageRow>, AppError>;
 
     async fn get_packages_at(
         &self,
         _proj_id: i64,
         _date: i64,
-    ) -> Result<Vec<PackageRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<PackageRow>, AppError>;
 
     async fn get_releases(
         &self,
         _pkg_id: i64
-    ) -> Result<Vec<ReleaseRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ReleaseRow>, AppError>;
 
     async fn get_releases_at(
         &self,
         _pkg_id: i64,
         _date: i64
-    ) -> Result<Vec<ReleaseRow>, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Vec<ReleaseRow>, AppError>;
 
     async fn get_authors(
         &self,
         _pkg_ver_id: i64
-    ) -> Result<Users, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Users, AppError>;
 
     async fn get_package_url(
         &self,
         _pkg_id: i64
-    ) -> Result<String, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<String, AppError>;
 
     async fn get_release_url(
         &self,
         _pkg_id: i64,
         _version: &Version
-    ) -> Result<String, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<String, AppError>;
 
     async fn get_players(
         &self,
         _proj_id: i64
-    ) -> Result<Users, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<Users, AppError>;
 
     async fn add_player(
         &self,
         _player: &User,
         _proj_id: i64,
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn remove_player(
         &self,
         _player: &User,
         _proj_id: i64
-    ) -> Result<(), AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<(), AppError>;
 
     async fn get_image_url(
         &self,
         _proj_id: i64,
         _img_name: &str
-    ) -> Result<String, AppError>
-    {
-        unimplemented!();
-    }
+    ) -> Result<String, AppError>;
 }
