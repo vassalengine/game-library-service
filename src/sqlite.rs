@@ -2361,6 +2361,39 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_package_ok(pool: Pool) {
+        assert_eq!(
+            get_packages(&pool, 6).await.unwrap(),
+            []
+        );
+
+        create_package(
+            &pool,
+            &Owner("bob".into()),
+            6,
+            "newpkg",
+            &PackageDataPost {
+                description: "".into()
+            },
+            1699804206419538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_packages(&pool, 6).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 4,
+                    name: "newpkg".into(),
+                    created_at: 1699804206419538067
+                }
+            ]
+        );
+    }
+
+// TODO: test create_package not a project
+// TODO: test create_package duplicate name
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_ok(pool: Pool) {
         assert_eq!(
             get_releases(&pool, 1).await.unwrap(),
