@@ -4,7 +4,7 @@ use sqlx::FromRow;
 
 use crate::{
     errors::AppError,
-    model::{Owner, PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -173,7 +173,7 @@ pub trait DatabaseClient {
 
     async fn update_project(
         &self,
-        _owner: &Owner,
+        _owner_id: i64,
         _proj_id: i64,
         _proj_data: &ProjectDataPatch,
         _now: i64
@@ -203,7 +203,7 @@ pub trait DatabaseClient {
 
     async fn create_package(
         &self,
-        _user: &Owner,
+        _owner_id: i64,
         _proj_id: i64,
         _pkg: &str,
         _pkg_data: &PackageDataPost,

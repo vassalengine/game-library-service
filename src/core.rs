@@ -98,7 +98,7 @@ pub trait Core {
 
     async fn update_project(
         &self,
-        _user: &Owner,
+        _owner: &Owner,
         _proj_id: i64,
         _proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
@@ -117,7 +117,7 @@ pub trait Core {
 
     async fn create_package(
         &self,
-        _user: &Owner,
+        _owner: &Owner,
         _proj_id: i64,
         _pkg: &str,
         _pkg_data: &PackageDataPost

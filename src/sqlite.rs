@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{Owner, PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
     version::Version
@@ -226,13 +226,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn update_project(
         &self,
-        owner: &Owner,
+        owner_id: i64,
         proj_id: i64,
         proj_data: &ProjectDataPatch,
         now: i64
     ) -> Result<(), AppError>
     {
-        update_project(&self.0, owner, proj_id, proj_data, now).await
+        update_project(&self.0, owner_id, proj_id, proj_data, now).await
     }
 
     async fn get_project_row(
@@ -271,14 +271,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn create_package(
         &self,
-        user: &Owner,
+        owner_id: i64,
         proj_id: i64,
         pkg: &str,
         pkg_data: &PackageDataPost,
         now: i64
     ) -> Result<(), AppError>
     {
-        create_package(&self.0, user, proj_id, pkg, pkg_data, now).await
+        create_package(&self.0, owner_id, proj_id, pkg, pkg_data, now).await
     }
 
     async fn get_releases(
@@ -1122,7 +1122,7 @@ where
 
 async fn update_project<'a, A>(
     conn: A,
-    owner: &Owner,
+    owner_id: i64,
     proj_id: i64,
     pd: &ProjectDataPatch,
     now: i64
@@ -1131,9 +1131,6 @@ where
     A: Acquire<'a, Database = Sqlite>
 {
     let mut tx = conn.begin().await?;
-
-    // get user id of owner
-    let owner_id = get_user_id(&mut *tx, &owner.0).await?;
 
     // get project
     let row = get_project_row(&mut *tx, proj_id).await?;
@@ -1303,23 +1300,17 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
-// FIXME: pass in owner id so we don't have to look it up here
-async fn create_package<'a, A>(
-    conn: A,
-    owner: &Owner,
+async fn create_package<'e, E>(
+    ex: E,
+    owner_id: i64,
     proj_id: i64,
     pkg: &str,
     pkg_data: &PackageDataPost,
     now: i64
 ) -> Result<(), AppError>
 where
-    A: Acquire<'a, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
-    let mut tx = conn.begin().await?;
-
-    // get user id of new owner
-    let owner_id = get_user_id(&mut *tx, &owner.0).await?;
-
     sqlx::query!(
         "
 INSERT INTO packages (
@@ -1335,10 +1326,8 @@ VALUES (?, ?, ?, ?)
             now,
             owner_id
     )
-    .execute(&mut *tx)
+    .execute(ex)
     .await?;
-
-    tx.commit().await?;
 
     Ok(())
 }
@@ -2369,7 +2358,7 @@ mod test {
 
         create_package(
             &pool,
-            &Owner("bob".into()),
+            1,
             6,
             "newpkg",
             &PackageDataPost {

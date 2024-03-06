@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, Owner, PackageData, PackageDataPost, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
+    model::{GameData, Owner, PackageData, PackageDataPost, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, UserID, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -25,6 +25,14 @@ pub struct ProdCore<C: DatabaseClient> {
 
 #[async_trait]
 impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
+    async fn get_user_id(
+         &self,
+        user: &User
+    ) -> Result<UserID, AppError>
+    {
+        Ok(UserID(self.db.get_user_id(&user.0).await?))
+    }
+
     async fn get_project_id(
          &self,
         proj: &Project
@@ -145,7 +153,8 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let now = (self.now)()
             .timestamp_nanos_opt()
             .ok_or(AppError::InternalError)?;
-        self.db.update_project(owner, proj_id, proj_data, now).await
+        let owner_id = self.get_user_id(&User((&owner.0).into())).await?;
+        self.db.update_project(owner_id.0, proj_id, proj_data, now).await
     }
 
     async fn get_project_revision(
@@ -174,7 +183,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn create_package(
         &self,
-        user: &Owner,
+        owner: &Owner,
         proj_id: i64,
         pkg: &str,
         pkg_data: &PackageDataPost
@@ -183,7 +192,8 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let now = (self.now)()
             .timestamp_nanos_opt()
             .ok_or(AppError::InternalError)?;
-        self.db.create_package(user, proj_id, pkg, pkg_data, now).await
+        let owner_id = self.get_user_id(&User((&owner.0).into())).await?;
+        self.db.create_package(owner_id.0, proj_id, pkg, pkg_data, now).await
     }
 
     async fn get_release(
