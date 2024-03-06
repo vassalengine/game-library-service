@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, Owner, PackageData, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
+    model::{GameData, Owner, PackageData, PackageDataPost, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -170,6 +170,20 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
             package_rows,
             |pc, pkgid| pc.db.get_releases_at(pkgid, mtime)
         ).await
+    }
+
+    async fn create_package(
+        &self,
+        user: &Owner,
+        proj_id: i64,
+        pkg: &str,
+        pkg_data: &PackageDataPost
+    ) -> Result<(), AppError>
+    {
+        let now = (self.now)()
+            .timestamp_nanos_opt()
+            .ok_or(AppError::InternalError)?;
+        self.db.create_package(user, proj_id, pkg, pkg_data, now).await
     }
 
     async fn get_release(

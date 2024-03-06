@@ -4,7 +4,7 @@ use sqlx::FromRow;
 
 use crate::{
     errors::AppError,
-    model::{Owner, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{Owner, PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -200,6 +200,15 @@ pub trait DatabaseClient {
         _proj_id: i64,
         _date: i64,
     ) -> Result<Vec<PackageRow>, AppError>;
+
+    async fn create_package(
+        &self,
+        _user: &Owner,
+        _proj_id: i64,
+        _pkg: &str,
+        _pkg_data: &PackageDataPost,
+        _now: i64
+    ) -> Result<(), AppError>;
 
     async fn get_releases(
         &self,

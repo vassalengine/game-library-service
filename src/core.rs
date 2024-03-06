@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Owner, PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
+    model::{Owner, PackageDataPost, PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
     params::ProjectsParams,
     version::Version
 };
@@ -111,6 +111,17 @@ pub trait Core {
         _proj_id: i64,
         _revision: i64
     ) -> Result<ProjectData, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn create_package(
+        &self,
+        _user: &Owner,
+        _proj_id: i64,
+        _pkg: &str,
+        _pkg_data: &PackageDataPost
+    ) -> Result<(), AppError>
     {
         unimplemented!();
     }

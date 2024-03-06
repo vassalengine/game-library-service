@@ -7,7 +7,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectIDAndPackageID, Wrapper},
-    model::{Owned, PackageID, PackageDataPut, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, Users, User},
+    model::{Owned, PackageID, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, Users, User},
     params::ProjectsParams,
     version::Version
 };
@@ -53,7 +53,6 @@ pub async fn project_patch(
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPatch>>
 ) -> Result<(), AppError>
 {
-// TODO: pass through owner to note who made change
     core.update_project(&owner, proj_id.0, &proj_data).await
 }
 
@@ -118,14 +117,18 @@ pub async fn players_remove(
     core.remove_player(&requester, proj_id.0).await
 }
 
-pub async fn packages_put(
-    _proj_id: ProjectID,
-    State(_core): State<CoreArc>,
-    Wrapper(Json(_pkg_data)): Wrapper<Json<PackageDataPut>>
+pub async fn packages_post(
+    Owned(owner, proj_id): Owned,
+    Path((_, pkg)): Path<(String, String)>,
+    State(core): State<CoreArc>,
+    Wrapper(Json(pkg_data)): Wrapper<Json<PackageDataPost>>
 ) -> Result<(), AppError>
 {
-    todo!();
+    core.create_package(&owner, proj_id.0, &pkg, &pkg_data).await
 }
+
+// TODO
+//pub async fn packages_patch(
 
 pub async fn release_get(
     proj_id: ProjectID,

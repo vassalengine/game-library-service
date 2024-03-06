@@ -68,7 +68,10 @@ pub struct PackageData {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct PackageDataPut {
+pub struct PackageDataPost {
+// TODO: display name?
+//    pub name: String,
+    pub description: String
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]

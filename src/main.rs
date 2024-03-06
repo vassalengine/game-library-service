@@ -116,12 +116,9 @@ fn routes(api: &str) -> Router<AppState> {
             .delete(handlers::players_remove)
         )
         .route(
-            &format!("{api}/projects/:proj/packages"),
-            put(handlers::packages_put)
-        )
-        .route(
             &format!("{api}/projects/:proj/packages/:pkg_name"),
             get(handlers::release_get)
+            .post(handlers::packages_post)
         )
         .route(
             &format!("{api}/projects/:proj/packages/:pkg_name/:version"),

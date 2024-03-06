@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{Owner, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{Owner, PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
     version::Version
@@ -267,6 +267,18 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<PackageRow>, AppError>
     {
         get_packages_at(&self.0, proj_id, date).await
+    }
+
+    async fn create_package(
+        &self,
+        user: &Owner,
+        proj_id: i64,
+        pkg: &str,
+        pkg_data: &PackageDataPost,
+        now: i64
+    ) -> Result<(), AppError>
+    {
+        create_package(&self.0, user, proj_id, pkg, pkg_data, now).await
     }
 
     async fn get_releases(
@@ -1289,6 +1301,46 @@ ORDER BY name COLLATE NOCASE ASC
        .fetch_all(ex)
        .await?
     )
+}
+
+// FIXME: pass in owner id so we don't have to look it up here
+async fn create_package<'a, A>(
+    conn: A,
+    owner: &Owner,
+    proj_id: i64,
+    pkg: &str,
+    pkg_data: &PackageDataPost,
+    now: i64
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // get user id of new owner
+    let owner_id = get_user_id(&mut *tx, &owner.0).await?;
+
+    sqlx::query!(
+        "
+INSERT INTO packages (
+    project_id,
+    name,
+    created_at,
+    created_by
+)
+VALUES (?, ?, ?, ?)
+            ",
+            proj_id,
+            pkg,
+            now,
+            owner_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }
 
 // TODO: can we combine these?
