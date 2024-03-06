@@ -98,6 +98,7 @@ pub struct GameDataPatch {
 pub struct MaybeProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
+    #[serde(default)]
     pub game: GameDataPatch,
     pub readme: Option<String>,
     pub image: Option<Option<String>>
