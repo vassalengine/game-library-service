@@ -71,6 +71,17 @@ CREATE TABLE images (
   UNIQUE(project_id, filename)
 );
 
+CREATE TABLE image_revisions (
+  project_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  url TEXT NOT NULL,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id),
+  UNIQUE(project_id, filename, published_at)
+);
+
 CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
