@@ -179,6 +179,16 @@ pub trait Core {
     {
         unimplemented!();
     }
+
+    async fn get_image_revision(
+        &self,
+        _proj_id: i64,
+        _revision: i64,
+        _img_name: &str
+    ) -> Result<String, AppError>
+    {
+        unimplemented!();
+    }
 }
 
 pub type CoreArc = Arc<dyn Core + Send + Sync>;

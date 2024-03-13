@@ -249,6 +249,23 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     {
         self.db.get_image_url(proj_id, img_name).await
     }
+
+    async fn get_image_revision(
+        &self,
+        proj_id: i64,
+        revision: i64,
+        img_name: &str
+    ) -> Result<String, AppError>
+    {
+        // TODO: this could be a join
+        let proj_row = self.db.get_project_row_revision(
+            proj_id, revision
+        ).await?;
+
+        let mtime = proj_row.modified_at;
+
+        self.db.get_image_url_at(proj_id, img_name, mtime).await
+    }
 }
 
 impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {

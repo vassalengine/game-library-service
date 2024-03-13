@@ -259,4 +259,11 @@ pub trait DatabaseClient {
         _proj_id: i64,
         _img_name: &str
     ) -> Result<String, AppError>;
+
+    async fn get_image_url_at(
+        &self,
+        _proj_id: i64,
+        _img_name: &str,
+        _date: i64
+    ) -> Result<String, AppError>;
 }

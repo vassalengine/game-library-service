@@ -357,6 +357,16 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     {
         get_image_url(&self.0, proj_id, img_name).await
     }
+
+    async fn get_image_url_at(
+        &self,
+        proj_id: i64,
+        img_name: &str,
+        date: i64
+    ) -> Result<String, AppError>
+    {
+        get_image_url_at(&self.0, proj_id, img_name, date).await
+    }
 }
 
 async fn get_project_id<'e, E>(
@@ -1710,10 +1720,39 @@ LIMIT 1
         ",
         proj_id,
         img_name
-     )
-     .fetch_optional(ex)
-     .await?
-     .ok_or(AppError::NotFound)
+    )
+    .fetch_optional(ex)
+    .await?
+    .ok_or(AppError::NotFound)
+}
+
+// TODO: tests
+async fn get_image_url_at<'e, E>(
+    ex: E,
+    proj_id: i64,
+    img_name: &str,
+    date: i64
+) -> Result<String, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT url
+FROM image_revisions
+WHERE project_id = ?
+    AND filename = ?
+    AND published_at <= ?
+ORDER BY published_at DESC
+LIMIT 1
+        ",
+        proj_id,
+        img_name,
+        date
+    )
+    .fetch_optional(ex)
+    .await?
+    .ok_or(AppError::NotFound)
 }
 
 #[cfg(test)]
