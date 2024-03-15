@@ -1,8 +1,10 @@
 use axum::{
     Router, serve,
+    body::{Body, Bytes},
+    extract::Request,
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing::{get, post, put}
+    routing::{get, post}
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -29,6 +31,7 @@ mod params;
 mod prod_core;
 mod sqlite;
 mod time;
+mod upload;
 mod version;
 
 use crate::{
@@ -38,7 +41,8 @@ use crate::{
     prod_core::ProdCore,
     errors::AppError,
     jwt::DecodingKey,
-    sqlite::SqlxDatabaseClient
+    sqlite::SqlxDatabaseClient,
+    upload::LocalUploader,
 };
 
 impl From<&AppError> for StatusCode {
@@ -128,7 +132,11 @@ fn routes(api: &str) -> Router<AppState> {
         .route(
             &format!("{api}/projects/:proj/images/:img_name"),
             get(handlers::image_get)
-            .put(handlers::image_put)
+            .post(handlers::image_post)
+        )
+        .route(
+            &format!("{api}/projects/:proj/images/:img_name/:revision"),
+            get(handlers::image_revision_get)
         )
         .route(
             &format!("{api}/projects/:proj/flag"),
@@ -161,6 +169,7 @@ async fn main() {
 
     let core = ProdCore {
         db: SqlxDatabaseClient(db_pool),
+        uploader: LocalUploader { uploads_directory: "uploads".into() },
         now: Utc::now
     };
 

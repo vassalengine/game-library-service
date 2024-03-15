@@ -1,5 +1,12 @@
-use axum::async_trait;
-use std::sync::Arc;
+use axum::{
+    async_trait,
+    body::Bytes
+};
+use futures::Stream;
+use std::{
+    io,
+    sync::Arc
+};
 
 use crate::{
     errors::AppError,
@@ -145,6 +152,19 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn add_release(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _version: &Version,
+        _filename: &str,
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+    ) -> Result<(), AppError>
+    {
+        unimplemented!();
+    }
+
     async fn get_players(
         &self,
         _proj: Project
@@ -186,6 +206,17 @@ pub trait Core {
         _revision: i64,
         _img_name: &str
     ) -> Result<String, AppError>
+    {
+        unimplemented!();
+    }
+
+    async fn add_image(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _img_name: &str,
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+    ) -> Result<(), AppError>
     {
         unimplemented!();
     }

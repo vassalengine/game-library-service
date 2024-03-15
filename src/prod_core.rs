@@ -1,7 +1,14 @@
-use axum::async_trait;
+use axum::{
+    async_trait,
+    body::Bytes
+};
 use chrono::{DateTime, Utc};
+use futures::Stream;
 use futures_util::future::try_join_all;
-use std::future::Future;
+use std::{
+    future::Future,
+    io
+};
 
 use crate::{
     core::Core,
@@ -11,25 +18,31 @@ use crate::{
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
+    upload::{LocalUploader, Uploader},
     version::Version
 };
 
 #[derive(Clone)]
-pub struct ProdCore<C: DatabaseClient> {
+pub struct ProdCore<C: DatabaseClient, U: Uploader> {
     pub db: C,
+    pub uploader: U,
     pub now: fn() -> DateTime<Utc>
 }
 
 // TODO: Push User, Owner, Project all the way inward
 
 #[async_trait]
-impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
+impl<C, U> Core for ProdCore<C, U>
+where
+    C: DatabaseClient + Send + Sync,
+    U: Uploader + Send + Sync
+{
     async fn get_user_id(
          &self,
         username: &str
     ) -> Result<User, AppError>
     {
-        Ok(self.db.get_user_id(&username).await?)
+        Ok(self.db.get_user_id(username).await?)
     }
 
     async fn get_project_id(
@@ -258,9 +271,40 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
         self.db.get_image_url_at(proj, img_name, mtime).await
     }
+
+// TODO: tests
+    async fn add_image(
+        &self,
+        owner: Owner,
+        proj: Project,
+        img_name: &str,
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+    ) -> Result<(), AppError>
+    {
+        let now = (self.now)()
+            .timestamp_nanos_opt()
+            .ok_or(AppError::InternalError)?;
+
+// TODO: check that the file is not too large
+// TOOD: check that the file is an image
+
+        // write file
+        let url = self.uploader.upload(img_name, Box::into_pin(stream))
+            .await
+            .or(Err(AppError::InternalError))?;
+
+        // update record
+        self.db.add_image_url(owner, proj, img_name, &url, now).await?;
+
+        Ok(())
+    }
 }
 
-impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
+impl<C, U> ProdCore<C, U>
+where
+    C: DatabaseClient + Send + Sync,
+    U: Uploader + Send + Sync
+{
     async fn make_version_data(
         &self,
         rr: ReleaseRow
@@ -753,13 +797,30 @@ mod test {
         *NOW_DT
     }
 
+    struct FakeUploader {}
+
+    #[async_trait]
+    impl Uploader for FakeUploader {
+        async fn upload<S>(
+            &self,
+            _filename: &str,
+            _stream: S
+        ) -> Result<String, UploadError>
+        where
+            S: Stream<Item = Result<Bytes, io::Error>> + Send
+        {
+            unreachable!();
+        }
+    }
+
     fn make_core(
         pool: Pool,
         now: fn() -> DateTime<Utc>
-    ) -> ProdCore<SqlxDatabaseClient<sqlx::sqlite::Sqlite>>
+    ) -> ProdCore<SqlxDatabaseClient<sqlx::sqlite::Sqlite>, FakeUploader>
     {
         ProdCore {
             db: SqlxDatabaseClient(pool),
+            uploader: FakeUploader {},
             now
         }
     }
@@ -1720,8 +1781,8 @@ mod test {
             image: None
         };
 
-        core.create_project(user, &name, &cdata).await.unwrap();
-        let proj = core.get_project_id(&name).await.unwrap();
+        core.create_project(user, name, &cdata).await.unwrap();
+        let proj = core.get_project_id(name).await.unwrap();
         assert_eq!(core.get_project(proj).await.unwrap(), data);
     }
 
@@ -1762,7 +1823,7 @@ mod test {
             image: None
         };
 
-        let proj = core.get_project_id(&name).await.unwrap();
+        let proj = core.get_project_id(name).await.unwrap();
         let old_data = core.get_project(proj).await.unwrap();
         core.update_project(Owner(1), Project(42), &cdata).await.unwrap();
         // project has new data

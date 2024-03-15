@@ -554,7 +554,7 @@ where
 
     for username in &owners.users {
         // get user id of new owner
-        let owner = get_user_id(&mut *tx, &username).await?;
+        let owner = get_user_id(&mut *tx, username).await?;
         // associate new owner with the project
         add_owner(&mut *tx, owner, proj).await?;
     }
@@ -599,7 +599,7 @@ where
 
     for username in &owners.users {
         // get user id of owner
-        let owner = get_user_id(&mut *tx, &username).await?;
+        let owner = get_user_id(&mut *tx, username).await?;
         // remove old owner from the project
         remove_owner(&mut *tx, owner, proj).await?;
     }
@@ -1714,6 +1714,177 @@ LIMIT 1
     .fetch_optional(ex)
     .await?
     .ok_or(AppError::NotFound)
+}
+
+// TODO: tests
+async fn update_image_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    img_name: &str,
+    url: &str,
+    now: i64
+) -> Result<(), AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO images (
+    project_id,
+    filename,
+    url,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(project_id, filename)
+DO UPDATE
+SET url = excluded.url,
+    published_at = excluded.published_at,
+    published_by = excluded.published_by
+        ",
+        proj.0,
+        img_name,
+        url,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+// TODO: tests
+async fn create_image_revision_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    img_name: &str,
+    url: &str,
+    now: i64
+) -> Result<(), AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO image_revisions (
+    project_id,
+    filename,
+    url,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?)
+        ",
+        proj.0,
+        img_name,
+        url,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+// TODO: tests
+async fn get_project_data_id<'e, E>(
+    ex: E,
+    proj: Project,
+    revision: i64
+) -> Result<i64, AppError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT
+    project_revisions.project_data_id
+FROM project_revisions
+WHERE project_revisions.project_id = ?
+    AND project_revisions.revision = ?
+LIMIT 1
+        ",
+        proj.0,
+        revision
+    )
+    .fetch_optional(ex)
+    .await?
+    .ok_or(AppError::NotARevision)
+}
+
+// TODO: tests
+async fn add_image_url<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    img_name: &str,
+    url: &str,
+    now: i64,
+) -> Result<(), AppError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // update row in images
+    update_image_row(
+        &mut *tx,
+        owner,
+        proj,
+        img_name,
+        url,
+        now
+    ).await?;
+
+    // insert row in images_revisions
+    create_image_revision_row(
+        &mut *tx,
+        owner,
+        proj,
+        img_name,
+        url,
+        now
+    ).await?;
+
+    // get the project row, project_data_id
+    let row = get_project_row(&mut *tx, proj).await?;
+
+    let project_data_id = get_project_data_id(&mut *tx, proj, row.revision)
+        .await?;
+
+    let revision = row.revision + 1;
+
+    // insert a new project revision row
+    let rr = ProjectRevisionRow {
+        project_id: proj.0,
+        name: &row.name,
+        created_at: row.created_at,
+        modified_at: now,
+        modified_by: owner.0,
+        revision,
+        project_data_id
+    };
+
+    create_project_revision_row(&mut *tx, &rr).await?;
+
+    // update the project row
+    update_project_row(
+        &mut *tx,
+        owner,
+        proj,
+        revision,
+        &Default::default(),
+        now
+    ).await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

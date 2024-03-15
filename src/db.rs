@@ -266,4 +266,13 @@ pub trait DatabaseClient {
         _img_name: &str,
         _date: i64
     ) -> Result<String, AppError>;
+
+    async fn add_image_url(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _img_name: &str,
+        _url: &str,
+        _now: i64
+    ) -> Result<(), AppError>;
 }

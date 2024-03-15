@@ -1,7 +1,9 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, Request, State},
     response::{Json, Redirect}
 };
+use futures::TryStreamExt;
+use std::io;
 
 use crate::{
     core::CoreArc,
@@ -164,7 +166,20 @@ pub async fn release_put(
     request: Request
 ) -> Result<(), AppError>
 {
-    todo!();
+    let version = version.parse::<Version>()
+        .or(Err(AppError::NotAVersion))?;
+
+/*
+    let stream = request.into_body()
+        .into_data_stream()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+
+    core.add_image(&owner, proj, &img_name, Box::new(stream))
+        .await
+        .or(Err(AppError::InternalError))?;
+*/
+
+    Ok(())
 }
 
 /*
@@ -178,10 +193,6 @@ pub async fn release_put(
 {
     // 307 preserves the original method and body, which is essential
     // for a PUT uploading a file; we cannot use a 303 here
-    Ok(
-        Redirect:temporary(
-
-    core.pacakge_version_put(proj_id.0, pkg_id.0, &pkg_version, ).await
 }
 */
 
@@ -194,13 +205,35 @@ pub async fn image_get(
     Ok(Redirect::to(&core.get_image(proj, &img_name).await?))
 }
 
-pub async fn image_put(
-    _proj_id: ProjectID,
-    Path(_img_name): Path<String>,
-    State(_core): State<CoreArc>
+pub async fn image_revision_get(
+    proj: Project,
+    Path((_, img_name, revision)): Path<(String, String, u32)>,
+    State(core): State<CoreArc>
+) -> Result<Redirect, AppError>
+{
+    Ok(
+        Redirect::to(
+            &core.get_image_revision(proj, revision as i64, &img_name).await?
+        )
+    )
+}
+
+pub async fn image_post(
+    Owned(owner, proj): Owned,
+    Path((_, img_name)): Path<(String, String)>,
+    State(core): State<CoreArc>,
+    request: Request
 ) -> Result<(), AppError>
 {
-    todo!();
+    let stream = request.into_body()
+        .into_data_stream()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+
+    core.add_image(owner, proj, &img_name, Box::new(stream))
+        .await
+        .or(Err(AppError::InternalError))?;
+
+    Ok(())
 }
 
 pub async fn flag_post(
