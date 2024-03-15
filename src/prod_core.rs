@@ -552,7 +552,7 @@ fn get_next_for_before(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    projects: &Vec<ProjectSummaryRow>
+    projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, AppError>
 {
     // make the next link
@@ -629,7 +629,7 @@ fn get_prev_for_after(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    projects: &Vec<ProjectSummaryRow>
+    projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, AppError>
 {
     // make the prev link
