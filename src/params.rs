@@ -38,7 +38,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                      m.from.is_some() ||
                      m.q.is_some()
                 )
-            ) 
+            )
             ||
             (m.from.is_some() && m.q.is_some())
         {

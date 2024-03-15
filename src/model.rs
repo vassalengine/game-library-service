@@ -12,31 +12,25 @@ use crate::{
 // without having verified that the user exists
 //
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct User(pub String);
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct User(pub i64);
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Users {
-    pub users: Vec<User>
+    pub users: Vec<String>
 }
 
-#[derive(Debug, PartialEq)]
-pub struct UserID(pub i64);
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Package(pub i64);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Project(pub i64);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Owner(pub i64);
 
 #[derive(Debug, PartialEq)]
-pub struct PackageID(pub i64);
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Project(pub String);
-
-#[derive(Debug, PartialEq)]
-pub struct ProjectID(pub i64);
-
-#[derive(Debug, PartialEq)]
-pub struct Owner(pub String);
-
-#[derive(Debug, PartialEq)]
-pub struct Owned(pub Owner, pub ProjectID);
+pub struct Owned(pub Owner, pub Project);
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GameData {

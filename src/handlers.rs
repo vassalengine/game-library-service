@@ -6,8 +6,8 @@ use axum::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::{ProjectIDAndPackageID, Wrapper},
-    model::{Owned, PackageID, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, Users, User},
+    extractors::{ProjectAndPackage, Wrapper},
+    model::{Owned, Package, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
     version::Version
 };
@@ -30,11 +30,11 @@ pub async fn projects_get(
 }
 
 pub async fn project_get(
-    proj_id: ProjectID,
+    proj: Project,
     State(core): State<CoreArc>
 ) -> Result<Json<ProjectData>, AppError>
 {
-    Ok(Json(core.get_project(proj_id.0).await?))
+    Ok(Json(core.get_project(proj).await?))
 }
 
 pub async fn project_post(
@@ -44,105 +44,105 @@ pub async fn project_post(
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPost>>
 ) -> Result<(), AppError>
 {
-    core.create_project(&owner, &proj, &proj_data).await
+    core.create_project(owner, &proj, &proj_data).await
 }
 
 pub async fn project_patch(
-    Owned(owner, proj_id): Owned,
+    Owned(owner, proj): Owned,
     State(core): State<CoreArc>,
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPatch>>
 ) -> Result<(), AppError>
 {
-    core.update_project(&owner, proj_id.0, &proj_data).await
+    core.update_project(owner, proj, &proj_data).await
 }
 
 pub async fn project_revision_get(
-    proj_id: ProjectID,
+    proj: Project,
     Path((_, revision)): Path<(String, u32)>,
     State(core): State<CoreArc>
 ) -> Result<Json<ProjectData>, AppError>
 {
-    Ok(Json(core.get_project_revision(proj_id.0, revision as i64).await?))
+    Ok(Json(core.get_project_revision(proj, revision as i64).await?))
 }
 
 pub async fn owners_get(
-    proj_id: ProjectID,
+    proj: Project,
     State(core): State<CoreArc>
 ) -> Result<Json<Users>, AppError>
 {
-    Ok(Json(core.get_owners(proj_id.0).await?))
+    Ok(Json(core.get_owners(proj).await?))
 }
 
 pub async fn owners_add(
-    Owned(_, proj_id): Owned,
+    Owned(_, proj): Owned,
     State(core): State<CoreArc>,
     Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
-    core.add_owners(&owners, proj_id.0).await
+    core.add_owners(&owners, proj).await
 }
 
 pub async fn owners_remove(
-    Owned(_, proj_id): Owned,
+    Owned(_, proj): Owned,
     State(core): State<CoreArc>,
     Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
-    core.remove_owners(&owners, proj_id.0).await
+    core.remove_owners(&owners, proj).await
 }
 
 pub async fn players_get(
-    proj_id: ProjectID,
+    proj: Project,
     State(core): State<CoreArc>
 ) -> Result<Json<Users>, AppError>
 {
-    Ok(Json(core.get_players(proj_id.0).await?))
+    Ok(Json(core.get_players(proj).await?))
 }
 
 pub async fn players_add(
     requester: User,
-    proj_id: ProjectID,
+    proj: Project,
     State(core): State<CoreArc>
 ) -> Result<(), AppError>
 {
-    core.add_player(&requester, proj_id.0).await
+    core.add_player(requester, proj).await
 }
 
 pub async fn players_remove(
     requester: User,
-    proj_id: ProjectID,
+    proj: Project,
     State(core): State<CoreArc>,
 ) -> Result<(), AppError>
 {
-    core.remove_player(&requester, proj_id.0).await
+    core.remove_player(requester, proj).await
 }
 
 pub async fn packages_post(
-    Owned(owner, proj_id): Owned,
+    Owned(owner, proj): Owned,
     Path((_, pkg)): Path<(String, String)>,
     State(core): State<CoreArc>,
     Wrapper(Json(pkg_data)): Wrapper<Json<PackageDataPost>>
 ) -> Result<(), AppError>
 {
-    core.create_package(&owner, proj_id.0, &pkg, &pkg_data).await
+    core.create_package(owner, proj, &pkg, &pkg_data).await
 }
 
 // TODO
 //pub async fn packages_patch(
 
 pub async fn release_get(
-    proj_id: ProjectID,
-    pkg_id: PackageID,
+    proj: Project,
+    pkg: Package,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    Ok(Redirect::to(&core.get_release(proj_id.0, pkg_id.0).await?))
+    Ok(Redirect::to(&core.get_release(proj, pkg).await?))
 }
 
 
 // TODO: Version extractor?
 pub async fn release_version_get(
-    ProjectIDAndPackageID((proj_id, pkg_id)): ProjectIDAndPackageID,
+    ProjectAndPackage((proj, pkg)): ProjectAndPackage,
     Path((_, _, version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
@@ -152,15 +152,16 @@ pub async fn release_version_get(
 
     Ok(
         Redirect::to(
-            &core.get_release_version(proj_id.0, pkg_id.0, &version).await?
+            &core.get_release_version(proj, pkg, &version).await?
         )
     )
 }
 
 pub async fn release_put(
-    _proj_id: ProjectID,
-    Path((_pkg_name, _version)): Path<(String, String)>,
-    State(_core): State<CoreArc>
+    Owned(owner, proj): Owned,
+    Path((_, pkg, version)): Path<(String, String, String)>,
+    State(core): State<CoreArc>,
+    request: Request
 ) -> Result<(), AppError>
 {
     todo!();
@@ -169,8 +170,8 @@ pub async fn release_put(
 /*
 pub async fn release_put(
     _: Owner,
-    proj_id: ProjectID,
-    pkg_id: PackageID,
+    proj: Project,
+    pkg: Package,
     Path((_, _, pkg_version): Path<(String, String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
@@ -185,12 +186,12 @@ pub async fn release_put(
 */
 
 pub async fn image_get(
-    proj_id: ProjectID,
+    proj: Project,
     Path((_, img_name)): Path<(String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    Ok(Redirect::to(&core.get_image(proj_id.0, &img_name).await?))
+    Ok(Redirect::to(&core.get_image(proj, &img_name).await?))
 }
 
 pub async fn image_put(
@@ -204,7 +205,7 @@ pub async fn image_put(
 
 pub async fn flag_post(
     _requester: User,
-    _proj_id: ProjectID,
+    _proj: Project,
     State(_core): State<CoreArc>
 ) -> Result<(), AppError>
 {

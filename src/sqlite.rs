@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use crate::{
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{PackageDataPost, ProjectID, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
     version::Version
@@ -30,10 +30,10 @@ pub struct SqlxDatabaseClient<DB: Database>(pub sqlx::Pool<DB>);
 impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
-        project: &str
-    ) -> Result<ProjectID, AppError>
+        name: &str
+    ) -> Result<Project, AppError>
     {
-        get_project_id(&self.0, project).await
+        get_project_id(&self.0, name).await
     }
 
     async fn get_projects_count(
@@ -53,71 +53,71 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_user_id(
         &self,
-        user: &str
-    ) -> Result<i64, AppError>
+        username: &str
+    ) -> Result<User, AppError>
     {
-        get_user_id(&self.0, user).await
+        get_user_id(&self.0, username).await
     }
 
     async fn get_owners(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<Users, AppError>
     {
-        get_owners(&self.0, proj_id).await
+        get_owners(&self.0, proj).await
     }
 
     async fn user_is_owner(
         &self,
-        user: &User,
-        proj_id: i64
+        user: User,
+        proj: Project
     ) -> Result<bool, AppError>
     {
-        user_is_owner(&self.0, user, proj_id).await
+        user_is_owner(&self.0, user, proj).await
     }
 
     async fn add_owner(
         &self,
-        user_id: i64,
-        proj_id: i64
+        user: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        add_owner(&self.0, user_id, proj_id).await
+        add_owner(&self.0, user, proj).await
     }
 
     async fn add_owners(
         &self,
         owners: &Users,
-        proj_id: i64
+        proj: Project
     ) -> Result<(), AppError>
     {
-        add_owners(&self.0, owners, proj_id).await
+        add_owners(&self.0, owners, proj).await
     }
 
     async fn remove_owner(
         &self,
-        user_id: i64,
-        proj_id: i64
+        user: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        remove_owner(&self.0, user_id, proj_id).await
+        remove_owner(&self.0, user, proj).await
     }
 
     async fn remove_owners(
         &self,
         owners: &Users,
-        proj_id: i64
+        proj: Project
     ) -> Result<(), AppError>
     {
-        remove_owners(&self.0, owners, proj_id).await
+        remove_owners(&self.0, owners, proj).await
     }
 
     async fn has_owner(
         &self,
-        proj_id: i64,
+        proj: Project
     ) -> Result<bool, AppError>
     {
-        has_owner(&self.0, proj_id).await
+        has_owner(&self.0, proj).await
     }
 
     async fn get_projects_end_window(
@@ -215,7 +215,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn create_project(
         &self,
-        user: &User,
+        user: User,
         proj: &str,
         proj_data: &ProjectDataPost,
         now: i64
@@ -226,76 +226,76 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn update_project(
         &self,
-        owner_id: i64,
-        proj_id: i64,
+        owner: Owner,
+        proj: Project,
         proj_data: &ProjectDataPatch,
         now: i64
     ) -> Result<(), AppError>
     {
-        update_project(&self.0, owner_id, proj_id, proj_data, now).await
+        update_project(&self.0, owner, proj, proj_data, now).await
     }
 
     async fn get_project_row(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<ProjectRow, AppError>
     {
-        get_project_row(&self.0, proj_id).await
+        get_project_row(&self.0, proj).await
     }
 
     async fn get_project_row_revision(
         &self,
-        proj_id: i64,
+        proj: Project,
         revision: i64
     ) -> Result<ProjectRow, AppError>
     {
-        get_project_row_revision(&self.0, proj_id, revision).await
+        get_project_row_revision(&self.0, proj, revision).await
     }
 
     async fn get_packages(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<Vec<PackageRow>, AppError>
     {
-        get_packages(&self.0, proj_id).await
+        get_packages(&self.0, proj).await
     }
 
     async fn get_packages_at(
         &self,
-        proj_id: i64,
+        proj: Project,
         date: i64,
     ) -> Result<Vec<PackageRow>, AppError>
     {
-        get_packages_at(&self.0, proj_id, date).await
+        get_packages_at(&self.0, proj, date).await
     }
 
     async fn create_package(
         &self,
-        owner_id: i64,
-        proj_id: i64,
+        owner: Owner,
+        proj: Project,
         pkg: &str,
         pkg_data: &PackageDataPost,
         now: i64
     ) -> Result<(), AppError>
     {
-        create_package(&self.0, owner_id, proj_id, pkg, pkg_data, now).await
+        create_package(&self.0, owner, proj, pkg, pkg_data, now).await
     }
 
     async fn get_releases(
         &self,
-        pkg_id: i64
+        pkg: Package
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
-        get_releases(&self.0, pkg_id).await
+        get_releases(&self.0, pkg).await
     }
 
     async fn get_releases_at(
         &self,
-        pkg_id: i64,
+        pkg: Package,
         date: i64
     ) -> Result<Vec<ReleaseRow>, AppError>
     {
-        get_releases_at(&self.0, pkg_id, date).await
+        get_releases_at(&self.0, pkg, date).await
     }
 
     async fn get_authors(
@@ -308,71 +308,83 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_package_url(
         &self,
-        pkg_id: i64
+        pkg: Package
     ) -> Result<String, AppError>
     {
-        get_package_url(&self.0, pkg_id).await
+        get_package_url(&self.0, pkg).await
     }
 
      async fn get_release_url(
         &self,
-        pkg_id: i64,
+        pkg: Package,
         version: &Version
     ) -> Result<String, AppError>
     {
-        get_release_url(&self.0, pkg_id, version).await
+        get_release_url(&self.0, pkg, version).await
     }
 
     async fn get_players(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<Users, AppError>
     {
-        get_players(&self.0, proj_id).await
+        get_players(&self.0, proj).await
     }
 
     async fn add_player(
         &self,
-        player: &User,
-        proj_id: i64,
+        player: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        add_player(&self.0, player, proj_id).await
+        add_player(&self.0, player, proj).await
     }
 
     async fn remove_player(
         &self,
-        player: &User,
-        proj_id: i64
+        player: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        remove_player(&self.0, player, proj_id).await
+        remove_player(&self.0, player, proj).await
     }
 
     async fn get_image_url(
         &self,
-        proj_id: i64,
+        proj: Project,
         img_name: &str
     ) -> Result<String, AppError>
     {
-        get_image_url(&self.0, proj_id, img_name).await
+        get_image_url(&self.0, proj, img_name).await
     }
 
     async fn get_image_url_at(
         &self,
-        proj_id: i64,
+        proj: Project,
         img_name: &str,
         date: i64
     ) -> Result<String, AppError>
     {
-        get_image_url_at(&self.0, proj_id, img_name, date).await
+        get_image_url_at(&self.0, proj, img_name, date).await
+    }
+
+    async fn add_image_url(
+        &self,
+        owner: Owner,
+        proj: Project,
+        img_name: &str,
+        url: &str,
+        now: i64
+    ) -> Result<(), AppError>
+    {
+        add_image_url(&self.0, owner, proj, img_name, url, now).await
     }
 }
 
 async fn get_project_id<'e, E>(
     ex: E,
-    project: &str
-) -> Result<ProjectID, AppError>
+    name: &str
+) -> Result<Project, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -382,11 +394,11 @@ SELECT project_id
 FROM projects
 WHERE name = ?
         ",
-        project
+        name
     )
     .fetch_optional(ex)
     .await?
-    .map(ProjectID)
+    .map(Project)
     .ok_or(AppError::NotAProject)
 }
 
@@ -432,8 +444,8 @@ WHERE projects_fts MATCH ?
 
 async fn get_user_id<'e, E>(
     ex: E,
-    user: &str
-) -> Result<i64, AppError>
+    username: &str
+) -> Result<User, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -444,16 +456,17 @@ FROM users
 WHERE username = ?
 LIMIT 1
         ",
-        user
+        username
     )
     .fetch_optional(ex)
     .await?
+    .map(User)
     .ok_or(AppError::NotAUser)
 }
 
 async fn get_owners<'e, E>(
     ex: E,
-    proj_id: i64
+    proj: Project
 ) -> Result<Users, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -471,21 +484,18 @@ ON owners.project_id = projects.project_id
 WHERE projects.project_id = ?
 ORDER BY users.username
                 ",
-                proj_id
+                proj.0
             )
             .fetch_all(ex)
             .await?
-            .into_iter()
-            .map(User)
-            .collect()
         }
     )
 }
 
 async fn user_is_owner<'e, E>(
     ex: E,
-    user: &User,
-    proj_id: i64
+    user: User,
+    proj: Project
 ) -> Result<bool, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -495,13 +505,11 @@ where
             "
 SELECT 1 AS present
 FROM owners
-JOIN users
-ON users.user_id = owners.user_id
-WHERE users.username = ? AND owners.project_id = ?
+WHERE user_id = ? AND project_id = ?
 LIMIT 1
             ",
             user.0,
-            proj_id
+            proj.0
         )
         .fetch_optional(ex)
         .await?
@@ -511,8 +519,8 @@ LIMIT 1
 
 async fn add_owner<'e, E>(
     ex: E,
-    user_id: i64,
-    proj_id: i64
+    user: User,
+    proj: Project
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -525,8 +533,8 @@ INSERT OR IGNORE INTO owners (
 )
 VALUES (?, ?)
         ",
-        user_id,
-        proj_id
+        user.0,
+        proj.0
     )
     .execute(ex)
     .await?;
@@ -537,18 +545,18 @@ VALUES (?, ?)
 async fn add_owners<'a, A>(
     conn: A,
     owners: &Users,
-    proj_id: i64
+    proj: Project
 ) -> Result<(), AppError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
     let mut tx = conn.begin().await?;
 
-    for owner in &owners.users {
+    for username in &owners.users {
         // get user id of new owner
-        let owner_id = get_user_id(&mut *tx, &owner.0).await?;
+        let owner = get_user_id(&mut *tx, &username).await?;
         // associate new owner with the project
-        add_owner(&mut *tx, owner_id, proj_id).await?;
+        add_owner(&mut *tx, owner, proj).await?;
     }
 
     tx.commit().await?;
@@ -558,8 +566,8 @@ where
 
 async fn remove_owner<'e, E>(
     ex: E,
-    user_id: i64,
-    proj_id: i64
+    user: User,
+    proj: Project
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -570,8 +578,8 @@ DELETE FROM owners
 WHERE user_id = ?
     AND project_id = ?
         ",
-        user_id,
-        proj_id
+        user.0,
+        proj.0
     )
     .execute(ex)
     .await?;
@@ -582,22 +590,22 @@ WHERE user_id = ?
 async fn remove_owners<'a, A>(
     conn: A,
     owners: &Users,
-    proj_id: i64
+    proj: Project
 ) -> Result<(), AppError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
     let mut tx = conn.begin().await?;
 
-    for owner in &owners.users {
+    for username in &owners.users {
         // get user id of owner
-        let owner_id = get_user_id(&mut *tx, &owner.0).await?;
+        let owner = get_user_id(&mut *tx, &username).await?;
         // remove old owner from the project
-        remove_owner(&mut *tx, owner_id, proj_id).await?;
+        remove_owner(&mut *tx, owner, proj).await?;
     }
 
     // prevent removal of last owner
-    if !has_owner(&mut *tx, proj_id).await? {
+    if !has_owner(&mut *tx, proj).await? {
         return Err(AppError::CannotRemoveLastOwner);
     }
 
@@ -608,7 +616,7 @@ where
 
 async fn has_owner<'e, E>(
     ex: E,
-    proj_id: i64,
+    proj: Project
 ) -> Result<bool, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -621,7 +629,7 @@ FROM owners
 WHERE project_id = ?
 LIMIT 1
             ",
-            proj_id
+            proj.0
         )
         .fetch_optional(ex)
         .await?
@@ -873,17 +881,18 @@ JOIN (
 
 async fn create_project_row<'e, E>(
     ex: E,
-    user_id: i64,
+    user: User,
     proj: &str,
     proj_data: &ProjectDataPost,
     now: i64
-) -> Result<i64, AppError>
+) -> Result<Project, AppError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        sqlx::query_scalar!(
-            "
+        Project(
+            sqlx::query_scalar!(
+                "
 INSERT INTO projects (
     name,
     created_at,
@@ -900,22 +909,23 @@ INSERT INTO projects (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_id
-            ",
-            proj,
-            now,
-            proj_data.description,
-            proj_data.game.title,
-            proj_data.game.title_sort_key,
-            proj_data.game.publisher,
-            proj_data.game.year,
-            "",
-            None::<&str>,
-            now,
-            user_id,
-            1
+                ",
+                proj,
+                now,
+                proj_data.description,
+                proj_data.game.title,
+                proj_data.game.title_sort_key,
+                proj_data.game.publisher,
+                proj_data.game.year,
+                "",
+                None::<&str>,
+                now,
+                user.0,
+                1
+            )
+            .fetch_one(ex)
+            .await?
         )
-        .fetch_one(ex)
-        .await?
     )
 }
 
@@ -1015,8 +1025,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 
 async fn create_project<'a, A>(
     conn: A,
-    user: &User,
-    proj: &str,
+    owner: User,
+    name: &str,
     pd: &ProjectDataPost,
     now: i64
 ) -> Result<(), AppError>
@@ -1025,18 +1035,15 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // get user id of new owner
-    let owner_id = get_user_id(&mut *tx, &user.0).await?;
-
     // create project row
-    let proj_id = create_project_row(&mut *tx, owner_id, proj, pd, now).await?;
+    let proj = create_project_row(&mut *tx, owner, name, pd, now).await?;
 
     // associate new owner with the project
-    add_owner(&mut *tx, owner_id, proj_id).await?;
+    add_owner(&mut *tx, owner, proj).await?;
 
     // create project revision
     let dr = ProjectDataRow {
-        project_id: proj_id,
+        project_id: proj.0,
         description: &pd.description,
         game_title: &pd.game.title,
         game_title_sort: &pd.game.title_sort_key,
@@ -1049,11 +1056,11 @@ where
     let project_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
     let rr = ProjectRevisionRow {
-        project_id: proj_id,
-        name: proj,
+        project_id: proj.0,
+        name,
         created_at: now,
         modified_at: now,
-        modified_by: owner_id,
+        modified_by: owner.0,
         revision: 1,
         project_data_id
     };
@@ -1067,8 +1074,8 @@ where
 
 async fn update_project_row<'e, E>(
     ex: E,
-    owner_id: i64,
-    proj_id: i64,
+    owner: Owner,
+    proj: Project,
     revision: i64,
     pd: &ProjectDataPatch,
     now: i64
@@ -1088,7 +1095,7 @@ where
         .push("modified_at = ")
         .push_bind_unseparated(now)
         .push("modified_by = ")
-        .push_bind_unseparated(owner_id);
+        .push_bind_unseparated(owner.0);
 
     if let Some(description) = &pd.description {
         qbs.push("description = ").push_bind_unseparated(description);
@@ -1120,7 +1127,7 @@ where
 
     qb
         .push(" WHERE project_id = ")
-        .push_bind(proj_id)
+        .push_bind(proj.0)
         .build()
         .execute(ex)
         .await?;
@@ -1132,8 +1139,8 @@ where
 
 async fn update_project<'a, A>(
     conn: A,
-    owner_id: i64,
-    proj_id: i64,
+    owner: Owner,
+    proj: Project,
     pd: &ProjectDataPatch,
     now: i64
 ) -> Result<(), AppError>
@@ -1143,15 +1150,15 @@ where
     let mut tx = conn.begin().await?;
 
     // get project
-    let row = get_project_row(&mut *tx, proj_id).await?;
+    let row = get_project_row(&mut *tx, proj).await?;
     let revision = row.revision + 1;
 
     // update project
-    update_project_row(&mut *tx, owner_id, proj_id, revision, pd, now).await?;
+    update_project_row(&mut *tx, owner, proj, revision, pd, now).await?;
 
     // create project revision
     let dr = ProjectDataRow {
-        project_id: proj_id,
+        project_id: proj.0,
         description: pd.description.as_ref().unwrap_or(&row.description),
         game_title: pd.game.title.as_ref().unwrap_or(&row.game_title),
         game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
@@ -1164,11 +1171,11 @@ where
     let project_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
     let rr = ProjectRevisionRow {
-        project_id: proj_id,
+        project_id: proj.0,
         name: &row.name,
         created_at: row.created_at,
         modified_at: now,
-        modified_by: owner_id,
+        modified_by: owner.0,
         revision,
         project_data_id
     };
@@ -1182,7 +1189,7 @@ where
 
 async fn get_project_row<'e, E>(
     ex: E,
-    proj_id: i64
+    proj: Project
 ) -> Result<ProjectRow, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1208,7 +1215,7 @@ FROM projects
 WHERE project_id = ?
 LIMIT 1
         ",
-        proj_id
+        proj.0
     )
     .fetch_optional(ex)
     .await?
@@ -1217,7 +1224,7 @@ LIMIT 1
 
 async fn get_project_row_revision<'e, E>(
     ex: E,
-    proj_id: i64,
+    proj: Project,
     revision: i64
 ) -> Result<ProjectRow, AppError>
 where
@@ -1247,7 +1254,7 @@ WHERE project_revisions.project_id = ?
     AND project_revisions.revision = ?
 LIMIT 1
         ",
-        proj_id,
+        proj.0,
         revision
     )
     .fetch_optional(ex)
@@ -1257,7 +1264,7 @@ LIMIT 1
 
 async fn get_packages<'e, E>(
     ex: E,
-    proj_id: i64
+    proj: Project
 ) -> Result<Vec<PackageRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1274,7 +1281,7 @@ FROM packages
 WHERE project_id = ?
 ORDER BY name COLLATE NOCASE ASC
             ",
-            proj_id
+            proj.0
         )
        .fetch_all(ex)
        .await?
@@ -1283,7 +1290,7 @@ ORDER BY name COLLATE NOCASE ASC
 
 async fn get_packages_at<'e, E>(
     ex: E,
-    proj_id: i64,
+    proj: Project,
     date: i64
 ) -> Result<Vec<PackageRow>, AppError>
 where
@@ -1302,7 +1309,7 @@ WHERE project_id = ?
     AND created_at <= ?
 ORDER BY name COLLATE NOCASE ASC
             ",
-            proj_id,
+            proj.0,
             date
         )
        .fetch_all(ex)
@@ -1312,8 +1319,8 @@ ORDER BY name COLLATE NOCASE ASC
 
 async fn create_package<'e, E>(
     ex: E,
-    owner_id: i64,
-    proj_id: i64,
+    owner: Owner,
+    proj: Project,
     pkg: &str,
     pkg_data: &PackageDataPost,
     now: i64
@@ -1331,10 +1338,10 @@ INSERT INTO packages (
 )
 VALUES (?, ?, ?, ?)
             ",
-            proj_id,
+            proj.0,
             pkg,
             now,
-            owner_id
+            owner.0
     )
     .execute(ex)
     .await?;
@@ -1379,7 +1386,7 @@ where
 
 async fn get_releases<'e, E>(
     ex: E,
-    pkg_id: i64
+    pkg: Package
 ) -> Result<Vec<ReleaseRow>, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1412,7 +1419,7 @@ ORDER BY
     version_pre ASC,
     version_build ASC
         ",
-        pkg_id
+        pkg.0
     )
     .fetch_all(ex)
     .await?;
@@ -1423,7 +1430,7 @@ ORDER BY
 
 async fn get_releases_at<'e, E>(
     ex: E,
-    pkg_id: i64,
+    pkg: Package,
     date: i64
 ) -> Result<Vec<ReleaseRow>, AppError>
 where
@@ -1458,7 +1465,7 @@ ORDER BY
     version_pre ASC,
     version_build ASC
         ",
-        pkg_id,
+        pkg.0,
         date
     )
     .fetch_all(ex)
@@ -1490,9 +1497,6 @@ ORDER BY users.username
             )
             .fetch_all(ex)
             .await?
-            .into_iter()
-            .map(User)
-            .collect()
         }
     )
 }
@@ -1510,7 +1514,7 @@ struct ReducedReleaseRow {
 // TODO: figure out how to order version_pre
 async fn get_package_url<'e, E>(
     ex: E,
-    pkg_id: i64
+    pkg: Package
 ) -> Result<String, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1534,7 +1538,7 @@ ORDER BY
     version_pre ASC,
     version_build ASC
         ",
-        pkg_id
+        pkg.0
     )
     .fetch_all(ex)
     .await?;
@@ -1550,7 +1554,7 @@ ORDER BY
 
 async fn get_release_url<'e, E>(
     ex: E,
-    pkg_id: i64,
+    pkg: Package,
     version: &Version
 ) -> Result<String, AppError>
 where
@@ -1571,7 +1575,7 @@ WHERE package_id = ?
     AND version_build = ?
 LIMIT 1
         ",
-        pkg_id,
+        pkg.0,
         version.major,
         version.minor,
         version.patch,
@@ -1585,7 +1589,7 @@ LIMIT 1
 
 async fn get_players<'e, E>(
     ex: E,
-    proj_id: i64
+    proj: Project
 ) -> Result<Users, AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1603,21 +1607,18 @@ ON players.project_id = projects.project_id
 WHERE projects.project_id = ?
 ORDER BY users.username
                 ",
-                proj_id
+                proj.0
             )
             .fetch_all(ex)
             .await?
-            .into_iter()
-            .map(User)
-            .collect()
         }
     )
 }
 
-async fn add_player_id<'e, E>(
+async fn add_player<'e, E>(
     ex: E,
-    user_id: i64,
-    proj_id: i64,
+    user: User,
+    proj: Project
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1630,8 +1631,8 @@ INSERT OR IGNORE INTO players (
 )
 VALUES (?, ?)
         ",
-        user_id,
-        proj_id
+        user.0,
+        proj.0
     )
     .execute(ex)
     .await?;
@@ -1639,30 +1640,10 @@ VALUES (?, ?)
     Ok(())
 }
 
-async fn add_player<'a, A>(
-    conn: A,
-    player: &User,
-    proj_id: i64
-) -> Result<(), AppError>
-where
-    A: Acquire<'a, Database = Sqlite>
-{
-    let mut tx = conn.begin().await?;
-
-    // get user id of new player
-    let player_id = get_user_id(&mut *tx, &player.0).await?;
-    // associate new player with the project
-    add_player_id(&mut *tx, player_id, proj_id).await?;
-
-    tx.commit().await?;
-
-    Ok(())
-}
-
-async fn remove_player_id<'e, E>(
+async fn remove_player<'e, E>(
     ex: E,
-    user_id: i64,
-    proj_id: i64
+    user: User,
+    proj: Project
 ) -> Result<(), AppError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -1673,8 +1654,8 @@ DELETE FROM players
 WHERE user_id = ?
     AND project_id = ?
         ",
-        user_id,
-        proj_id
+        user.0,
+        proj.0
     )
     .execute(ex)
     .await?;
@@ -1682,29 +1663,9 @@ WHERE user_id = ?
     Ok(())
 }
 
-async fn remove_player<'a, A>(
-    conn: A,
-    player: &User,
-    proj_id: i64
-) -> Result<(), AppError>
-where
-    A: Acquire<'a, Database = Sqlite>
-{
-    let mut tx = conn.begin().await?;
-
-    // get user id of player
-    let player_id = get_user_id(&mut *tx, &player.0).await?;
-    // remove player from the project
-    remove_player_id(&mut *tx, player_id, proj_id).await?;
-
-    tx.commit().await?;
-
-    Ok(())
-}
-
 async fn get_image_url<'e, E>(
     ex: E,
-    proj_id: i64,
+    proj: Project,
     img_name: &str
 ) -> Result<String, AppError>
 where
@@ -1718,7 +1679,7 @@ WHERE project_id = ?
     AND filename = ?
 LIMIT 1
         ",
-        proj_id,
+        proj.0,
         img_name
     )
     .fetch_optional(ex)
@@ -1729,7 +1690,7 @@ LIMIT 1
 // TODO: tests
 async fn get_image_url_at<'e, E>(
     ex: E,
-    proj_id: i64,
+    proj: Project,
     img_name: &str,
     date: i64
 ) -> Result<String, AppError>
@@ -1746,7 +1707,7 @@ WHERE project_id = ?
 ORDER BY published_at DESC
 LIMIT 1
         ",
-        proj_id,
+        proj.0,
         img_name,
         date
     )
@@ -1765,7 +1726,7 @@ mod test {
     async fn get_project_id_ok(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "test_game").await.unwrap(),
-            ProjectID(42)
+            Project(42)
         );
     }
 
@@ -1784,7 +1745,7 @@ mod test {
 
     #[sqlx::test(fixtures("users"))]
     async fn get_user_id_ok(pool: Pool) {
-        assert_eq!(get_user_id(&pool, "bob").await.unwrap(), 1);
+        assert_eq!(get_user_id(&pool, "bob").await.unwrap(), User(1));
     }
 
     #[sqlx::test(fixtures("users"))]
@@ -1798,8 +1759,8 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
     }
 
@@ -1818,27 +1779,27 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
-        assert!(user_is_owner(&pool, &User("bob".into()), 42).await.unwrap());
+        assert!(user_is_owner(&pool, User(1), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects","one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
-        assert!(!user_is_owner(&pool, &User("alice".into()), 42).await.unwrap());
+        assert!(!user_is_owner(&pool, User(2), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_new(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
-        add_owner(&pool, 2, 42).await.unwrap();
+        add_owner(&pool, User(2), Project(42)).await.unwrap();
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
+            get_owners(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -1847,13 +1808,13 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_existing(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
-        add_owner(&pool, 1, 42).await.unwrap();
+        add_owner(&pool, User(1), Project(42)).await.unwrap();
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
     }
 
@@ -1863,12 +1824,12 @@ mod test {
     #[sqlx::test(fixtures("users", "projects","one_owner"))]
     async fn remove_owner_ok(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
-        remove_owner(&pool, 1, 42).await.unwrap();
+        remove_owner(&pool, User(1), Project(42)).await.unwrap();
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
+            get_owners(&pool, Project(42)).await.unwrap(),
             Users { users: vec![] }
         );
     }
@@ -1876,13 +1837,13 @@ mod test {
     #[sqlx::test(fixtures( "users", "projects", "one_owner"))]
     async fn remove_owner_not_an_owner(pool: Pool) {
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
-        remove_owner(&pool, 2, 42).await.unwrap();
+        remove_owner(&pool, User(2), Project(42)).await.unwrap();
         assert_eq!(
-            get_owners(&pool, 42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            get_owners(&pool, Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
     }
 
@@ -1891,17 +1852,17 @@ mod test {
 // TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn has_owner_yes(pool: Pool) {
-        assert!(has_owner(&pool, 42).await.unwrap());
+        assert!(has_owner(&pool, Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn has_owner_no(pool: Pool) {
-        assert!(!has_owner(&pool, 42).await.unwrap());
+        assert!(!has_owner(&pool, Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users"))]
     async fn create_project_ok(pool: Pool) {
-        let user = User("bob".into());
+        let user = User(1);
         let row = ProjectRow {
             project_id: 1,
             name: "test_game".into(),
@@ -1938,16 +1899,16 @@ mod test {
 
         create_project(
             &pool,
-            &user,
+            user,
             &row.name,
             &cdata,
             row.created_at
         ).await.unwrap();
 
-        let proj_id = get_project_id(&pool, &row.name).await.unwrap();
+        let proj = get_project_id(&pool, &row.name).await.unwrap();
 
         assert_eq!(
-            get_project_row(&pool, proj_id.0).await.unwrap(),
+            get_project_row(&pool, proj).await.unwrap(),
             row
         );
     }
@@ -2217,7 +2178,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_row_ok(pool: Pool) {
         assert_eq!(
-            get_project_row(&pool, 42).await.unwrap(),
+            get_project_row(&pool, Project(42)).await.unwrap(),
             ProjectRow {
                 project_id: 42,
                 name: "test_game".into(),
@@ -2239,7 +2200,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_row_not_a_project(pool: Pool) {
         assert_eq!(
-            get_project_row(&pool, 0).await.unwrap_err(),
+            get_project_row(&pool, Project(0)).await.unwrap_err(),
             AppError::NotAProject
         );
     }
@@ -2247,7 +2208,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "two_owners"))]
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 42, 3).await.unwrap(),
+            get_project_row_revision(&pool, Project(42), 3).await.unwrap(),
             ProjectRow {
                 project_id: 42,
                 name: "test_game".into(),
@@ -2269,7 +2230,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "two_owners"))]
     async fn get_project_revision_ok_old(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 42, 1).await.unwrap(),
+            get_project_row_revision(&pool, Project(42), 1).await.unwrap(),
             ProjectRow {
                 project_id: 42,
                 name: "test_game".into(),
@@ -2292,7 +2253,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_revision_not_a_project(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 0, 2).await.unwrap_err(),
+            get_project_row_revision(&pool, Project(0), 2).await.unwrap_err(),
             AppError::NotARevision
         );
     }
@@ -2300,7 +2261,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_revision_not_a_revision(pool: Pool) {
         assert_eq!(
-            get_project_row_revision(&pool, 42, 0).await.unwrap_err(),
+            get_project_row_revision(&pool, Project(42), 0).await.unwrap_err(),
             AppError::NotARevision
         );
     }
@@ -2308,7 +2269,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_ok(pool: Pool) {
         assert_eq!(
-            get_packages(&pool, 42).await.unwrap(),
+            get_packages(&pool, Project(42)).await.unwrap(),
             vec![
                 PackageRow {
                     package_id: 1,
@@ -2333,7 +2294,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_not_a_project(pool: Pool) {
         assert_eq!(
-            get_packages(&pool, 0).await.unwrap(),
+            get_packages(&pool, Project(0)).await.unwrap(),
             vec![]
         );
     }
@@ -2342,7 +2303,7 @@ mod test {
     async fn get_packages_at_none(pool: Pool) {
         let date = 0;
         assert_eq!(
-            get_packages_at(&pool, 42, date).await.unwrap(),
+            get_packages_at(&pool, Project(42), date).await.unwrap(),
             vec![]
         );
     }
@@ -2351,7 +2312,7 @@ mod test {
     async fn get_packages_at_some(pool: Pool) {
         let date = 1672531200000000000;
         assert_eq!(
-            get_packages_at(&pool, 42, date).await.unwrap(),
+            get_packages_at(&pool, Project(42), date).await.unwrap(),
             vec![
                 PackageRow {
                     package_id: 2,
@@ -2367,7 +2328,7 @@ mod test {
     async fn get_packages_at_not_a_project(pool: Pool) {
         let date = 16409952000000000;
         assert_eq!(
-            get_packages_at(&pool, 0, date).await.unwrap(),
+            get_packages_at(&pool, Project(0), date).await.unwrap(),
             vec![]
         );
     }
@@ -2375,7 +2336,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_package_url_ok(pool: Pool) {
         assert_eq!(
-            get_package_url(&pool, 1).await.unwrap(),
+            get_package_url(&pool, Package(1)).await.unwrap(),
             "https://example.com/a_package-1.2.4"
         );
     }
@@ -2383,7 +2344,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_package_url_not_a_package(pool: Pool) {
         assert_eq!(
-            get_package_url(&pool, 0).await.unwrap_err(),
+            get_package_url(&pool, Package(0)).await.unwrap_err(),
             AppError::NotAPackage
         );
     }
@@ -2391,14 +2352,14 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn create_package_ok(pool: Pool) {
         assert_eq!(
-            get_packages(&pool, 6).await.unwrap(),
+            get_packages(&pool, Project(6)).await.unwrap(),
             []
         );
 
         create_package(
             &pool,
-            1,
-            6,
+            Owner(1),
+            Project(6),
             "newpkg",
             &PackageDataPost {
                 description: "".into()
@@ -2407,7 +2368,7 @@ mod test {
         ).await.unwrap();
 
         assert_eq!(
-            get_packages(&pool, 6).await.unwrap(),
+            get_packages(&pool, Project(6)).await.unwrap(),
             [
                 PackageRow {
                     package_id: 4,
@@ -2424,7 +2385,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_ok(pool: Pool) {
         assert_eq!(
-            get_releases(&pool, 1).await.unwrap(),
+            get_releases(&pool, Package(1)).await.unwrap(),
             vec![
                 ReleaseRow {
                     release_id: 2,
@@ -2464,7 +2425,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_not_a_package(pool: Pool) {
         assert_eq!(
-            get_releases(&pool, 0).await.unwrap(),
+            get_releases(&pool, Package(0)).await.unwrap(),
             vec![]
         );
     }
@@ -2475,8 +2436,8 @@ mod test {
             get_authors(&pool, 2).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -2494,11 +2455,11 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn get_players_ok(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -2508,7 +2469,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn get_players_not_a_project(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 0).await.unwrap(),
+            get_players(&pool, Project(0)).await.unwrap(),
             Users { users: vec![] }
         );
     }
@@ -2516,22 +2477,22 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_new(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
-        add_player(&pool, &User("chuck".into()), 42).await.unwrap();
+        add_player(&pool, User(3), Project(42)).await.unwrap();
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
-                    User("chuck".into())
+                    "alice".into(),
+                    "bob".into(),
+                    "chuck".into()
                 ]
             }
         );
@@ -2540,21 +2501,21 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_existing(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
-        add_player(&pool, &User("alice".into()), 42).await.unwrap();
+        add_player(&pool, User(2), Project(42)).await.unwrap();
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
@@ -2566,20 +2527,20 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn remove_player_existing(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
-        remove_player(&pool, &User("alice".into()), 42).await.unwrap();
+        remove_player(&pool, User(2), Project(42)).await.unwrap();
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("bob".into()),
+                    "bob".into(),
                 ]
             }
         );
@@ -2588,21 +2549,21 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn remove_player_not_a_player(pool: Pool) {
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
-        remove_player(&pool, &User("chuck".into()), 42).await.unwrap();
+        remove_player(&pool, User(3), Project(42)).await.unwrap();
         assert_eq!(
-            get_players(&pool, 42).await.unwrap(),
+            get_players(&pool, Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
+                    "alice".into(),
+                    "bob".into(),
                 ]
             }
         );
@@ -2613,7 +2574,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_ok(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, 42, "img.png").await.unwrap(),
+            get_image_url(&pool, Project(42), "img.png").await.unwrap(),
             "https://example.com/images/img.png"
         );
     }
@@ -2621,7 +2582,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_not_a_project(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, 1, "img.png").await.unwrap_err(),
+            get_image_url(&pool, Project(1), "img.png").await.unwrap_err(),
             AppError::NotFound
         );
     }
@@ -2629,7 +2590,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_not_an_image(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, 42, "bogus").await.unwrap_err(),
+            get_image_url(&pool, Project(42), "bogus").await.unwrap_err(),
             AppError::NotFound
         );
     }

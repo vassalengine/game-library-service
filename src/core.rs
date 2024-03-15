@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    model::{Owner, PackageDataPost, PackageID, Project, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, User, UserID, Users},
+    model::{Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, User, Users},
     params::ProjectsParams,
     version::Version
 };
@@ -12,32 +12,32 @@ use crate::{
 pub trait Core {
     async fn get_project_id(
          &self,
-        _proj: &Project
-    ) -> Result<ProjectID, AppError>
+        _proj: &str
+    ) -> Result<Project, AppError>
     {
         unimplemented!();
     }
 
     async fn get_package_id(
          &self,
-        _proj_id: i64,
+        _proj: Project,
         _pkg: &str
-    ) -> Result<PackageID, AppError>
+    ) -> Result<Package, AppError>
     {
         unimplemented!();
     }
 
     async fn get_user_id(
          &self,
-        _user: &User
-    ) -> Result<UserID, AppError>
+        _username: &str
+    ) -> Result<User, AppError>
     {
         unimplemented!();
     }
 
     async fn get_owners(
         &self,
-        _proj_id: i64
+        _proj: Project
     ) -> Result<Users, AppError>
     {
         unimplemented!();
@@ -46,7 +46,7 @@ pub trait Core {
     async fn add_owners(
         &self,
         _owners: &Users,
-        _proj_id: i64
+        _proj: Project
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -55,7 +55,7 @@ pub trait Core {
     async fn remove_owners(
         &self,
         _owners: &Users,
-        _proj_id: i64
+        _proj: Project
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -63,8 +63,8 @@ pub trait Core {
 
     async fn user_is_owner(
         &self,
-        _user: &User,
-        _proj_id: i64
+        _user: User,
+        _proj: Project
     ) -> Result<bool, AppError>
     {
         unimplemented!();
@@ -80,7 +80,7 @@ pub trait Core {
 
     async fn get_project(
         &self,
-        _proj_id: i64
+        _proj: Project
     ) -> Result<ProjectData, AppError>
     {
         unimplemented!();
@@ -88,7 +88,7 @@ pub trait Core {
 
     async fn create_project(
         &self,
-        _user: &User,
+        _user: User,
         _proj: &str,
         _proj_data: &ProjectDataPost
     ) -> Result<(), AppError>
@@ -98,8 +98,8 @@ pub trait Core {
 
     async fn update_project(
         &self,
-        _owner: &Owner,
-        _proj_id: i64,
+        _owner: Owner,
+        _proj: Project,
         _proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
     {
@@ -108,7 +108,7 @@ pub trait Core {
 
     async fn get_project_revision(
         &self,
-        _proj_id: i64,
+        _proj: Project,
         _revision: i64
     ) -> Result<ProjectData, AppError>
     {
@@ -117,8 +117,8 @@ pub trait Core {
 
     async fn create_package(
         &self,
-        _owner: &Owner,
-        _proj_id: i64,
+        _owner: Owner,
+        _proj: Project,
         _pkg: &str,
         _pkg_data: &PackageDataPost
     ) -> Result<(), AppError>
@@ -128,8 +128,8 @@ pub trait Core {
 
     async fn get_release(
         &self,
-        _proj_id: i64,
-        _pkg_id: i64
+        _proj: Project,
+        _pkg: Package
     ) -> Result<String, AppError>
     {
         unimplemented!();
@@ -137,8 +137,8 @@ pub trait Core {
 
     async fn get_release_version(
         &self,
-        _proj_id: i64,
-        _pkg_id: i64,
+        _proj: Project,
+        _pkg: Package,
         _version: &Version
     ) -> Result<String, AppError>
     {
@@ -147,7 +147,7 @@ pub trait Core {
 
     async fn get_players(
         &self,
-        _proj_id: i64
+        _proj: Project
     ) -> Result<Users, AppError>
     {
         unimplemented!();
@@ -155,8 +155,8 @@ pub trait Core {
 
     async fn add_player(
         &self,
-        _player: &User,
-        _proj_id: i64
+        _player: User,
+        _proj: Project
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -164,8 +164,8 @@ pub trait Core {
 
     async fn remove_player(
         &self,
-        _player: &User,
-        _proj_id: i64
+        _player: User,
+        _proj: Project
     ) -> Result<(), AppError>
     {
         unimplemented!();
@@ -173,7 +173,7 @@ pub trait Core {
 
     async fn get_image(
         &self,
-        _proj_id: i64,
+        _proj: Project,
         _img_name: &str
     ) -> Result<String, AppError>
     {
@@ -182,7 +182,7 @@ pub trait Core {
 
     async fn get_image_revision(
         &self,
-        _proj_id: i64,
+        _proj: Project,
         _revision: i64,
         _img_name: &str
     ) -> Result<String, AppError>

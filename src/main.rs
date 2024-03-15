@@ -199,7 +199,7 @@ mod test {
     use crate::{
         core::Core,
         jwt::{self, EncodingKey},
-        model::{GameData, Owner, PackageData, PackageID, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, Users},
+        model::{GameData, Owner, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams,
         version::Version
@@ -256,6 +256,8 @@ mod test {
         }
     });
 
+    const BOB_UID: i64 = 1;
+
     #[derive(Clone)]
     struct TestCore { }
 
@@ -263,40 +265,40 @@ mod test {
     impl Core for TestCore {
         async fn get_project_id(
             &self,
-            proj: &Project
-        ) -> Result<ProjectID, AppError>
+            proj: &str,
+        ) -> Result<Project, AppError>
         {
-            match proj.0.as_str() {
-                "a_project" => Ok(ProjectID(1)),
+            match proj {
+                "a_project" => Ok(Project(1)),
                 _ => Err(AppError::NotAProject)
             }
         }
 
         async fn get_package_id(
             &self,
-            _proj_id: i64,
+            _proj: Project,
             pkg: &str
-        ) -> Result<PackageID, AppError>
+        ) -> Result<Package, AppError>
         {
             match pkg {
-                "a_package" => Ok(PackageID(1)),
+                "a_package" => Ok(Package(1)),
                 _ => Err(AppError::NotAPackage)
             }
         }
 
         async fn user_is_owner(
             &self,
-            user: &User,
-            _proj_id: i64
+            user: User,
+            _proj: Project
         ) -> Result<bool, AppError>
         {
-            Ok(user == &User("bob".into()) || user == &User("alice".into()))
+            Ok(user == User(1) || user == User(2))
         }
 
         async fn add_owners(
             &self,
             _owners: &Users,
-            _proj_id: i64
+            _proj: Project
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -305,7 +307,7 @@ mod test {
         async fn remove_owners(
             &self,
             _owners: &Users,
-            _proj_id: i64
+            _proj: Project
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -313,14 +315,14 @@ mod test {
 
         async fn get_owners(
             &self,
-            _proj_id: i64
+            _proj: Project
         ) -> Result<Users, AppError>
         {
             Ok(
                 Users {
                     users: vec![
-                        User("alice".into()),
-                        User("bob".into())
+                        "alice".into(),
+                        "bob".into()
                     ]
                 }
             )
@@ -366,7 +368,7 @@ mod test {
 
         async fn get_project(
             &self,
-            _proj_id: i64,
+            _proj: Project,
         ) -> Result<ProjectData, AppError>
         {
             Ok(
@@ -411,7 +413,7 @@ mod test {
 
         async fn create_project(
             &self,
-            _user: &User,
+            _user: User,
             _proj: &str,
             _proj_data: &ProjectDataPost
         ) -> Result<(), AppError>
@@ -421,8 +423,8 @@ mod test {
 
         async fn update_project(
             &self,
-            _owner: &Owner,
-            _proj_id: i64,
+            _owner: Owner,
+            _proj: Project,
             _proj_data: &ProjectDataPatch
         ) -> Result<(), AppError>
         {
@@ -431,20 +433,20 @@ mod test {
 
         async fn get_project_revision(
             &self,
-            proj_id: i64,
+            proj: Project,
             revision: i64
         ) -> Result<ProjectData, AppError>
         {
             match revision {
-                1 => self.get_project(proj_id).await,
+                1 => self.get_project(proj).await,
                 _ => Err(AppError::NotARevision)
             }
         }
 
         async fn get_release(
             &self,
-            _proj_id: i64,
-            _pkg_id: i64
+            _proj: Project,
+            _pkg: Package
         ) -> Result<String, AppError>
         {
             Ok("https://example.com/package".into())
@@ -452,8 +454,8 @@ mod test {
 
         async fn get_release_version(
             &self,
-            _proj_id: i64,
-            _pkg_id: i64,
+            _proj: Project,
+            _pkg: Package,
             version: &Version
         ) -> Result<String, AppError>
         {
@@ -467,14 +469,14 @@ mod test {
 
         async fn get_players(
             &self,
-            _proj_id: i64
+            _proj: Project
         ) -> Result<Users, AppError>
         {
             Ok(
                 Users {
                     users: vec![
-                        User("player 1".into()),
-                        User("player 2".into())
+                        "player 1".into(),
+                        "player 2".into()
                     ]
                 }
             )
@@ -482,8 +484,8 @@ mod test {
 
         async fn add_player(
             &self,
-            _player: &User,
-            _proj_id: i64
+            _player: User,
+            _proj: Project
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -491,8 +493,8 @@ mod test {
 
         async fn remove_player(
             &self,
-            _player: &User,
-            _proj_id: i64
+            _player: User,
+            _proj: Project
         ) -> Result<(), AppError>
         {
             Ok(())
@@ -500,11 +502,11 @@ mod test {
 
         async fn get_image(
             &self,
-            proj_id: i64,
+            proj: Project,
             img_name: &str
         ) -> Result<String, AppError>
         {
-            if proj_id == 1 && img_name == "img.png" {
+            if proj == Project(1) && img_name == "img.png" {
                 Ok("https://example.com/img.png".into())
             }
             else {
@@ -520,9 +522,9 @@ mod test {
         }
     }
 
-    fn token(user: &str) -> String {
+    fn token(uid: i64) -> String {
         let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, user, 899999999999).unwrap();
+        let token = jwt::issue(&ekey, uid, 899999999999).unwrap();
         format!("Bearer {token}")
     }
 
@@ -1218,7 +1220,7 @@ mod test {
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
                 .unwrap()
@@ -1268,7 +1270,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
                 .unwrap()
         )
@@ -1288,7 +1290,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap()
         )
@@ -1308,7 +1310,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap()
         )
@@ -1332,7 +1334,7 @@ mod test {
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
                 .unwrap()
@@ -1353,7 +1355,7 @@ mod test {
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
                 .unwrap()
@@ -1398,7 +1400,7 @@ mod test {
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
                 .unwrap()
         )
@@ -1418,7 +1420,7 @@ mod test {
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap()
         )
@@ -1438,7 +1440,7 @@ mod test {
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap()
         )
@@ -1682,8 +1684,8 @@ mod test {
             body_as::<Users>(response).await,
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -1713,7 +1715,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1730,7 +1732,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1750,7 +1752,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("rando"))
+                .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1770,7 +1772,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
                 .unwrap()
@@ -1790,7 +1792,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
                 .unwrap()
@@ -1810,7 +1812,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
         )
@@ -1829,7 +1831,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1846,7 +1848,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1866,7 +1868,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("rando"))
+                .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
@@ -1886,7 +1888,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
                 .unwrap()
@@ -1906,7 +1908,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
                 .unwrap()
@@ -1926,7 +1928,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap()
         )
@@ -1955,8 +1957,8 @@ mod test {
             body_as::<Users>(response).await,
             Users {
                 users: vec![
-                    User("player 1".into()),
-                    User("player 2".into())
+                    "player 1".into(),
+                    "player 2".into()
                 ]
             }
         );
@@ -1986,7 +1988,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -2002,7 +2004,7 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
-                .header(AUTHORIZATION, token("bob"))
+                .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -2021,7 +2023,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
-                .header(AUTHORIZATION, token("player 1"))
+                .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
                 .unwrap()
         )
@@ -2037,7 +2039,7 @@ mod test {
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/not_a_project/players"))
-                .header(AUTHORIZATION, token("player 1"))
+                .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
                 .unwrap()
         )

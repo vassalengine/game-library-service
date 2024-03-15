@@ -7,7 +7,7 @@ use crate::{
     core::Core,
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     errors::AppError,
-    model::{GameData, Owner, PackageData, PackageDataPost, Project, ProjectData, ProjectDataPatch, ProjectDataPost, ProjectID, Projects, ProjectSummary, ReleaseData, User, UserID, Users},
+    model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -20,60 +20,59 @@ pub struct ProdCore<C: DatabaseClient> {
     pub now: fn() -> DateTime<Utc>
 }
 
-// TODO: switch proj_id to proj_name; then we will always know if the project
-// exists because we have to look up the id
+// TODO: Push User, Owner, Project all the way inward
 
 #[async_trait]
 impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
     async fn get_user_id(
          &self,
-        user: &User
-    ) -> Result<UserID, AppError>
+        username: &str
+    ) -> Result<User, AppError>
     {
-        Ok(UserID(self.db.get_user_id(&user.0).await?))
+        Ok(self.db.get_user_id(&username).await?)
     }
 
     async fn get_project_id(
          &self,
-        proj: &Project
-    ) -> Result<ProjectID, AppError>
+        proj: &str
+    ) -> Result<Project, AppError>
     {
-        self.db.get_project_id(&proj.0).await
+        self.db.get_project_id(proj).await
     }
 
     async fn get_owners(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<Users, AppError>
     {
-        self.db.get_owners(proj_id).await
+        self.db.get_owners(proj).await
     }
 
     async fn add_owners(
         &self,
         owners: &Users,
-        proj_id: i64
+        proj: Project
     ) -> Result<(), AppError>
     {
-        self.db.add_owners(owners, proj_id).await
+        self.db.add_owners(owners, proj).await
     }
 
     async fn remove_owners(
         &self,
         owners: &Users,
-        proj_id: i64
+        proj: Project
     ) -> Result<(), AppError>
     {
-        self.db.remove_owners(owners, proj_id).await
+        self.db.remove_owners(owners, proj).await
     }
 
     async fn user_is_owner(
         &self,
-        user: &User,
-        proj_id: i64
+        user: User,
+        proj: Project
     ) -> Result<bool, AppError>
     {
-        self.db.user_is_owner(user, proj_id).await
+        self.db.user_is_owner(user, proj).await
     }
 
     async fn get_projects(
@@ -110,14 +109,14 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn get_project(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<ProjectData, AppError>
     {
         self.get_project_impl(
-            proj_id,
-            self.db.get_project_row(proj_id).await?,
-            self.db.get_packages(proj_id).await?,
-            |pc, pkgid| pc.db.get_releases(pkgid)
+            proj,
+            self.db.get_project_row(proj).await?,
+            self.db.get_packages(proj).await?,
+            |pc, pkg| pc.db.get_releases(pkg)
         ).await
     }
 
@@ -129,7 +128,7 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn create_project(
         &self,
-        user: &User,
+        user: User,
         proj: &str,
         proj_data: &ProjectDataPost
     ) -> Result<(), AppError>
@@ -145,46 +144,42 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
 
     async fn update_project(
         &self,
-        owner: &Owner,
-        proj_id: i64,
+        owner: Owner,
+        proj: Project,
         proj_data: &ProjectDataPatch
     ) -> Result<(), AppError>
     {
         let now = (self.now)()
             .timestamp_nanos_opt()
             .ok_or(AppError::InternalError)?;
-        let owner_id = self.get_user_id(&User((&owner.0).into())).await?;
-        self.db.update_project(owner_id.0, proj_id, proj_data, now).await
+        self.db.update_project(owner, proj, proj_data, now).await
     }
 
     async fn get_project_revision(
         &self,
-        proj_id: i64,
+        proj: Project,
         revision: i64
     ) -> Result<ProjectData, AppError>
     {
-        let proj_row = self.db.get_project_row_revision(
-            proj_id, revision
-        ).await?;
+        let proj_row = self.db.get_project_row_revision(proj, revision)
+            .await?;
 
         let mtime = proj_row.modified_at;
 
-        let package_rows = self.db.get_packages_at(
-            proj_id, mtime
-        ).await?;
+        let package_rows = self.db.get_packages_at(proj, mtime).await?;
 
         self.get_project_impl(
-            proj_id,
+            proj,
             proj_row,
             package_rows,
-            |pc, pkgid| pc.db.get_releases_at(pkgid, mtime)
+            |pc, pkg| pc.db.get_releases_at(pkg, mtime)
         ).await
     }
 
     async fn create_package(
         &self,
-        owner: &Owner,
-        proj_id: i64,
+        owner: Owner,
+        proj: Project,
         pkg: &str,
         pkg_data: &PackageDataPost
     ) -> Result<(), AppError>
@@ -192,79 +187,76 @@ impl<C: DatabaseClient + Send + Sync> Core for ProdCore<C> {
         let now = (self.now)()
             .timestamp_nanos_opt()
             .ok_or(AppError::InternalError)?;
-        let owner_id = self.get_user_id(&User((&owner.0).into())).await?;
-        self.db.create_package(owner_id.0, proj_id, pkg, pkg_data, now).await
+        self.db.create_package(owner, proj, pkg, pkg_data, now).await
     }
 
     async fn get_release(
         &self,
-        _proj_id: i64,
-        pkg_id: i64
+        _proj: Project,
+        pkg: Package
     ) -> Result<String, AppError>
     {
-        self.db.get_package_url(pkg_id).await
+        self.db.get_package_url(pkg).await
     }
 
     async fn get_release_version(
         &self,
-        _proj_id: i64,
-        pkg_id: i64,
+        _proj: Project,
+        pkg: Package,
         version: &Version
     ) -> Result<String, AppError>
     {
-        self.db.get_release_url(pkg_id, version).await
+        self.db.get_release_url(pkg, version).await
     }
 
     async fn get_players(
         &self,
-        proj_id: i64
+        proj: Project
     ) -> Result<Users, AppError>
     {
-        self.db.get_players(proj_id).await
+        self.db.get_players(proj).await
     }
 
     async fn add_player(
         &self,
-        player: &User,
-        proj_id: i64
+        player: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        self.db.add_player(player, proj_id).await
+        self.db.add_player(player, proj).await
     }
 
     async fn remove_player(
         &self,
-        player: &User,
-        proj_id: i64
+        player: User,
+        proj: Project
     ) -> Result<(), AppError>
     {
-        self.db.remove_player(player, proj_id).await
+        self.db.remove_player(player, proj).await
     }
 
     async fn get_image(
         &self,
-        proj_id: i64,
+        proj: Project,
         img_name: &str
     ) -> Result<String, AppError>
     {
-        self.db.get_image_url(proj_id, img_name).await
+        self.db.get_image_url(proj, img_name).await
     }
 
     async fn get_image_revision(
         &self,
-        proj_id: i64,
+        proj: Project,
         revision: i64,
         img_name: &str
     ) -> Result<String, AppError>
     {
         // TODO: this could be a join
-        let proj_row = self.db.get_project_row_revision(
-            proj_id, revision
-        ).await?;
+        let proj_row = self.db.get_project_row_revision(proj, revision).await?;
 
         let mtime = proj_row.modified_at;
 
-        self.db.get_image_url_at(proj_id, img_name, mtime).await
+        self.db.get_image_url_at(proj, img_name, mtime).await
     }
 }
 
@@ -276,10 +268,7 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
     {
         let authors = self.db.get_authors(rr.release_id)
             .await?
-            .users
-            .into_iter()
-            .map(|u| u.0)
-            .collect();
+            .users;
 
         Ok(
             ReleaseData {
@@ -302,11 +291,11 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
         get_release_rows: &F
     ) -> Result<PackageData, AppError>
     where
-        F: Fn(&'s Self, i64) -> R,
+        F: Fn(&'s Self, Package) -> R,
         R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
         let releases = try_join_all(
-            get_release_rows(self, pr.package_id)
+            get_release_rows(self, Package(pr.package_id))
                 .await?
                 .into_iter()
                 .map(|vr| self.make_version_data(vr))
@@ -323,21 +312,18 @@ impl<C: DatabaseClient + Send + Sync> ProdCore<C>  {
 
     async fn get_project_impl<'s, F, R>(
         &'s self,
-        proj_id: i64,
+        proj: Project,
         proj_row: ProjectRow,
         package_rows: Vec<PackageRow>,
         get_release_rows: F
     ) -> Result<ProjectData, AppError>
     where
-        F: Fn(&'s Self, i64) -> R,
+        F: Fn(&'s Self, Package) -> R,
         R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
     {
-        let owners = self.get_owners(proj_id)
+        let owners = self.get_owners(proj)
             .await?
-            .users
-            .into_iter()
-            .map(|u| u.0)
-            .collect();
+            .users;
 
         let packages = try_join_all(
             package_rows
@@ -751,7 +737,8 @@ mod test {
     use crate::{
         model::GameDataPatch,
         pagination::Direction,
-        sqlite::{Pool, SqlxDatabaseClient}
+        sqlite::{Pool, SqlxDatabaseClient},
+        upload::UploadError
     };
 
     const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
@@ -1520,7 +1507,7 @@ mod test {
     async fn get_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project(42).await.unwrap(),
+            core.get_project(Project(42)).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
@@ -1597,7 +1584,7 @@ mod test {
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project_revision(42, 3).await.unwrap(),
+            core.get_project_revision(Project(42), 3).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
@@ -1662,7 +1649,7 @@ mod test {
     async fn get_project_revision_ok_old(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_project_revision(42, 1).await.unwrap(),
+            core.get_project_revision(Project(42), 1).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
@@ -1699,10 +1686,10 @@ mod test {
     async fn create_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let user = User("bob".into());
-        let proj = Project("newproj".into());
+        let user = User(1);
+        let name = "newproj";
         let data = ProjectData {
-            name: proj.0.clone(),
+            name: name.into(),
             description: "A New Game".into(),
             revision: 1,
             created_at: NOW.into(),
@@ -1733,18 +1720,18 @@ mod test {
             image: None
         };
 
-        core.create_project(&user, &proj.0, &cdata).await.unwrap();
-        let proj_id = core.get_project_id(&proj).await.unwrap();
-        assert_eq!(core.get_project(proj_id.0).await.unwrap(), data);
+        core.create_project(user, &name, &cdata).await.unwrap();
+        let proj = core.get_project_id(&name).await.unwrap();
+        assert_eq!(core.get_project(proj).await.unwrap(), data);
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn update_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
 
-        let proj = Project("test_game".into());
+        let name = "test_game";
         let new_data = ProjectData {
-            name: proj.0.clone(),
+            name: name.into(),
             description: "new description".into(),
             revision: 4,
             created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
@@ -1775,14 +1762,14 @@ mod test {
             image: None
         };
 
-        let proj_id = core.get_project_id(&proj).await.unwrap();
-        let old_data = core.get_project(proj_id.0).await.unwrap();
-        core.update_project(&Owner("bob".into()), 42, &cdata).await.unwrap();
+        let proj = core.get_project_id(&name).await.unwrap();
+        let old_data = core.get_project(proj).await.unwrap();
+        core.update_project(Owner(1), Project(42), &cdata).await.unwrap();
         // project has new data
-        assert_eq!(core.get_project(proj_id.0).await.unwrap(), new_data);
+        assert_eq!(core.get_project(proj).await.unwrap(), new_data);
         // old data is kept as a revision
         assert_eq!(
-            core.get_project_revision(proj_id.0, 3).await.unwrap(),
+            core.get_project_revision(proj, 3).await.unwrap(),
             old_data
         );
     }
@@ -1791,7 +1778,7 @@ mod test {
     async fn get_release_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_release(42, 1).await.unwrap(),
+            core.get_release(Project(42), Package(1)).await.unwrap(),
             "https://example.com/a_package-1.2.4"
         );
     }
@@ -1801,7 +1788,9 @@ mod test {
         let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_release_version(42, 1, &version).await.unwrap(),
+            core.get_release_version(Project(42), Package(1), &version)
+                .await
+                .unwrap(),
             "https://example.com/a_package-1.2.3"
         );
     }
@@ -1811,7 +1800,9 @@ mod test {
         let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();
         assert_eq!(
-            core.get_release_version(42, 1, &version).await.unwrap_err(),
+            core.get_release_version(Project(42), Package(1), &version)
+                .await
+                .unwrap_err(),
             AppError::NotAVersion
         );
     }
@@ -1820,34 +1811,34 @@ mod test {
     async fn get_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_owners(42).await.unwrap(),
-            Users { users: vec![User("bob".into())] }
+            core.get_owners(Project(42)).await.unwrap(),
+            Users { users: vec!["bob".into()] }
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
         let core = make_core(pool, fake_now);
-        assert!(core.user_is_owner(&User("bob".into()), 42).await.unwrap());
+        assert!(core.user_is_owner(User(1), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         let core = make_core(pool, fake_now);
-        assert!(!core.user_is_owner(&User("alice".into()), 42).await.unwrap());
+        assert!(!core.user_is_owner(User(2), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec![User("alice".into())] };
-        core.add_owners(&users, 42).await.unwrap();
+        let users = Users { users: vec!["alice".into()] };
+        core.add_owners(&users, Project(42)).await.unwrap();
         assert_eq!(
-            core.get_owners(42).await.unwrap(),
+            core.get_owners(Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -1856,20 +1847,20 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec![User("bob".into())] };
-        core.remove_owners(&users, 42).await.unwrap();
+        let users = Users { users: vec!["bob".into()] };
+        core.remove_owners(&users, Project(42)).await.unwrap();
         assert_eq!(
-            core.get_owners(42).await.unwrap(),
-            Users { users: vec![User("alice".into())] }
+            core.get_owners(Project(42)).await.unwrap(),
+            Users { users: vec!["alice".into()] }
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
         let core = make_core(pool, fake_now);
-        let users = Users { users: vec![User("bob".into())] };
+        let users = Users { users: vec!["bob".into()] };
         assert_eq!(
-            core.remove_owners(&users, 1).await.unwrap_err(),
+            core.remove_owners(&users, Project(1)).await.unwrap_err(),
             AppError::CannotRemoveLastOwner
         );
     }
@@ -1878,11 +1869,11 @@ mod test {
     async fn get_players_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_players(42).await.unwrap(),
+            core.get_players(Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into())
+                    "alice".into(),
+                    "bob".into()
                 ]
             }
         );
@@ -1891,14 +1882,14 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        core.add_player(&User("chuck".into()), 42).await.unwrap();
+        core.add_player(User(3), Project(42)).await.unwrap();
         assert_eq!(
-            core.get_players(42).await.unwrap(),
+            core.get_players(Project(42)).await.unwrap(),
             Users {
                 users: vec![
-                    User("alice".into()),
-                    User("bob".into()),
-                    User("chuck".into())
+                    "alice".into(),
+                    "bob".into(),
+                    "chuck".into()
                 ]
             }
         );
@@ -1907,10 +1898,10 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn remove_player_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
-        core.remove_player(&User("bob".into()), 42).await.unwrap();
+        core.remove_player(User(1), Project(42)).await.unwrap();
         assert_eq!(
-            core.get_players(42).await.unwrap(),
-            Users { users: vec![User("alice".into())] }
+            core.get_players(Project(42)).await.unwrap(),
+            Users { users: vec!["alice".into()] }
         );
     }
 
@@ -1918,7 +1909,7 @@ mod test {
     async fn get_image_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_image(42, "img.png").await.unwrap(),
+            core.get_image(Project(42), "img.png").await.unwrap(),
             "https://example.com/images/img.png"
         );
     }
@@ -1927,7 +1918,7 @@ mod test {
     async fn get_image_not_a_project(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_image(1, "img.png").await.unwrap_err(),
+            core.get_image(Project(1), "img.png").await.unwrap_err(),
             AppError::NotFound
         );
     }
@@ -1936,7 +1927,7 @@ mod test {
     async fn get_image_not_an_image(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
-            core.get_image(42, "bogus").await.unwrap_err(),
+            core.get_image(Project(42), "bogus").await.unwrap_err(),
             AppError::NotFound
         );
     }

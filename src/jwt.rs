@@ -11,7 +11,7 @@ impl From<jsonwebtoken::errors::Error> for AppError {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
-    pub sub: String,
+    pub sub: i64,
     pub exp: u64,
     pub iat: u64
 }
@@ -45,9 +45,9 @@ impl EncodingKey {
 }
 
 
-pub fn issue(key: &EncodingKey, username: &str, expiry: u64) -> Result<String, AppError> {
+pub fn issue(key: &EncodingKey, uid: i64, expiry: u64) -> Result<String, AppError> {
     let claims = Claims {
-        sub: username.into(),
+        sub: uid,
         exp: expiry,
         iat: get_current_timestamp()
     };

@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, Owner, PackageID, Project, ProjectID, User}
+    model::{Owned, Owner, Package, Project, User}
 };
 
 #[async_trait]
@@ -55,38 +55,13 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         // check that the requester is authorized
         let claims = Claims::from_request_parts(parts, state).await?;
-        // extract the username
+        // extract the user id
         Ok(User(claims.sub))
     }
 }
 
-/*
 #[async_trait]
-impl<S> FromRequestParts<S> for UserID
-where
-    S: Send + Sync,
-    DecodingKey: FromRef<S>,
-    CoreArc: FromRef<S>
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // extract the user
-        let user = User::from_request_parts(parts, state).await?;
-
-        // should never fail
-        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
-            .await
-            .map_err(|_| AppError::InternalError)?;
-
-        // lookup the user id
-        Ok(core.get_user_id(&user).await?)
-    }
-}
-*/
-
-#[async_trait]
-impl<S> FromRequestParts<S> for ProjectID
+impl<S> FromRequestParts<S> for Project
 where
     S: Send + Sync,
     CoreArc: FromRef<S>
@@ -111,13 +86,13 @@ where
             .await
             .map_err(|_| AppError::InternalError)?;
 
-        // look up the user id
-        Ok(core.get_project_id(&Project(proj)).await?)
+        // look up the project id
+        Ok(core.get_project_id(&proj).await?)
     }
 }
 
 #[async_trait]
-impl<S> FromRequestParts<S> for PackageID
+impl<S> FromRequestParts<S> for Package
 where
     S: Send + Sync,
     CoreArc: FromRef<S>
@@ -126,7 +101,7 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         // check that that project exists
-        let proj_id = ProjectID::from_request_parts(parts, state).await?;
+        let proj = Project::from_request_parts(parts, state).await?;
 
         // extract however many path elements there are; should never fail
         let Path(params) =
@@ -146,14 +121,14 @@ where
             .map_err(|_| AppError::InternalError)?;
 
         // look up the package id
-        Ok(core.get_package_id(proj_id.0, &pkg).await?)
+        Ok(core.get_package_id(proj, &pkg).await?)
     }
 }
 
-pub struct ProjectIDAndPackageID(pub (ProjectID, PackageID));
+pub struct ProjectAndPackage(pub (Project, Package));
 
 #[async_trait]
-impl<S> FromRequestParts<S> for ProjectIDAndPackageID
+impl<S> FromRequestParts<S> for ProjectAndPackage
 where
     S: Send + Sync,
     CoreArc: FromRef<S>
@@ -162,11 +137,11 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         // check that that project exists
-        let proj_id = ProjectID::from_request_parts(parts, state).await?;
+        let proj = Project::from_request_parts(parts, state).await?;
 
-        let pkg_id = PackageID::from_request_parts(parts, state).await?;
+        let pkg = Package::from_request_parts(parts, state).await?;
 
-        Ok(ProjectIDAndPackageID((proj_id, pkg_id)))
+        Ok(ProjectAndPackage((proj, pkg)))
     }
 }
 
@@ -184,7 +159,7 @@ where
         let claims = Claims::from_request_parts(parts, state).await?;
 
         // check that that project exists
-        let proj_id = ProjectID::from_request_parts(parts, state).await?;
+        let proj = Project::from_request_parts(parts, state).await?;
 
         // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)
@@ -192,10 +167,10 @@ where
             .map_err(|_| AppError::InternalError)?;
 
         // check that that requester owns the project
-        let requester = User(claims.sub.clone());
+        let requester = User(claims.sub);
 
-        match core.user_is_owner(&requester, proj_id.0).await? {
-            true => Ok(Owned(Owner(claims.sub), proj_id)),
+        match core.user_is_owner(requester, proj).await? {
+            true => Ok(Owned(Owner(claims.sub), proj)),
             false =>  Err(AppError::Unauthorized)
         }
     }
@@ -273,7 +248,7 @@ mod test {
 
     fn bob_ok() -> Claims {
         Claims {
-            sub: "bob".into(),
+            sub: 1,
             exp: 899999999999,
             iat: 0
         }
@@ -281,7 +256,7 @@ mod test {
 
     fn bob_expired() -> Claims {
         Claims {
-            sub: "bob".into(),
+            sub: 1,
             exp: 0,
             iat: 0
         }
@@ -289,7 +264,7 @@ mod test {
 
     fn token(key: &[u8], claims: &Claims) -> String {
         let ekey = EncodingKey::from_secret(key);
-        let token = jwt::issue(&ekey, &claims.sub, claims.exp).unwrap();
+        let token = jwt::issue(&ekey, claims.sub, claims.exp).unwrap();
         format!("Bearer {token}")
     }
 
@@ -486,36 +461,36 @@ mod test {
         }
     }
 
-    // We have to test ProjectID::from_request_parts via a Router because
+    // We have to test Project::from_request_parts via a Router because
     // Path uses a private extension to get parameters from the request
 
     #[derive(Clone)]
-    struct ProjectIDTestCore {}
+    struct ProjectTestCore {}
 
     #[axum::async_trait]
-    impl Core for ProjectIDTestCore {
+    impl Core for ProjectTestCore {
         async fn get_project_id(
             &self,
-            proj: &Project
-        ) -> Result<ProjectID, AppError>
+            proj: &str
+        ) -> Result<Project, AppError>
         {
-            match proj.0.as_str() {
-                "a_project" => Ok(ProjectID(42)),
+            match proj {
+                "a_project" => Ok(Project(42)),
                 _ => Err(AppError::NotAProject)
             }
         }
     }
 
     async fn project_ok(
-        proj_id: ProjectID,
+        proj: Project,
         State(_): State<AppState>
     )
     {
-        assert_eq!(proj_id, ProjectID(42));
+        assert_eq!(proj, Project(42));
     }
 
     async fn project_fail(
-        _proj_id: ProjectID,
+        _proj: Project,
         State(_): State<AppState>
     )
     {
@@ -526,7 +501,7 @@ mod test {
     async fn project_id_from_request_parts_ok() {
         let app = Router::new()
             .route("/:proj", get(project_ok))
-            .with_state(make_state(ProjectIDTestCore {}));
+            .with_state(make_state(ProjectTestCore {}));
 
         let response = app
             .oneshot(
@@ -546,7 +521,7 @@ mod test {
     async fn project_id_from_request_parts_not_a_project() {
         let app = Router::new()
             .route("/:proj", get(project_fail))
-            .with_state(make_state(ProjectIDTestCore {}));
+            .with_state(make_state(ProjectTestCore {}));
 
         let response = app
             .oneshot(
@@ -572,36 +547,30 @@ mod test {
     impl Core for OwnersTestCore {
         async fn get_project_id(
             &self,
-            proj: &Project
-        ) -> Result<ProjectID, AppError>
+            proj: &str
+        ) -> Result<Project, AppError>
         {
-            match proj.0.as_str() {
-                "a_project" => Ok(ProjectID(42)),
+            match proj {
+                "a_project" => Ok(Project(42)),
                 _ => Err(AppError::NotAProject)
             }
         }
 
         async fn user_is_owner(
             &self,
-            user: &User,
-            proj_id: i64
+            user: User,
+            proj: Project
         ) -> Result<bool, AppError>
         {
-            Ok(proj_id == 42 && user == &User("bob".into()))
+            Ok(user == User(1) && proj == Project(42))
         }
 
         async fn get_owners(
             &self,
-            _proj_id: i64
+            _proj: Project
         ) -> Result<Users, AppError>
         {
-            Ok(
-                Users {
-                    users: vec![
-                        User("bob".into())
-                    ]
-                }
-            )
+            Ok(Users { users: vec!["bob".into()] })
         }
     }
 
@@ -610,7 +579,7 @@ mod test {
         State(_): State<AppState>
     )
     {
-        assert_eq!(owned, Owned(Owner("bob".into()), ProjectID(42)));
+        assert_eq!(owned, Owned(Owner(1), Project(42)));
     }
 
     async fn owned_fail(
@@ -647,7 +616,7 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_not_owner() {
         let exp = Claims {
-            sub: "alice".into(),
+            sub: 2,
             exp: 899999999999,
             iat: 0
         };
