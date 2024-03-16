@@ -25,7 +25,7 @@ pub struct ProjectSummaryRow {
     pub image: Option<String>
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct ProjectRow {
     pub project_id: i64,
     pub name: String,
@@ -42,7 +42,7 @@ pub struct ProjectRow {
     pub readme: String
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
@@ -50,7 +50,7 @@ pub struct PackageRow {
 //    description: String
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct ReleaseRow {
     pub release_id: i64,
     pub version: String,

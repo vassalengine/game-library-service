@@ -10,7 +10,7 @@ use crate::errors::AppError;
 
 // TODO: private fields various places
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
 #[repr(transparent)]
 pub struct Limit(NonZeroU8);
@@ -102,7 +102,7 @@ struct RawAnchor {
     id: Option<u32>
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "RawAnchor", into = "RawAnchor")]
 pub enum Anchor {
     Start,
@@ -172,7 +172,7 @@ impl From<Anchor> for RawAnchor {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 pub enum Direction {
     Ascending,
@@ -209,7 +209,7 @@ impl TryFrom<&str> for Direction {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 pub enum SortBy {
     ProjectName,
@@ -259,7 +259,7 @@ impl SortBy {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Seek {
     pub sort_by: SortBy,
     pub dir: Direction,
@@ -327,7 +327,7 @@ impl FromStr for Seek {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct SeekLink(String);
 
 impl SeekLink {
@@ -349,7 +349,7 @@ impl fmt::Display for SeekLink {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Pagination {
     pub prev_page: Option<SeekLink>,
     pub next_page: Option<SeekLink>,

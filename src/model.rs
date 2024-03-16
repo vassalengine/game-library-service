@@ -15,7 +15,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct User(pub i64);
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Users {
     pub users: Vec<String>
 }
@@ -29,10 +29,10 @@ pub struct Project(pub i64);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Owner(pub i64);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Owned(pub Owner, pub Project);
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
     pub title_sort_key: String,
@@ -40,7 +40,7 @@ pub struct GameData {
     pub year: String
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ReleaseData {
     pub version: String,
     pub filename: String,
@@ -54,21 +54,21 @@ pub struct ReleaseData {
 }
 
 // TODO: probably needs slug
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,
     pub description: String,
     pub releases: Vec<ReleaseData>
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageDataPost {
 // TODO: display name?
 //    pub name: String,
     pub description: String
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectData {
     pub name: String,
     pub description: String,
@@ -83,7 +83,7 @@ pub struct ProjectData {
     pub packages: Vec<PackageData>
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameDataPatch {
     pub title: Option<String>,
     pub title_sort_key: Option<String>,
@@ -91,7 +91,7 @@ pub struct GameDataPatch {
     pub year: Option<String>
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
@@ -101,7 +101,7 @@ pub struct MaybeProjectDataPatch {
     pub image: Option<Option<String>>
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "MaybeProjectDataPatch")]
 pub struct ProjectDataPatch {
     pub description: Option<String>,
@@ -141,7 +141,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectDataPost {
     pub description: String,
     pub tags: Vec<String>,
@@ -152,7 +152,7 @@ pub struct ProjectDataPost {
 
 // TODO: maybe use a date type for ctime, mtime?
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectSummary {
     pub name: String,
     pub description: String,
@@ -163,7 +163,7 @@ pub struct ProjectSummary {
     pub game: GameData
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Projects {
     pub projects: Vec<ProjectSummary>,
     pub meta: Pagination
