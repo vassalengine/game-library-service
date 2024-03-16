@@ -1,6 +1,6 @@
 use axum::async_trait;
 use sqlx::{
-    Acquire, Database, Encode, Executor, QueryBuilder, Type,
+    Acquire, Database, Encode, Executor, QueryBuilder, Transaction, Type,
     sqlite::Sqlite
 };
 use serde::Deserialize;
@@ -1317,8 +1317,8 @@ ORDER BY name COLLATE NOCASE ASC
     )
 }
 
-async fn create_package<'e, E>(
-    ex: E,
+async fn create_package<'a, A>(
+    conn: A,
     owner: Owner,
     proj: Project,
     pkg: &str,
@@ -1326,8 +1326,10 @@ async fn create_package<'e, E>(
     now: i64
 ) -> Result<(), AppError>
 where
-    E: Executor<'e, Database = Sqlite>
+    A: Acquire<'a, Database = Sqlite>
 {
+    let mut tx = conn.begin().await?;
+
     sqlx::query!(
         "
 INSERT INTO packages (
@@ -1343,10 +1345,15 @@ VALUES (?, ?, ?, ?)
             now,
             owner.0
     )
-    .execute(ex)
+    .execute(&mut *tx)
     .await?;
 
-    Ok(())
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(()   )
 }
 
 // TODO: can we combine these?
@@ -1817,6 +1824,47 @@ LIMIT 1
     .ok_or(AppError::NotARevision)
 }
 
+async fn update_project_non_project_data(
+    tx: &mut Transaction<'_, Sqlite>,
+    owner: Owner,
+    proj: Project,
+    now: i64,
+) -> Result<(), AppError>
+{
+    // get the project row, project_data_id
+    let row = get_project_row(&mut **tx, proj).await?;
+
+    let project_data_id = get_project_data_id(&mut **tx, proj, row.revision)
+        .await?;
+
+    let revision = row.revision + 1;
+
+    // insert a new project revision row
+    let rr = ProjectRevisionRow {
+        project_id: proj.0,
+        name: &row.name,
+        created_at: row.created_at,
+        modified_at: now,
+        modified_by: owner.0,
+        revision,
+        project_data_id
+    };
+
+    create_project_revision_row(&mut **tx, &rr).await?;
+
+    // update the project row
+    update_project_row(
+        &mut **tx,
+        owner,
+        proj,
+        revision,
+        &Default::default(),
+        now
+    ).await?;
+
+    Ok(())
+}
+
 // TODO: tests
 async fn add_image_url<'a, A>(
     conn: A,
@@ -1851,36 +1899,8 @@ where
         now
     ).await?;
 
-    // get the project row, project_data_id
-    let row = get_project_row(&mut *tx, proj).await?;
-
-    let project_data_id = get_project_data_id(&mut *tx, proj, row.revision)
-        .await?;
-
-    let revision = row.revision + 1;
-
-    // insert a new project revision row
-    let rr = ProjectRevisionRow {
-        project_id: proj.0,
-        name: &row.name,
-        created_at: row.created_at,
-        modified_at: now,
-        modified_by: owner.0,
-        revision,
-        project_data_id
-    };
-
-    create_project_revision_row(&mut *tx, &rr).await?;
-
-    // update the project row
-    update_project_row(
-        &mut *tx,
-        owner,
-        proj,
-        revision,
-        &Default::default(),
-        now
-    ).await?;
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
 
     tx.commit().await?;
 

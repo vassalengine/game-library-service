@@ -78,7 +78,19 @@ VALUES
     "1979",
     "",
     NULL
+  ),
+  (
+    3,
+    6,
+    "Another game",
+    "Some Other Game",
+    "Some Other Game",
+    "XYZ",
+    "1993",
+    "",
+    NULL
   );
+;
 
 INSERT INTO project_revisions (
   project_id,
@@ -107,4 +119,13 @@ VALUES
     1,
     3,
     2
+  ),
+  (
+    6,
+    "a_game",
+    1573573806419538067,
+    1573573806419538067,
+    1,
+    1,
+    3
   );
