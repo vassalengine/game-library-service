@@ -34,11 +34,12 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader::<Authorization<Bearer>>>()
             .await
-            .map_err(|_| AppError::Unauthorized)?;
+            .or(Err(AppError::Unauthorized))?;
 
         // verify the token
         let key = DecodingKey::from_ref(state);
-        let claims = jwt::verify(bearer.token(), &key)?;
+        let claims = jwt::verify(bearer.token(), &key)
+            .or(Err(AppError::Unauthorized))?;
 
         Ok(claims)
     }
@@ -239,7 +240,7 @@ mod test {
 
     use crate::{
         app::AppState,
-        core::Core,
+        core::{Core, CoreError},
         jwt::EncodingKey,
         model::Users
     };
@@ -472,11 +473,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str
-        ) -> Result<Project, AppError>
+        ) -> Result<Project, CoreError>
         {
             match proj {
                 "a_project" => Ok(Project(42)),
-                _ => Err(AppError::NotAProject)
+                _ => Err(CoreError::NotAProject)
             }
         }
     }
@@ -548,11 +549,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str
-        ) -> Result<Project, AppError>
+        ) -> Result<Project, CoreError>
         {
             match proj {
                 "a_project" => Ok(Project(42)),
-                _ => Err(AppError::NotAProject)
+                _ => Err(CoreError::NotAProject)
             }
         }
 
@@ -560,7 +561,7 @@ mod test {
             &self,
             user: User,
             proj: Project
-        ) -> Result<bool, AppError>
+        ) -> Result<bool, CoreError>
         {
             Ok(user == User(1) && proj == Project(42))
         }
@@ -568,7 +569,7 @@ mod test {
         async fn get_owners(
             &self,
             _proj: Project
-        ) -> Result<Users, AppError>
+        ) -> Result<Users, CoreError>
         {
             Ok(Users { users: vec!["bob".into()] })
         }

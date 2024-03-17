@@ -2,12 +2,9 @@ use base64::{Engine as _};
 use serde::Deserialize;
 use std::str;
 
-use crate::{
-    errors::AppError,
-    pagination::{Anchor, Limit, Direction, SortBy, Seek}
-};
+use crate::pagination::{Anchor, Limit, Direction, SortBy, Seek, SeekError};
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct MaybeProjectsParams {
     pub q: Option<String>,
     pub sort: Option<SortBy>,
@@ -26,8 +23,20 @@ pub struct ProjectsParams {
 
 // TODO: tests
 
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub enum Error {
+    #[error("invalid combination {0:?}")]
+    InvalidCombination(MaybeProjectsParams),
+    #[error("invalid base64 {0}")]
+    Base64DecodeError(#[from] base64::DecodeError),
+    #[error("invalid UTF-8 {0}")]
+    Utf8Error(#[from] std::str::Utf8Error),
+    #[error("{0}")]
+    SeekError(#[from] SeekError)
+}
+
 impl TryFrom<MaybeProjectsParams> for ProjectsParams {
-    type Error = AppError;
+    type Error = Error;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
         if (
@@ -44,20 +53,17 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         {
             // sort, order, query, from are incompatible with seek
             // from is incompatible with query
-            Err(AppError::MalformedQuery)
+            Err(Error::InvalidCombination(m))
         }
         else {
             let seek = match m.seek {
                 Some(enc) => {
                     // base64-decode the seek string
                     let buf = base64::engine::general_purpose::URL_SAFE_NO_PAD
-                        .decode(enc)
-                        .map_err(|_| AppError::MalformedQuery)?;
+                        .decode(enc)?;
 
-                    str::from_utf8(&buf)
-                        .map_err(|_| AppError::MalformedQuery)?
-                        .parse::<Seek>()
-                        .map_err(|_| AppError::MalformedQuery)?
+                    str::from_utf8(&buf)?
+                        .parse::<Seek>()?
                 },
                 None => {
                     let (sort_by, anchor) = match m.q {

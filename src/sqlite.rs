@@ -7,8 +7,8 @@ use serde::Deserialize;
 use std::cmp::Ordering;
 
 use crate::{
+    core::CoreError,
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
-    errors::AppError,
     model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
@@ -16,12 +16,6 @@ use crate::{
 };
 
 pub type Pool = sqlx::Pool<Sqlite>;
-
-impl From<sqlx::Error> for AppError {
-    fn from(e: sqlx::Error) -> Self {
-        AppError::DatabaseError(e.to_string())
-    }
-}
 
 #[derive(Clone)]
 pub struct SqlxDatabaseClient<DB: Database>(pub sqlx::Pool<DB>);
@@ -31,14 +25,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
         name: &str
-    ) -> Result<Project, AppError>
+    ) -> Result<Project, CoreError>
     {
         get_project_id(&self.0, name).await
     }
 
     async fn get_projects_count(
         &self,
-    ) -> Result<i64, AppError>
+    ) -> Result<i64, CoreError>
     {
         get_projects_count(&self.0).await
     }
@@ -46,7 +40,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_query_count(
         &self,
         query: &str
-    ) -> Result<i64, AppError>
+    ) -> Result<i64, CoreError>
     {
         get_projects_query_count(&self.0, query).await
     }
@@ -54,7 +48,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_user_id(
         &self,
         username: &str
-    ) -> Result<User, AppError>
+    ) -> Result<User, CoreError>
     {
         get_user_id(&self.0, username).await
     }
@@ -62,7 +56,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_owners(
         &self,
         proj: Project
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, CoreError>
     {
         get_owners(&self.0, proj).await
     }
@@ -71,7 +65,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: User,
         proj: Project
-    ) -> Result<bool, AppError>
+    ) -> Result<bool, CoreError>
     {
         user_is_owner(&self.0, user, proj).await
     }
@@ -80,7 +74,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         add_owner(&self.0, user, proj).await
     }
@@ -89,7 +83,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         add_owners(&self.0, owners, proj).await
     }
@@ -98,7 +92,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         remove_owner(&self.0, user, proj).await
     }
@@ -107,7 +101,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         remove_owners(&self.0, owners, proj).await
     }
@@ -115,7 +109,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn has_owner(
         &self,
         proj: Project
-    ) -> Result<bool, AppError>
+    ) -> Result<bool, CoreError>
     {
         has_owner(&self.0, proj).await
     }
@@ -125,7 +119,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         sort_by: SortBy,
         dir: Direction,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         get_projects_end_window(&self.0, sort_by, dir, limit).await
     }
@@ -136,7 +130,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         sort_by: SortBy,
         dir: Direction,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         get_projects_query_end_window(&self.0, query, sort_by, dir, limit).await
     }
@@ -148,7 +142,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         field: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         match sort_by {
             SortBy::CreationTime |
@@ -179,7 +173,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         field: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         match sort_by {
             SortBy::CreationTime |
@@ -197,7 +191,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 query,
                 sort_by,
                 dir,
-                &field.parse::<f64>().map_err(|_| AppError::MalformedQuery)?,
+                &field.parse::<f64>().map_err(|_| CoreError::MalformedQuery)?,
                 id,
                 limit
             ).await,
@@ -219,7 +213,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: &str,
         proj_data: &ProjectDataPost,
         now: i64
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         create_project(&self.0, user, proj, proj_data, now).await
     }
@@ -230,7 +224,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         proj_data: &ProjectDataPatch,
         now: i64
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         update_project(&self.0, owner, proj, proj_data, now).await
     }
@@ -238,7 +232,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_row(
         &self,
         proj: Project
-    ) -> Result<ProjectRow, AppError>
+    ) -> Result<ProjectRow, CoreError>
     {
         get_project_row(&self.0, proj).await
     }
@@ -247,7 +241,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         revision: i64
-    ) -> Result<ProjectRow, AppError>
+    ) -> Result<ProjectRow, CoreError>
     {
         get_project_row_revision(&self.0, proj, revision).await
     }
@@ -255,7 +249,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_packages(
         &self,
         proj: Project
-    ) -> Result<Vec<PackageRow>, AppError>
+    ) -> Result<Vec<PackageRow>, CoreError>
     {
         get_packages(&self.0, proj).await
     }
@@ -264,7 +258,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         date: i64,
-    ) -> Result<Vec<PackageRow>, AppError>
+    ) -> Result<Vec<PackageRow>, CoreError>
     {
         get_packages_at(&self.0, proj, date).await
     }
@@ -276,7 +270,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         pkg: &str,
         pkg_data: &PackageDataPost,
         now: i64
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         create_package(&self.0, owner, proj, pkg, pkg_data, now).await
     }
@@ -284,7 +278,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_releases(
         &self,
         pkg: Package
-    ) -> Result<Vec<ReleaseRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, CoreError>
     {
         get_releases(&self.0, pkg).await
     }
@@ -293,7 +287,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg: Package,
         date: i64
-    ) -> Result<Vec<ReleaseRow>, AppError>
+    ) -> Result<Vec<ReleaseRow>, CoreError>
     {
         get_releases_at(&self.0, pkg, date).await
     }
@@ -301,7 +295,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_authors(
         &self,
         pkg_ver_id: i64
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, CoreError>
     {
         get_authors(&self.0, pkg_ver_id).await
     }
@@ -309,7 +303,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_package_url(
         &self,
         pkg: Package
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         get_package_url(&self.0, pkg).await
     }
@@ -318,7 +312,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg: Package,
         version: &Version
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         get_release_url(&self.0, pkg, version).await
     }
@@ -326,7 +320,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_players(
         &self,
         proj: Project
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, CoreError>
     {
         get_players(&self.0, proj).await
     }
@@ -335,7 +329,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         add_player(&self.0, player, proj).await
     }
@@ -344,7 +338,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         remove_player(&self.0, player, proj).await
     }
@@ -353,7 +347,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         img_name: &str
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         get_image_url(&self.0, proj, img_name).await
     }
@@ -363,7 +357,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         img_name: &str,
         date: i64
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         get_image_url_at(&self.0, proj, img_name, date).await
     }
@@ -375,7 +369,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         img_name: &str,
         url: &str,
         now: i64
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         add_image_url(&self.0, owner, proj, img_name, url, now).await
     }
@@ -384,7 +378,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 async fn get_project_id<'e, E>(
     ex: E,
     name: &str
-) -> Result<Project, AppError>
+) -> Result<Project, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -399,12 +393,12 @@ WHERE name = ?
     .fetch_optional(ex)
     .await?
     .map(Project)
-    .ok_or(AppError::NotAProject)
+    .ok_or(CoreError::NotAProject)
 }
 
 async fn get_projects_count<'e, E>(
     ex: E
-) -> Result<i64, AppError>
+) -> Result<i64, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -424,7 +418,7 @@ FROM projects
 async fn get_projects_query_count<'e, E>(
     ex: E,
     query: &str
-) -> Result<i64, AppError>
+) -> Result<i64, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -445,7 +439,7 @@ WHERE projects_fts MATCH ?
 async fn get_user_id<'e, E>(
     ex: E,
     username: &str
-) -> Result<User, AppError>
+) -> Result<User, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -461,13 +455,13 @@ LIMIT 1
     .fetch_optional(ex)
     .await?
     .map(User)
-    .ok_or(AppError::NotAUser)
+    .ok_or(CoreError::NotAUser)
 }
 
 async fn get_owners<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Users, AppError>
+) -> Result<Users, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -496,7 +490,7 @@ async fn user_is_owner<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<bool, AppError>
+) -> Result<bool, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -521,7 +515,7 @@ async fn add_owner<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -546,7 +540,7 @@ async fn add_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -568,7 +562,7 @@ async fn remove_owner<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -591,7 +585,7 @@ async fn remove_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -606,7 +600,7 @@ where
 
     // prevent removal of last owner
     if !has_owner(&mut *tx, proj).await? {
-        return Err(AppError::CannotRemoveLastOwner);
+        return Err(CoreError::CannotRemoveLastOwner);
     }
 
     tx.commit().await?;
@@ -617,7 +611,7 @@ where
 async fn has_owner<'e, E>(
     ex: E,
     proj: Project
-) -> Result<bool, AppError>
+) -> Result<bool, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -671,7 +665,7 @@ async fn get_projects_end_window<'e, E>(
     sort_by: SortBy,
     dir: Direction,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -713,7 +707,7 @@ async fn get_projects_query_end_window<'e, E>(
     sort_by: SortBy,
     dir: Direction,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -760,7 +754,7 @@ async fn get_projects_mid_window<'e, 'f, E, F>(
     field: &'f F,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>,
     F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
@@ -819,7 +813,7 @@ async fn get_projects_query_mid_window<'e, 'f, E, F>(
     field: &'f F,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, AppError>
+) -> Result<Vec<ProjectSummaryRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>,
     F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
@@ -885,7 +879,7 @@ async fn create_project_row<'e, E>(
     proj: &str,
     proj_data: &ProjectDataPost,
     now: i64
-) -> Result<Project, AppError>
+) -> Result<Project, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -944,7 +938,7 @@ struct ProjectDataRow<'a> {
 async fn create_project_data_row<'e, E>(
     ex: E,
     row: &ProjectDataRow<'_>
-) -> Result<i64, AppError>
+) -> Result<i64, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -992,7 +986,7 @@ struct ProjectRevisionRow<'a> {
 async fn create_project_revision_row<'e, E>(
     ex: E,
     row: &ProjectRevisionRow<'_>
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1029,7 +1023,7 @@ async fn create_project<'a, A>(
     name: &str,
     pd: &ProjectDataPost,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -1079,7 +1073,7 @@ async fn update_project_row<'e, E>(
     revision: i64,
     pd: &ProjectDataPatch,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1143,7 +1137,7 @@ async fn update_project<'a, A>(
     proj: Project,
     pd: &ProjectDataPatch,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -1190,7 +1184,7 @@ where
 async fn get_project_row<'e, E>(
     ex: E,
     proj: Project
-) -> Result<ProjectRow, AppError>
+) -> Result<ProjectRow, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1219,14 +1213,14 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotAProject)
+    .ok_or(CoreError::NotAProject)
 }
 
 async fn get_project_row_revision<'e, E>(
     ex: E,
     proj: Project,
     revision: i64
-) -> Result<ProjectRow, AppError>
+) -> Result<ProjectRow, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1259,13 +1253,13 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotARevision)
+    .ok_or(CoreError::NotARevision)
 }
 
 async fn get_packages<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Vec<PackageRow>, AppError>
+) -> Result<Vec<PackageRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1292,7 +1286,7 @@ async fn get_packages_at<'e, E>(
     ex: E,
     proj: Project,
     date: i64
-) -> Result<Vec<PackageRow>, AppError>
+) -> Result<Vec<PackageRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1324,7 +1318,7 @@ async fn create_package<'a, A>(
     pkg: &str,
     pkg_data: &PackageDataPost,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -1394,7 +1388,7 @@ where
 async fn get_releases<'e, E>(
     ex: E,
     pkg: Package
-) -> Result<Vec<ReleaseRow>, AppError>
+) -> Result<Vec<ReleaseRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1439,7 +1433,7 @@ async fn get_releases_at<'e, E>(
     ex: E,
     pkg: Package,
     date: i64
-) -> Result<Vec<ReleaseRow>, AppError>
+) -> Result<Vec<ReleaseRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1485,7 +1479,7 @@ ORDER BY
 async fn get_authors<'e, E>(
     ex: E,
     pkg_ver_id: i64
-) -> Result<Users, AppError>
+) -> Result<Users, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1522,7 +1516,7 @@ struct ReducedReleaseRow {
 async fn get_package_url<'e, E>(
     ex: E,
     pkg: Package
-) -> Result<String, AppError>
+) -> Result<String, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1551,7 +1545,7 @@ ORDER BY
     .await?;
 
     match releases.is_empty() {
-        true => Err(AppError::NotAPackage),
+        true => Err(CoreError::NotAPackage),
         false => {
             releases.sort_by(release_row_cmp);
             Ok(releases.pop().unwrap().url)
@@ -1563,7 +1557,7 @@ async fn get_release_url<'e, E>(
     ex: E,
     pkg: Package,
     version: &Version
-) -> Result<String, AppError>
+) -> Result<String, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1591,13 +1585,13 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotAVersion)
+    .ok_or(CoreError::NotAVersion)
 }
 
 async fn get_players<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Users, AppError>
+) -> Result<Users, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1626,7 +1620,7 @@ async fn add_player<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1651,7 +1645,7 @@ async fn remove_player<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1674,7 +1668,7 @@ async fn get_image_url<'e, E>(
     ex: E,
     proj: Project,
     img_name: &str
-) -> Result<String, AppError>
+) -> Result<String, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1691,7 +1685,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotFound)
+    .ok_or(CoreError::NotFound)
 }
 
 // TODO: tests
@@ -1700,7 +1694,7 @@ async fn get_image_url_at<'e, E>(
     proj: Project,
     img_name: &str,
     date: i64
-) -> Result<String, AppError>
+) -> Result<String, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1720,7 +1714,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotFound)
+    .ok_or(CoreError::NotFound)
 }
 
 // TODO: tests
@@ -1731,7 +1725,7 @@ async fn update_image_row<'e, E>(
     img_name: &str,
     url: &str,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1771,7 +1765,7 @@ async fn create_image_revision_row<'e, E>(
     img_name: &str,
     url: &str,
     now: i64
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1803,7 +1797,7 @@ async fn get_project_data_id<'e, E>(
     ex: E,
     proj: Project,
     revision: i64
-) -> Result<i64, AppError>
+) -> Result<i64, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -1821,7 +1815,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(AppError::NotARevision)
+    .ok_or(CoreError::NotARevision)
 }
 
 async fn update_project_non_project_data(
@@ -1829,7 +1823,7 @@ async fn update_project_non_project_data(
     owner: Owner,
     proj: Project,
     now: i64,
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 {
     // get the project row, project_data_id
     let row = get_project_row(&mut **tx, proj).await?;
@@ -1873,7 +1867,7 @@ async fn add_image_url<'a, A>(
     img_name: &str,
     url: &str,
     now: i64,
-) -> Result<(), AppError>
+) -> Result<(), CoreError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -1925,7 +1919,7 @@ mod test {
     async fn get_project_id_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "bogus").await.unwrap_err(),
-            AppError::NotAProject
+            CoreError::NotAProject
         );
     }
 
@@ -1943,7 +1937,7 @@ mod test {
     async fn get_user_id_not_a_user(pool: Pool) {
         assert_eq!(
             get_user_id(&pool, "not_a_user").await.unwrap_err(),
-            AppError::NotAUser
+            CoreError::NotAUser
         );
     }
 
@@ -1961,7 +1955,7 @@ mod test {
     async fn get_owners_not_a_project(pool: Pool) {
         assert_eq!(
             get_owners(&pool, 0).await.unwrap_err(),
-            AppError::NotAProject
+            CoreError::NotAProject
         );
     }
 */
@@ -2085,7 +2079,7 @@ mod test {
 
         assert_eq!(
             get_project_id(&pool, &row.name).await.unwrap_err(),
-            AppError::NotAProject
+            CoreError::NotAProject
         );
 
         create_project(
@@ -2116,7 +2110,7 @@ mod test {
 
     #[track_caller]
     fn assert_projects_window(
-        act: Result<Vec<ProjectSummaryRow>, AppError>,
+        act: Result<Vec<ProjectSummaryRow>, CoreError>,
         exp: &[&str]
     )
     {
@@ -2392,7 +2386,7 @@ mod test {
     async fn get_project_row_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_row(&pool, Project(0)).await.unwrap_err(),
-            AppError::NotAProject
+            CoreError::NotAProject
         );
     }
 
@@ -2445,7 +2439,7 @@ mod test {
     async fn get_project_revision_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, Project(0), 2).await.unwrap_err(),
-            AppError::NotARevision
+            CoreError::NotARevision
         );
     }
 
@@ -2453,7 +2447,7 @@ mod test {
     async fn get_project_revision_not_a_revision(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, Project(42), 0).await.unwrap_err(),
-            AppError::NotARevision
+            CoreError::NotARevision
         );
     }
 
@@ -2536,7 +2530,7 @@ mod test {
     async fn get_package_url_not_a_package(pool: Pool) {
         assert_eq!(
             get_package_url(&pool, Package(0)).await.unwrap_err(),
-            AppError::NotAPackage
+            CoreError::NotAPackage
         );
     }
 
@@ -2774,7 +2768,7 @@ mod test {
     async fn get_image_url_not_a_project(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, Project(1), "img.png").await.unwrap_err(),
-            AppError::NotFound
+            CoreError::NotFound
         );
     }
 
@@ -2782,7 +2776,7 @@ mod test {
     async fn get_image_url_not_an_image(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, Project(42), "bogus").await.unwrap_err(),
-            AppError::NotFound
+            CoreError::NotFound
         );
     }
 }

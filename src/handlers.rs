@@ -46,7 +46,7 @@ pub async fn project_post(
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPost>>
 ) -> Result<(), AppError>
 {
-    core.create_project(owner, &proj, &proj_data).await
+    Ok(core.create_project(owner, &proj, &proj_data).await?)
 }
 
 pub async fn project_patch(
@@ -55,7 +55,7 @@ pub async fn project_patch(
     Wrapper(Json(proj_data)): Wrapper<Json<ProjectDataPatch>>
 ) -> Result<(), AppError>
 {
-    core.update_project(owner, proj, &proj_data).await
+    Ok(core.update_project(owner, proj, &proj_data).await?)
 }
 
 pub async fn project_revision_get(
@@ -81,7 +81,7 @@ pub async fn owners_add(
     Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
-    core.add_owners(&owners, proj).await
+    Ok(core.add_owners(&owners, proj).await?)
 }
 
 pub async fn owners_remove(
@@ -90,7 +90,7 @@ pub async fn owners_remove(
     Wrapper(Json(owners)): Wrapper<Json<Users>>
 ) -> Result<(), AppError>
 {
-    core.remove_owners(&owners, proj).await
+    Ok(core.remove_owners(&owners, proj).await?)
 }
 
 pub async fn players_get(
@@ -107,7 +107,7 @@ pub async fn players_add(
     State(core): State<CoreArc>
 ) -> Result<(), AppError>
 {
-    core.add_player(requester, proj).await
+    Ok(core.add_player(requester, proj).await?)
 }
 
 pub async fn players_remove(
@@ -116,7 +116,7 @@ pub async fn players_remove(
     State(core): State<CoreArc>,
 ) -> Result<(), AppError>
 {
-    core.remove_player(requester, proj).await
+    Ok(core.remove_player(requester, proj).await?)
 }
 
 pub async fn packages_post(
@@ -126,7 +126,7 @@ pub async fn packages_post(
     Wrapper(Json(pkg_data)): Wrapper<Json<PackageDataPost>>
 ) -> Result<(), AppError>
 {
-    core.create_package(owner, proj, &pkg, &pkg_data).await
+    Ok(core.create_package(owner, proj, &pkg, &pkg_data).await?)
 }
 
 // TODO

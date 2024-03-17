@@ -3,7 +3,7 @@ use serde::Deserialize;
 use sqlx::FromRow;
 
 use crate::{
-    errors::AppError,
+    core::CoreError,
     model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     version::Version
@@ -73,68 +73,68 @@ pub trait DatabaseClient {
     async fn get_project_id(
         &self,
         _project: &str
-    ) -> Result<Project, AppError>;
+    ) -> Result<Project, CoreError>;
 
     async fn get_projects_count(
         &self,
-    ) -> Result<i64, AppError>;
+    ) -> Result<i64, CoreError>;
 
     async fn get_projects_query_count(
         &self,
         _query: &str
-    ) -> Result<i64, AppError>;
+    ) -> Result<i64, CoreError>;
 
     async fn get_user_id(
         &self,
         _username: &str
-    ) -> Result<User, AppError>;
+    ) -> Result<User, CoreError>;
 
     async fn get_owners(
         &self,
         _proj: Project
-    ) -> Result<Users, AppError>;
+    ) -> Result<Users, CoreError>;
 
     async fn user_is_owner(
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<bool, AppError>;
+    ) -> Result<bool, CoreError>;
 
     async fn add_owner(
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn add_owners(
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn remove_owner(
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn remove_owners(
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn has_owner(
         &self,
         _proj: Project
-    ) -> Result<bool, AppError>;
+    ) -> Result<bool, CoreError>;
 
     async fn get_projects_end_window(
         &self,
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
 
     async fn get_projects_query_end_window(
         &self,
@@ -142,7 +142,7 @@ pub trait DatabaseClient {
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
 
     async fn get_projects_mid_window(
         &self,
@@ -151,7 +151,7 @@ pub trait DatabaseClient {
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
 
     async fn get_projects_query_mid_window(
         &self,
@@ -161,7 +161,7 @@ pub trait DatabaseClient {
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>;
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
 
     async fn create_project(
         &self,
@@ -169,7 +169,7 @@ pub trait DatabaseClient {
         _proj: &str,
         _proj_data: &ProjectDataPost,
         _now: i64
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn update_project(
         &self,
@@ -177,29 +177,29 @@ pub trait DatabaseClient {
         _proj: Project,
         _proj_data: &ProjectDataPatch,
         _now: i64
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn get_project_row(
         &self,
         proj: Project
-    ) -> Result<ProjectRow, AppError>;
+    ) -> Result<ProjectRow, CoreError>;
 
     async fn get_project_row_revision(
         &self,
         _proj: Project,
         _revision: i64
-    ) -> Result<ProjectRow, AppError>;
+    ) -> Result<ProjectRow, CoreError>;
 
     async fn get_packages(
         &self,
         _proj: Project
-    ) -> Result<Vec<PackageRow>, AppError>;
+    ) -> Result<Vec<PackageRow>, CoreError>;
 
     async fn get_packages_at(
         &self,
         _proj: Project,
         _date: i64,
-    ) -> Result<Vec<PackageRow>, AppError>;
+    ) -> Result<Vec<PackageRow>, CoreError>;
 
     async fn create_package(
         &self,
@@ -208,64 +208,64 @@ pub trait DatabaseClient {
         _pkg: &str,
         _pkg_data: &PackageDataPost,
         _now: i64
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn get_releases(
         &self,
         _pkg: Package
-    ) -> Result<Vec<ReleaseRow>, AppError>;
+    ) -> Result<Vec<ReleaseRow>, CoreError>;
 
     async fn get_releases_at(
         &self,
         _pkg: Package,
         _date: i64
-    ) -> Result<Vec<ReleaseRow>, AppError>;
+    ) -> Result<Vec<ReleaseRow>, CoreError>;
 
     async fn get_authors(
         &self,
         _pkg_ver_id: i64
-    ) -> Result<Users, AppError>;
+    ) -> Result<Users, CoreError>;
 
     async fn get_package_url(
         &self,
         _pkg: Package
-    ) -> Result<String, AppError>;
+    ) -> Result<String, CoreError>;
 
     async fn get_release_url(
         &self,
         _pkg: Package,
         _version: &Version
-    ) -> Result<String, AppError>;
+    ) -> Result<String, CoreError>;
 
     async fn get_players(
         &self,
         _proj: Project
-    ) -> Result<Users, AppError>;
+    ) -> Result<Users, CoreError>;
 
     async fn add_player(
         &self,
         _player: User,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn remove_player(
         &self,
         _player: User,
         _proj: Project
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 
     async fn get_image_url(
         &self,
         _proj: Project,
         _img_name: &str
-    ) -> Result<String, AppError>;
+    ) -> Result<String, CoreError>;
 
     async fn get_image_url_at(
         &self,
         _proj: Project,
         _img_name: &str,
         _date: i64
-    ) -> Result<String, AppError>;
+    ) -> Result<String, CoreError>;
 
     async fn add_image_url(
         &self,
@@ -274,5 +274,5 @@ pub trait DatabaseClient {
         _img_name: &str,
         _url: &str,
         _now: i64
-    ) -> Result<(), AppError>;
+    ) -> Result<(), CoreError>;
 }

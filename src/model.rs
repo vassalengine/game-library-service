@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    errors::AppError,
-    pagination::Pagination
-};
+use crate::pagination::Pagination;
 
 // TODO: rationalize struct naming---names should reflect whether the
 // structs are input or ouptut
@@ -111,8 +108,12 @@ pub struct ProjectDataPatch {
     pub image: Option<Option<String>>
 }
 
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct ProjectDataPatchError(MaybeProjectDataPatch);
+
 impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
-    type Error = AppError;
+    type Error = ProjectDataPatchError;
 
     fn try_from(m: MaybeProjectDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
@@ -125,7 +126,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
            m.readme.is_none() &&
            m.image.is_none()
         {
-            Err(AppError::MalformedQuery)
+            Err(ProjectDataPatchError(m))
         }
         else {
             Ok(

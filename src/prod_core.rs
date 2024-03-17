@@ -11,9 +11,8 @@ use std::{
 };
 
 use crate::{
-    core::Core,
+    core::{Core, CoreError},
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
-    errors::AppError,
     model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -29,8 +28,6 @@ pub struct ProdCore<C: DatabaseClient, U: Uploader> {
     pub now: fn() -> DateTime<Utc>
 }
 
-// TODO: Push User, Owner, Project all the way inward
-
 #[async_trait]
 impl<C, U> Core for ProdCore<C, U>
 where
@@ -40,7 +37,7 @@ where
     async fn get_user_id(
          &self,
         username: &str
-    ) -> Result<User, AppError>
+    ) -> Result<User, CoreError>
     {
         Ok(self.db.get_user_id(username).await?)
     }
@@ -48,7 +45,7 @@ where
     async fn get_project_id(
          &self,
         proj: &str
-    ) -> Result<Project, AppError>
+    ) -> Result<Project, CoreError>
     {
         self.db.get_project_id(proj).await
     }
@@ -56,7 +53,7 @@ where
     async fn get_owners(
         &self,
         proj: Project
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, CoreError>
     {
         self.db.get_owners(proj).await
     }
@@ -65,7 +62,7 @@ where
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         self.db.add_owners(owners, proj).await
     }
@@ -74,7 +71,7 @@ where
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         self.db.remove_owners(owners, proj).await
     }
@@ -83,7 +80,7 @@ where
         &self,
         user: User,
         proj: Project
-    ) -> Result<bool, AppError>
+    ) -> Result<bool, CoreError>
     {
         self.db.user_is_owner(user, proj).await
     }
@@ -91,7 +88,7 @@ where
     async fn get_projects(
         &self,
         params: ProjectsParams
-    ) -> Result<Projects, AppError>
+    ) -> Result<Projects, CoreError>
     {
         let ProjectsParams { seek, limit } = params;
         let (prev, next, projects, total) = self.get_projects_from(
@@ -123,7 +120,7 @@ where
     async fn get_project(
         &self,
         proj: Project
-    ) -> Result<ProjectData, AppError>
+    ) -> Result<ProjectData, CoreError>
     {
         self.get_project_impl(
             proj,
@@ -144,11 +141,11 @@ where
         user: User,
         proj: &str,
         proj_data: &ProjectDataPost
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         let now = (self.now)()
             .timestamp_nanos_opt()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(CoreError::InternalError)?;
 // FIXME: generate a sort key?
 //        let mut proj_data = proj_data;
 //        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
@@ -160,11 +157,11 @@ where
         owner: Owner,
         proj: Project,
         proj_data: &ProjectDataPatch
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         let now = (self.now)()
             .timestamp_nanos_opt()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(CoreError::InternalError)?;
         self.db.update_project(owner, proj, proj_data, now).await
     }
 
@@ -172,7 +169,7 @@ where
         &self,
         proj: Project,
         revision: i64
-    ) -> Result<ProjectData, AppError>
+    ) -> Result<ProjectData, CoreError>
     {
         let proj_row = self.db.get_project_row_revision(proj, revision)
             .await?;
@@ -195,11 +192,11 @@ where
         proj: Project,
         pkg: &str,
         pkg_data: &PackageDataPost
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         let now = (self.now)()
             .timestamp_nanos_opt()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(CoreError::InternalError)?;
         self.db.create_package(owner, proj, pkg, pkg_data, now).await
     }
 
@@ -207,7 +204,7 @@ where
         &self,
         _proj: Project,
         pkg: Package
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         self.db.get_package_url(pkg).await
     }
@@ -217,7 +214,7 @@ where
         _proj: Project,
         pkg: Package,
         version: &Version
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         self.db.get_release_url(pkg, version).await
     }
@@ -225,7 +222,7 @@ where
     async fn get_players(
         &self,
         proj: Project
-    ) -> Result<Users, AppError>
+    ) -> Result<Users, CoreError>
     {
         self.db.get_players(proj).await
     }
@@ -234,7 +231,7 @@ where
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         self.db.add_player(player, proj).await
     }
@@ -243,7 +240,7 @@ where
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         self.db.remove_player(player, proj).await
     }
@@ -252,7 +249,7 @@ where
         &self,
         proj: Project,
         img_name: &str
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         self.db.get_image_url(proj, img_name).await
     }
@@ -262,7 +259,7 @@ where
         proj: Project,
         revision: i64,
         img_name: &str
-    ) -> Result<String, AppError>
+    ) -> Result<String, CoreError>
     {
         // TODO: this could be a join
         let proj_row = self.db.get_project_row_revision(proj, revision).await?;
@@ -279,11 +276,11 @@ where
         proj: Project,
         img_name: &str,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
-    ) -> Result<(), AppError>
+    ) -> Result<(), CoreError>
     {
         let now = (self.now)()
             .timestamp_nanos_opt()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(CoreError::InternalError)?;
 
 // TODO: check that the file is not too large
 // TOOD: check that the file is an image
@@ -291,7 +288,7 @@ where
         // write file
         let url = self.uploader.upload(img_name, Box::into_pin(stream))
             .await
-            .or(Err(AppError::InternalError))?;
+            .or(Err(CoreError::InternalError))?;
 
         // update record
         self.db.add_image_url(owner, proj, img_name, &url, now).await?;
@@ -308,7 +305,7 @@ where
     async fn make_version_data(
         &self,
         rr: ReleaseRow
-    ) -> Result<ReleaseData, AppError>
+    ) -> Result<ReleaseData, CoreError>
     {
         let authors = self.db.get_authors(rr.release_id)
             .await?
@@ -333,10 +330,10 @@ where
         &'s self,
         pr: PackageRow,
         get_release_rows: &F
-    ) -> Result<PackageData, AppError>
+    ) -> Result<PackageData, CoreError>
     where
         F: Fn(&'s Self, Package) -> R,
-        R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
+        R: Future<Output = Result<Vec<ReleaseRow>, CoreError>>
     {
         let releases = try_join_all(
             get_release_rows(self, Package(pr.package_id))
@@ -360,10 +357,10 @@ where
         proj_row: ProjectRow,
         package_rows: Vec<PackageRow>,
         get_release_rows: F
-    ) -> Result<ProjectData, AppError>
+    ) -> Result<ProjectData, CoreError>
     where
         F: Fn(&'s Self, Package) -> R,
-        R: Future<Output = Result<Vec<ReleaseRow>, AppError>>
+        R: Future<Output = Result<Vec<ReleaseRow>, CoreError>>
     {
         let owners = self.get_owners(proj)
             .await?
@@ -403,7 +400,7 @@ where
         sort_by: SortBy,
         dir: Direction,
         limit_extra: u32
-    ) -> Result<Vec<ProjectSummaryRow>, AppError>
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         match anchor {
             Anchor::Start =>
@@ -460,7 +457,7 @@ where
         &self,
         seek: Seek,
         limit: Limit
-    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), AppError>
+    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), CoreError>
     {
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
@@ -512,7 +509,7 @@ fn get_prev_for_before(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<Option<Seek>, AppError>
+) -> Result<Option<Seek>, CoreError>
 {
     // make the prev link
     if projects.len() == limit_extra as usize {
@@ -553,7 +550,7 @@ fn get_next_for_before(
     sort_by: SortBy,
     dir: Direction,
     projects: &[ProjectSummaryRow]
-) -> Result<Option<Seek>, AppError>
+) -> Result<Option<Seek>, CoreError>
 {
     // make the next link
     if projects.is_empty() {
@@ -589,7 +586,7 @@ fn get_next_for_after(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<Option<Seek>, AppError>
+) -> Result<Option<Seek>, CoreError>
 {
     // make the next link
     if projects.len() == limit_extra as usize {
@@ -630,7 +627,7 @@ fn get_prev_for_after(
     sort_by: SortBy,
     dir: Direction,
     projects: &[ProjectSummaryRow]
-) -> Result<Option<Seek>, AppError>
+) -> Result<Option<Seek>, CoreError>
 {
     // make the prev link
     match anchor {
@@ -671,7 +668,7 @@ fn get_links(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<(Option<Seek>, Option<Seek>), AppError>
+) -> Result<(Option<Seek>, Option<Seek>), CoreError>
 {
     match anchor {
         Anchor::Before(..) |
@@ -718,19 +715,21 @@ fn get_links(
 }
 
 impl ProjectSummaryRow {
-    fn sort_field(&self, sort_by: SortBy) -> Result<String, AppError> {
-        match sort_by {
-            SortBy::ProjectName => Ok(self.name.clone()),
-            SortBy::GameTitle => Ok(self.game_title_sort.clone()),
-            SortBy::ModificationTime => nanos_to_rfc3339(self.modified_at),
-            SortBy::CreationTime => nanos_to_rfc3339(self.created_at),
-            SortBy::Relevance => Ok(self.rank.to_string())
-        }
+    fn sort_field(&self, sort_by: SortBy) -> Result<String, CoreError> {
+        Ok(
+            match sort_by {
+                SortBy::ProjectName => self.name.clone(),
+                SortBy::GameTitle => self.game_title_sort.clone(),
+                SortBy::ModificationTime => nanos_to_rfc3339(self.modified_at)?,
+                SortBy::CreationTime => nanos_to_rfc3339(self.created_at)?,
+                SortBy::Relevance => self.rank.to_string()
+            }
+        )
     }
 }
 
 impl TryFrom<ProjectSummaryRow> for ProjectSummary {
-    type Error = AppError;
+    type Error = CoreError;
 
     fn try_from(r: ProjectSummaryRow) -> Result<Self, Self::Error> {
         Ok(
@@ -1864,7 +1863,7 @@ mod test {
             core.get_release_version(Project(42), Package(1), &version)
                 .await
                 .unwrap_err(),
-            AppError::NotAVersion
+            CoreError::NotAVersion
         );
     }
 
@@ -1922,7 +1921,7 @@ mod test {
         let users = Users { users: vec!["bob".into()] };
         assert_eq!(
             core.remove_owners(&users, Project(1)).await.unwrap_err(),
-            AppError::CannotRemoveLastOwner
+            CoreError::CannotRemoveLastOwner
         );
     }
 
@@ -1980,7 +1979,7 @@ mod test {
         let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(1), "img.png").await.unwrap_err(),
-            AppError::NotFound
+            CoreError::NotFound
         );
     }
 
@@ -1989,7 +1988,7 @@ mod test {
         let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(42), "bogus").await.unwrap_err(),
-            AppError::NotFound
+            CoreError::NotFound
         );
     }
 }

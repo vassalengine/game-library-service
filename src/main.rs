@@ -206,7 +206,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::Core,
+        core::{Core, CoreError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -275,11 +275,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str,
-        ) -> Result<Project, AppError>
+        ) -> Result<Project, CoreError>
         {
             match proj {
                 "a_project" => Ok(Project(1)),
-                _ => Err(AppError::NotAProject)
+                _ => Err(CoreError::NotAProject)
             }
         }
 
@@ -287,11 +287,11 @@ mod test {
             &self,
             _proj: Project,
             pkg: &str
-        ) -> Result<Package, AppError>
+        ) -> Result<Package, CoreError>
         {
             match pkg {
                 "a_package" => Ok(Package(1)),
-                _ => Err(AppError::NotAPackage)
+                _ => Err(CoreError::NotAPackage)
             }
         }
 
@@ -299,7 +299,7 @@ mod test {
             &self,
             user: User,
             _proj: Project
-        ) -> Result<bool, AppError>
+        ) -> Result<bool, CoreError>
         {
             Ok(user == User(1) || user == User(2))
         }
@@ -308,7 +308,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj: Project
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -317,7 +317,7 @@ mod test {
             &self,
             _owners: &Users,
             _proj: Project
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -325,7 +325,7 @@ mod test {
         async fn get_owners(
             &self,
             _proj: Project
-        ) -> Result<Users, AppError>
+        ) -> Result<Users, CoreError>
         {
             Ok(
                 Users {
@@ -340,7 +340,7 @@ mod test {
         async fn get_projects(
             &self,
             params: ProjectsParams
-        ) -> Result<Projects, AppError>
+        ) -> Result<Projects, CoreError>
         {
             Ok(
                 Projects {
@@ -378,7 +378,7 @@ mod test {
         async fn get_project(
             &self,
             _proj: Project,
-        ) -> Result<ProjectData, AppError>
+        ) -> Result<ProjectData, CoreError>
         {
             Ok(
                 ProjectData {
@@ -425,7 +425,7 @@ mod test {
             _user: User,
             _proj: &str,
             _proj_data: &ProjectDataPost
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -435,7 +435,7 @@ mod test {
             _owner: Owner,
             _proj: Project,
             _proj_data: &ProjectDataPatch
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -444,11 +444,11 @@ mod test {
             &self,
             proj: Project,
             revision: i64
-        ) -> Result<ProjectData, AppError>
+        ) -> Result<ProjectData, CoreError>
         {
             match revision {
                 1 => self.get_project(proj).await,
-                _ => Err(AppError::NotARevision)
+                _ => Err(CoreError::NotARevision)
             }
         }
 
@@ -456,7 +456,7 @@ mod test {
             &self,
             _proj: Project,
             _pkg: Package
-        ) -> Result<String, AppError>
+        ) -> Result<String, CoreError>
         {
             Ok("https://example.com/package".into())
         }
@@ -466,20 +466,20 @@ mod test {
             _proj: Project,
             _pkg: Package,
             version: &Version
-        ) -> Result<String, AppError>
+        ) -> Result<String, CoreError>
         {
             match version {
                 Version { major: 1, minor: 2, patch: 3, .. } => {
                     Ok("https://example.com/package-1.2.3".into())
                 },
-                _ => Err(AppError::NotAVersion)
+                _ => Err(CoreError::NotAVersion)
             }
         }
 
         async fn get_players(
             &self,
             _proj: Project
-        ) -> Result<Users, AppError>
+        ) -> Result<Users, CoreError>
         {
             Ok(
                 Users {
@@ -495,7 +495,7 @@ mod test {
             &self,
             _player: User,
             _proj: Project
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -504,7 +504,7 @@ mod test {
             &self,
             _player: User,
             _proj: Project
-        ) -> Result<(), AppError>
+        ) -> Result<(), CoreError>
         {
             Ok(())
         }
@@ -513,13 +513,13 @@ mod test {
             &self,
             proj: Project,
             img_name: &str
-        ) -> Result<String, AppError>
+        ) -> Result<String, CoreError>
         {
             if proj == Project(1) && img_name == "img.png" {
                 Ok("https://example.com/img.png".into())
             }
             else {
-                Err(AppError::NotFound)
+                Err(CoreError::NotFound)
             }
         }
     }

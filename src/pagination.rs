@@ -3,12 +3,19 @@ use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     str::{self, FromStr},
+    mem,
     num::NonZeroU8
 };
 
-use crate::errors::AppError;
-
 // TODO: private fields various places
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+pub enum LimitError {
+    #[error("limit {0} out of range")]
+    OutOfRange(u8),
+    #[error("limit {0} malformed")]
+    Malformed(String)
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
@@ -38,12 +45,12 @@ impl Default for Limit {
 }
 
 impl TryFrom<&str> for Limit {
-    type Error = AppError;
+    type Error = LimitError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s.parse::<u8>() {
-            Ok(n) => Limit::new(n).ok_or(AppError::LimitOutOfRange),
-            Err(_) => Err(AppError::MalformedQuery)
+            Ok(n) => Limit::new(n).ok_or(LimitError::OutOfRange(n)),
+            Err(_) => Err(LimitError::Malformed(s.into()))
         }
     }
 }
@@ -54,7 +61,11 @@ impl fmt::Display for Limit {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("anchor tag {0} unknown")]
+pub struct AnchorTagError(String);
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 enum AnchorTag {
     Start,
@@ -79,7 +90,7 @@ impl From<AnchorTag> for String {
 }
 
 impl TryFrom<&str> for AnchorTag {
-    type Error = AppError;
+    type Error = AnchorTagError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
@@ -89,12 +100,12 @@ impl TryFrom<&str> for AnchorTag {
             "q" => Ok(AnchorTag::StartQuery),
             "p" => Ok(AnchorTag::BeforeQuery),
             "r" => Ok(AnchorTag::AfterQuery),
-            _ => Err(AppError::MalformedQuery)
+            _ => Err(AnchorTagError(value.into()))
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct RawAnchor {
     tag: AnchorTag,
     field: Option<String>,
@@ -113,18 +124,52 @@ pub enum Anchor {
     AfterQuery(String, String, u32)
 }
 
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("anchor {0:?} invalid")]
+pub struct AnchorError(RawAnchor);
+
 impl TryFrom<RawAnchor> for Anchor {
-    type Error = AppError;
+    type Error = AnchorError;
 
     fn try_from(ra: RawAnchor) -> Result<Self, Self::Error> {
-        match (ra.tag, ra.field, ra.query, ra.id) {
-            (AnchorTag::Start, None, None, None) => Ok(Anchor::Start),
-            (AnchorTag::Before, Some(f), None, Some(i)) => Ok(Anchor::Before(f, i)),
-            (AnchorTag::After, Some(f), None, Some(i)) => Ok(Anchor::After(f, i)),
-            (AnchorTag::StartQuery, None, Some(q), None) => Ok(Anchor::StartQuery(q)),
-            (AnchorTag::BeforeQuery, Some(f), Some(q), Some(i)) => Ok(Anchor::BeforeQuery(q, f, i)),
-            (AnchorTag::AfterQuery, Some(f), Some(q), Some(i)) => Ok(Anchor::AfterQuery(q, f, i)),
-            _ => Err(AppError::MalformedQuery)
+        match ra {
+            RawAnchor {
+                tag: AnchorTag::Start,
+                field: None,
+                query: None,
+                id: None
+            } => Ok(Anchor::Start),
+            RawAnchor {
+                tag: AnchorTag::Before,
+                field: Some(f),
+                query: None,
+                id: Some(i)
+            } => Ok(Anchor::Before(f, i)),
+           RawAnchor {
+                tag: AnchorTag::After,
+                field: Some(f),
+                query: None,
+                id: Some(i)
+            } => Ok(Anchor::After(f, i)),
+            RawAnchor {
+                tag: AnchorTag::StartQuery,
+                field: None,
+                query: Some(q),
+                id: None
+            } => Ok(Anchor::StartQuery(q)),
+            RawAnchor {
+                tag: AnchorTag::BeforeQuery,
+                field: Some(f),
+                query: Some(q),
+                id: Some(i)
+            } => Ok(Anchor::BeforeQuery(q, f, i)),
+            RawAnchor {
+                tag: AnchorTag::AfterQuery,
+                field: Some(f),
+                query: Some(q),
+                id: Some(i)
+            } => Ok(Anchor::AfterQuery(q, f, i)),
+            _ => Err(AnchorError(ra))
         }
     }
 }
@@ -172,6 +217,10 @@ impl From<Anchor> for RawAnchor {
     }
 }
 
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("direction {0:?} invalid")]
+pub struct DirectionError(String);
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
 pub enum Direction {
@@ -198,16 +247,20 @@ impl From<Direction> for String {
 }
 
 impl TryFrom<&str> for Direction {
-    type Error = AppError;
+    type Error = DirectionError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "a" => Ok(Direction::Ascending),
             "d" => Ok(Direction::Descending),
-            _ => Err(AppError::MalformedQuery)
+            _ => Err(DirectionError(value.into()))
         }
     }
 }
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("sort {0:?} invalid")]
+pub struct SortByError(String);
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str", into = "String")]
@@ -233,7 +286,7 @@ impl From<SortBy> for String {
 }
 
 impl TryFrom<&str> for SortBy {
-    type Error = AppError;
+    type Error = SortByError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
@@ -242,7 +295,7 @@ impl TryFrom<&str> for SortBy {
             "m" => Ok(SortBy::ModificationTime),
             "c" => Ok(SortBy::CreationTime),
             "r" => Ok(SortBy::Relevance),
-            _ => Err(AppError::MalformedQuery)
+            _ => Err(SortByError(value.into()))
         }
     }
 }
@@ -256,6 +309,32 @@ impl SortBy {
             SortBy::CreationTime => Direction::Descending,
             SortBy::Relevance => Direction::Ascending
         }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SeekError {
+    #[error("{0}")]
+    CsvError(#[from] csv::Error),
+    #[error("{0}")]
+    CsvIntoInnerError(Box<dyn std::error::Error + Send>),
+    #[error("{0}")]
+    Utf8Error(#[from] std::string::FromUtf8Error),
+    #[error("Relevance must be paired with a query anchor, not {0:?}")]
+    RelevanceMismatch(Anchor),
+    #[error("Empty seek")]
+    EmptySeek
+}
+
+impl PartialEq for SeekError {
+    fn eq(&self, other: &Self) -> bool {
+        // csv::Error and csv::CsvIntoInnerError are not PartialEq,
+        // so we must exclude those
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(
+            self,
+            SeekError::CsvError(_) | SeekError::CsvIntoInnerError(_)
+        )
     }
 }
 
@@ -277,7 +356,7 @@ impl Default for Seek {
 }
 
 impl TryFrom<Seek> for String {
-    type Error = AppError;
+    type Error = SeekError;
 
     fn try_from(s: Seek) -> Result<Self, Self::Error> {
         String::try_from(&s)
@@ -285,22 +364,23 @@ impl TryFrom<Seek> for String {
 }
 
 impl TryFrom<&Seek> for String {
-    type Error = AppError;
+    type Error = SeekError;
 
     fn try_from(s: &Seek) -> Result<Self, Self::Error> {
         let mut w = csv::WriterBuilder::new()
             .has_headers(false)
             .from_writer(vec![]);
 
-        w.serialize(s).map_err(|_| AppError::MalformedQuery)?;
-        let mut b = w.into_inner().map_err(|_| AppError::MalformedQuery)?;
+        w.serialize(s)?;
+        let mut b = w.into_inner()
+            .map_err(|e| SeekError::CsvIntoInnerError(Box::new(e)))?;
         b.pop(); // drop the terminator
-        String::from_utf8(b).map_err(|_| AppError::MalformedQuery)
+        Ok(String::from_utf8(b)?)
     }
 }
 
 impl FromStr for Seek {
-    type Err = AppError;
+    type Err = SeekError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut r = csv::ReaderBuilder::new()
@@ -308,7 +388,7 @@ impl FromStr for Seek {
             .from_reader(s.as_bytes());
 
         if let Some(result) = r.deserialize().next() {
-            let seek: Seek = result.map_err(|_| AppError::MalformedQuery)?;
+            let seek: Seek = result?;
 
             // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
             match seek.sort_by {
@@ -316,13 +396,13 @@ impl FromStr for Seek {
                     Anchor::StartQuery(..) |
                     Anchor::AfterQuery(..) |
                     Anchor::BeforeQuery(..) => Ok(seek),
-                    _ => Err(AppError::MalformedQuery)
+                    a => Err(SeekError::RelevanceMismatch(a))
                 },
                 _ => Ok(seek)
             }
         }
         else {
-            Err(AppError::MalformedQuery)
+            Err(SeekError::EmptySeek)
         }
     }
 }
@@ -331,9 +411,8 @@ impl FromStr for Seek {
 pub struct SeekLink(String);
 
 impl SeekLink {
-    pub fn new(seek: &Seek, limit: Option<Limit>) -> Result<SeekLink, AppError> {
-        let s = String::try_from(seek)
-            .map_err(|_| AppError::MalformedQuery)?;
+    pub fn new(seek: &Seek, limit: Option<Limit>) -> Result<SeekLink, SeekError> {
+        let s = String::try_from(seek)?;
         let s = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s);
 
         match limit {

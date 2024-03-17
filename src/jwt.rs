@@ -1,13 +1,9 @@
 use jsonwebtoken::{Header, Validation, get_current_timestamp};
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::AppError};
-
-impl From<jsonwebtoken::errors::Error> for AppError {
-    fn from(_: jsonwebtoken::errors::Error) -> Self {
-        AppError::Unauthorized
-    }
-}
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("{0}")]
+pub struct Error(#[from] jsonwebtoken::errors::Error);
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -25,7 +21,7 @@ impl DecodingKey {
     }
 }
 
-pub fn verify(token: &str, key: &DecodingKey) -> Result<Claims, AppError> {
+pub fn verify(token: &str, key: &DecodingKey) -> Result<Claims, Error> {
     Ok(
         jsonwebtoken::decode::<Claims>(
             token,
@@ -45,7 +41,7 @@ impl EncodingKey {
 }
 
 
-pub fn issue(key: &EncodingKey, uid: i64, expiry: u64) -> Result<String, AppError> {
+pub fn issue(key: &EncodingKey, uid: i64, expiry: u64) -> Result<String, Error> {
     let claims = Claims {
         sub: uid,
         exp: expiry,

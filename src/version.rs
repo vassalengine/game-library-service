@@ -3,10 +3,12 @@ use std::{
     cmp::Ordering,
     str::FromStr
 };
+use thiserror::Error;
 
-use crate::errors::AppError;
+#[derive(Debug, Eq, Error, PartialEq)]
+#[error("{0} is malformed")]
+pub struct MalformedVersion(String);
 
-#[non_exhaustive]
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(try_from = "&str")]
 pub struct Version {
@@ -53,21 +55,20 @@ impl Version {
     }
 }
 
-// TODO: Should have a non-AppError?
 impl TryFrom<&str> for Version {
-    type Error = AppError;
+    type Error = MalformedVersion;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse::<semver::Version>()
             .ok()
             .as_ref()
             .and_then(Version::new)
-            .ok_or(AppError::MalformedVersion)
+            .ok_or_else(|| MalformedVersion(s.into()))
     }
 }
 
 impl FromStr for Version {
-    type Err = AppError;
+    type Err = MalformedVersion;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Version::try_from(s)
@@ -154,76 +155,94 @@ mod test {
 
     #[test]
     fn string_to_version_empty() {
-        assert_eq!(
-            "".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                "".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_bogus() {
-        assert_eq!(
-            "bogus".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                "bogus".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_whitespace() {
-        assert_eq!(
-            " 1.2.3 ".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                " 1.2.3 ".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_too_few_components() {
-        assert_eq!(
-            "0.1".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                "0.1".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_too_many_components() {
-        assert_eq!(
-            "0.1.2.3".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                "0.1.2.3".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_bad_pre() {
-        assert_eq!(
-            "0.1.2-".parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                "0.1.2-".parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_major_too_large() {
         let v = format!("{}.0.0", i64::MAX as u64 + 1);
-        assert_eq!(
-            v.parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                v.parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_minor_too_large() {
         let v = format!("0.{}.0", i64::MAX as u64 + 1);
-        assert_eq!(
-            v.parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                v.parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
     #[test]
     fn string_to_version_patch_too_large() {
         let v = format!("0.0.{}", i64::MAX as u64 + 1);
-        assert_eq!(
-            v.parse::<Version>().unwrap_err(),
-            AppError::MalformedVersion
+        assert!(
+            matches!(
+                v.parse::<Version>().unwrap_err(),
+                MalformedVersion(_)
+            )
         );
     }
 
