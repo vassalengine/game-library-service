@@ -5,9 +5,8 @@ use crate::pagination::Pagination;
 // TODO: rationalize struct naming---names should reflect whether the
 // structs are input or ouptut
 
-// TODO: User should become a newtype so that you can't construct one
+// TODO: Maybe User should be a newtype so that you can't construct one
 // without having verified that the user exists
-//
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct User(pub i64);
