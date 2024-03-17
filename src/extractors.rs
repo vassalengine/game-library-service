@@ -29,7 +29,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // get the bearer token from the Authorization header
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader::<Authorization<Bearer>>>()
@@ -53,7 +57,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // check that the requester is authorized
         let claims = Claims::from_request_parts(parts, state).await?;
         // extract the user id
@@ -69,7 +77,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // extract however many path elements there are; should never fail
         let Path(params) =
             Path::<Vec<(String, String)>>::from_request_parts(parts, state)
@@ -100,7 +112,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // check that that project exists
         let proj = Project::from_request_parts(parts, state).await?;
 
@@ -136,7 +152,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // check that that project exists
         let proj = Project::from_request_parts(parts, state).await?;
 
@@ -155,7 +175,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         // check that the requester is authorized
         let claims = Claims::from_request_parts(parts, state).await?;
 
@@ -203,7 +227,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         Ok(Wrapper(T::from_request_parts(parts, state).await?))
     }
 }
@@ -217,7 +245,11 @@ where
 {
     type Rejection = AppError;
 
-    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(
+        req: Request,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
         Ok(Wrapper(T::from_request(req, state).await?))
     }
 }
