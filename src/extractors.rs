@@ -173,11 +173,11 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        Ok(ProjectAndPackage::from_request_parts(parts, state).await?.0.1)
+        Ok(ProjectAndPackage::from_request_parts(parts, state).await?.1)
     }
 }
 
-pub struct ProjectAndPackage(pub (Project, Package));
+pub struct ProjectAndPackage(pub Project, pub Package);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for ProjectAndPackage
@@ -201,7 +201,7 @@ where
         // look up the package id
         let pkg = core.get_package_id(proj, &pkg).await?;
 
-        Ok(ProjectAndPackage((proj, pkg)))
+        Ok(ProjectAndPackage(proj, pkg))
     }
 }
 

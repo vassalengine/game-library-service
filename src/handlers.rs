@@ -144,7 +144,7 @@ pub async fn release_get(
 
 // TODO: Version extractor?
 pub async fn release_version_get(
-    ProjectAndPackage((proj, pkg)): ProjectAndPackage,
+    ProjectAndPackage(proj, pkg): ProjectAndPackage,
     Path((_, _, version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
