@@ -13,6 +13,8 @@ use axum_extra::{
         authorization::Bearer
     }
 };
+// TODO: replace with into_ok() when that's available
+use unwrap_infallible::UnwrapInfallible;
 
 use crate::{
     core::CoreArc,
@@ -94,10 +96,9 @@ where
             .next()
             .ok_or(AppError::InternalError)?;
 
-        // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)
             .await
-            .map_err(|_| AppError::InternalError)?;
+            .unwrap_infallible();
 
         // look up the project id
         Ok(core.get_project_id(&proj).await?)
@@ -132,10 +133,9 @@ where
             .nth(1)
             .ok_or(AppError::InternalError)?;
 
-        // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)
             .await
-            .map_err(|_| AppError::InternalError)?;
+            .unwrap_infallible();
 
         // look up the package id
         Ok(core.get_package_id(proj, &pkg).await?)
@@ -186,10 +186,9 @@ where
         // check that that project exists
         let proj = Project::from_request_parts(parts, state).await?;
 
-        // should never fail
         let State(core) = State::<CoreArc>::from_request_parts(parts, state)
             .await
-            .map_err(|_| AppError::InternalError)?;
+            .unwrap_infallible();
 
         // check that that requester owns the project
         let requester = User(claims.sub);
