@@ -181,7 +181,7 @@ where
     ) -> Result<Self, Self::Rejection>
     {
         // check that the requester is authorized
-        let claims = Claims::from_request_parts(parts, state).await?;
+        let user = User::from_request_parts(parts, state).await?;
 
         // check that that project exists
         let proj = Project::from_request_parts(parts, state).await?;
@@ -191,10 +191,8 @@ where
             .unwrap_infallible();
 
         // check that that requester owns the project
-        let requester = User(claims.sub);
-
-        match core.user_is_owner(requester, proj).await? {
-            true => Ok(Owned(Owner(claims.sub), proj)),
+        match core.user_is_owner(user, proj).await? {
+            true => Ok(Owned(Owner(user.0), proj)),
             false =>  Err(AppError::Unauthorized)
         }
     }
