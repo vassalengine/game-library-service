@@ -71,6 +71,74 @@ where
     }
 }
 
+async fn get_state<S>(
+    parts: &mut Parts,
+    state: &S
+) -> CoreArc
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    State::<CoreArc>::from_request_parts(parts, state)
+        .await
+        .unwrap_infallible()
+        .0
+}
+
+async fn get_path_vec<S>(
+    parts: &mut Parts,
+    state: &S
+) -> Result<Vec<(String, String)>, AppError>
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    // extract however many path elements there are; should never fail
+    Ok(
+        Path::<Vec<(String, String)>>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| AppError::InternalError)?
+            .0
+    )
+}
+
+async fn get_project<S>(
+    parts: &mut Parts,
+    state: &S
+) -> Result<String, AppError>
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    // extract the first path element, which is the project name
+    get_path_vec(parts, state)
+        .await?
+        .into_iter()
+        .next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)
+}
+
+async fn get_project_and_package<S>(
+    parts: &mut Parts,
+    state: &S
+) -> Result<(String, String), AppError>
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    let mut path_captures = get_path_vec(parts, state).await?.into_iter();
+    // extract the first path element, which is the project name
+    let proj = path_captures.next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)?;
+    // extract the second path element, which is the package name
+    let pkg = path_captures.next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)?;
+    Ok((proj, pkg))
+}
+
 #[async_trait]
 impl<S> FromRequestParts<S> for Project
 where
@@ -84,21 +152,8 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        // extract however many path elements there are; should never fail
-        let Path(params) =
-            Path::<Vec<(String, String)>>::from_request_parts(parts, state)
-                .await
-                .map_err(|_| AppError::InternalError)?;
-
-        // extract the first path element, which is the project name
-        let (_, proj) = params
-            .into_iter()
-            .next()
-            .ok_or(AppError::InternalError)?;
-
-        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
-            .await
-            .unwrap_infallible();
+        let proj = get_project(parts, state).await?;
+        let core = get_state(parts, state).await;
 
         // look up the project id
         Ok(core.get_project_id(&proj).await?)
@@ -118,27 +173,7 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        // check that that project exists
-        let proj = Project::from_request_parts(parts, state).await?;
-
-        // extract however many path elements there are; should never fail
-        let Path(params) =
-            Path::<Vec<(String, String)>>::from_request_parts(parts, state)
-                .await
-                .map_err(|_| AppError::InternalError)?;
-
-        // extract the second path element, which is the package name
-        let (_, pkg) = params
-            .into_iter()
-            .nth(1)
-            .ok_or(AppError::InternalError)?;
-
-        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
-            .await
-            .unwrap_infallible();
-
-        // look up the package id
-        Ok(core.get_package_id(proj, &pkg).await?)
+        Ok(ProjectAndPackage::from_request_parts(parts, state).await?.0.1)
     }
 }
 
@@ -157,10 +192,14 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        // check that that project exists
-        let proj = Project::from_request_parts(parts, state).await?;
+        let (proj, pkg) = get_project_and_package(parts, state).await?;
+        let core = get_state(parts, state).await;
 
-        let pkg = Package::from_request_parts(parts, state).await?;
+        // look up the project id
+        let proj = core.get_project_id(&proj).await?;
+
+        // look up the package id
+        let pkg = core.get_package_id(proj, &pkg).await?;
 
         Ok(ProjectAndPackage((proj, pkg)))
     }
@@ -186,9 +225,7 @@ where
         // check that that project exists
         let proj = Project::from_request_parts(parts, state).await?;
 
-        let State(core) = State::<CoreArc>::from_request_parts(parts, state)
-            .await
-            .unwrap_infallible();
+        let core = get_state(parts, state).await;
 
         // check that that requester owns the project
         match core.user_is_owner(user, proj).await? {
