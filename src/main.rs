@@ -26,6 +26,7 @@ mod extractors;
 mod handlers;
 mod jwt;
 mod model;
+mod module;
 mod pagination;
 mod params;
 mod prod_core;
