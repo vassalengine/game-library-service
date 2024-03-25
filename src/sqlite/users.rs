@@ -217,18 +217,15 @@ mod test {
         );
     }
 
-// TODO: can we tell when the project doesn't exist?
-/*
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good;
+        // however, it's not an error if it does, just a no-op.
         assert_eq!(
-            get_owners(&pool, 0).await.unwrap_err(),
-            CoreError::NotAProject
+            get_owners(&pool, Project(0)).await.unwrap(),
+            Users { users: vec![] }
         );
     }
-*/
-
-// TODO: can we tell when the project doesn't exist?
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
@@ -319,9 +316,13 @@ mod test {
         );
     }
 
-// TODO: add test for remove_owner not a project
+    #[sqlx::test(fixtures("users", "projects", "one_owner"))]
+    async fn remove_owner_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good;
+        // however, it's not an error if it does, just a no-op.
+        remove_owner(&pool, User(1), Project(0)).await.unwrap();
+    }
 
-// TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn has_owner_yes(pool: Pool) {
         assert!(has_owner(&pool, Project(42)).await.unwrap());
@@ -330,5 +331,12 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn has_owner_no(pool: Pool) {
         assert!(!has_owner(&pool, Project(42)).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn has_owner_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good,
+        // however, it's not an error if it does, just a no-op.
+        assert!(!has_owner(&pool, Project(0)).await.unwrap());
     }
 }
