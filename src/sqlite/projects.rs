@@ -367,7 +367,7 @@ RETURNING project_id
 }
 
 #[derive(Debug)]
-struct ProjectDataRow<'a> {
+pub struct ProjectDataRow<'a> {
     project_id: i64,
     description: &'a str,
     game_title: &'a str,
@@ -416,7 +416,7 @@ RETURNING project_data_id
 }
 
 #[derive(Debug)]
-struct ProjectRevisionRow<'a> {
+pub struct ProjectRevisionRow<'a> {
     project_id: i64,
     name: &'a str,
     created_at: i64,
