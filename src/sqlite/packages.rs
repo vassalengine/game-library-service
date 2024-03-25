@@ -134,9 +134,10 @@ mod test {
         );
     }
 
-// TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
         assert_eq!(
             get_packages(&pool, Project(0)).await.unwrap(),
             []
@@ -167,9 +168,10 @@ mod test {
         );
     }
 
-    // TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_at_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
         let date = 16409952000000000;
         assert_eq!(
             get_packages_at(&pool, Project(0), date).await.unwrap(),
