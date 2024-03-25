@@ -114,7 +114,7 @@ mod test {
     async fn get_packages_ok(pool: Pool) {
         assert_eq!(
             get_packages(&pool, Project(42)).await.unwrap(),
-            vec![
+            [
                 PackageRow {
                     package_id: 1,
                     name: "a_package".into(),
@@ -139,7 +139,7 @@ mod test {
     async fn get_packages_not_a_project(pool: Pool) {
         assert_eq!(
             get_packages(&pool, Project(0)).await.unwrap(),
-            vec![]
+            []
         );
     }
 
@@ -148,7 +148,7 @@ mod test {
         let date = 0;
         assert_eq!(
             get_packages_at(&pool, Project(42), date).await.unwrap(),
-            vec![]
+            []
         );
     }
 
@@ -157,7 +157,7 @@ mod test {
         let date = 1672531200000000000;
         assert_eq!(
             get_packages_at(&pool, Project(42), date).await.unwrap(),
-            vec![
+            [
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
@@ -173,7 +173,7 @@ mod test {
         let date = 16409952000000000;
         assert_eq!(
             get_packages_at(&pool, Project(0), date).await.unwrap(),
-            vec![]
+            []
         );
     }
 
