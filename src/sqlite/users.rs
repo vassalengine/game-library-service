@@ -219,8 +219,8 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_not_a_project(pool: Pool) {
-        // This should not happen; the Project passed in should be good;
-        // however, it's not an error if it does, just a no-op.
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
         assert_eq!(
             get_owners(&pool, Project(0)).await.unwrap(),
             Users { users: vec![] }
@@ -235,6 +235,13 @@ mod test {
     #[sqlx::test(fixtures("users", "projects","one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
         assert!(!user_is_owner(&pool, User(2), Project(42)).await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users", "projects","one_owner"))]
+    async fn user_is_owner_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
+        assert!(!user_is_owner(&pool, User(2), Project(0)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
@@ -270,7 +277,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_not_a_project(pool: Pool) {
-        // This should not happen; the Project passed in should be good
+        // This should not happen; the Project passed in should be good.
         assert!(
             matches!(
                 add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
@@ -281,7 +288,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_not_a_user(pool: Pool) {
-        // This should not happen; the User passed in should be good
+        // This should not happen; the User passed in should be good.
         assert!(
             matches!(
                 add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
@@ -318,8 +325,8 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn remove_owner_not_a_project(pool: Pool) {
-        // This should not happen; the Project passed in should be good;
-        // however, it's not an error if it does, just a no-op.
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does, just a no-op.
         remove_owner(&pool, User(1), Project(0)).await.unwrap();
     }
 
@@ -335,8 +342,8 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn has_owner_not_a_project(pool: Pool) {
-        // This should not happen; the Project passed in should be good,
-        // however, it's not an error if it does, just a no-op.
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
         assert!(!has_owner(&pool, Project(0)).await.unwrap());
     }
 }
