@@ -271,10 +271,29 @@ mod test {
         );
     }
 
-// TODO: add test for add_owner not a project
-// TODO: add test for add_owner not a user
+    #[sqlx::test(fixtures("users", "projects", "one_owner"))]
+    async fn add_owner_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good
+        assert!(
+            matches!(
+                add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
 
-    #[sqlx::test(fixtures("users", "projects","one_owner"))]
+    #[sqlx::test(fixtures("users", "projects", "one_owner"))]
+    async fn add_owner_not_a_user(pool: Pool) {
+        // This should not happen; the User passed in should be good
+        assert!(
+            matches!(
+                add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        )
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn remove_owner_ok(pool: Pool) {
         assert_eq!(
             get_owners(&pool, Project(42)).await.unwrap(),
