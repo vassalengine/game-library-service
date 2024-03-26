@@ -1184,9 +1184,9 @@ mod test {
         );
     }
 
-// TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_revision_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
         assert_eq!(
             get_project_row_revision(&pool, Project(0), 2).await.unwrap_err(),
             CoreError::NotARevision
