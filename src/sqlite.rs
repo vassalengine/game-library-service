@@ -7,6 +7,7 @@ use sqlx::{
 mod images;
 mod packages;
 mod players;
+mod project;
 mod projects;
 mod releases;
 mod users;
@@ -32,7 +33,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         name: &str
     ) -> Result<Project, CoreError>
     {
-        projects::get_project_id(&self.0, name).await
+        project::get_project_id(&self.0, name).await
     }
 
     async fn get_projects_count(
@@ -220,7 +221,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), CoreError>
     {
-        projects::create_project(&self.0, user, proj, proj_data, now).await
+        project::create_project(&self.0, user, proj, proj_data, now).await
     }
 
     async fn update_project(
@@ -231,7 +232,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), CoreError>
     {
-        projects::update_project(&self.0, owner, proj, proj_data, now).await
+        project::update_project(&self.0, owner, proj, proj_data, now).await
     }
 
     async fn get_project_row(
@@ -239,7 +240,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project
     ) -> Result<ProjectRow, CoreError>
     {
-        projects::get_project_row(&self.0, proj).await
+        project::get_project_row(&self.0, proj).await
     }
 
     async fn get_project_row_revision(
@@ -248,7 +249,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         revision: i64
     ) -> Result<ProjectRow, CoreError>
     {
-        projects::get_project_row_revision(&self.0, proj, revision).await
+        project::get_project_row_revision(&self.0, proj, revision).await
     }
 
     async fn get_packages(

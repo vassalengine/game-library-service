@@ -6,7 +6,7 @@ use sqlx::{
 use crate::{
     core::CoreError,
     model::{Owner, Project},
-    sqlite::projects::update_project_non_project_data
+    sqlite::project::update_project_non_project_data
 };
 
 pub async fn get_image_url<'e, E>(

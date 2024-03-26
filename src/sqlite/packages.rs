@@ -7,7 +7,7 @@ use crate::{
     core::CoreError,
     db::PackageRow,
     model::{Owner, PackageDataPost, Project},
-    sqlite::projects::update_project_non_project_data
+    sqlite::project::update_project_non_project_data
 };
 
 pub async fn get_packages<'e, E>(
