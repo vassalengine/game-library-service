@@ -103,9 +103,10 @@ mod test {
         );
     }
 
-// TODO: can we tell when the project doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn get_players_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does.
         assert_eq!(
             get_players(&pool, Project(0)).await.unwrap(),
             Users { users: vec![] }
@@ -159,8 +160,25 @@ mod test {
         );
     }
 
-// TODO: add test for add_player not a project
-// TODO: add test for add_player not a user
+    #[sqlx::test(fixtures("users", "projects", "players"))]
+    async fn add_player_not_a_project(pool: Pool) {
+        assert!(
+            matches!(
+                add_player(&pool, User(2), Project(0)).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "players"))]
+    async fn add_player_not_a_user(pool: Pool) {
+        assert!(
+            matches!(
+                add_player(&pool, User(0), Project(42)).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn remove_player_existing(pool: Pool) {
@@ -207,5 +225,10 @@ mod test {
         );
     }
 
-// TODO: add test for remove_player not a project
+    #[sqlx::test(fixtures("users", "projects", "players"))]
+    async fn remove_player_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        // However, it's not an error if it does, just a no-op.
+        remove_player(&pool, User(3), Project(0)).await.unwrap();
+    }
 }
