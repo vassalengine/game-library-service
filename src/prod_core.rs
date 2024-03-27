@@ -485,8 +485,8 @@ where
         // get the total number of responsive items
         let total = match anchor {
             Anchor::StartQuery(ref q) |
-            Anchor::AfterQuery(ref q, _, _) |
-            Anchor::BeforeQuery(ref q, _, _) =>
+            Anchor::AfterQuery(ref q, ..) |
+            Anchor::BeforeQuery(ref q, ..) =>
                 self.db.get_projects_query_count(q),
             _ => self.db.get_projects_count()
         }.await?;
@@ -522,7 +522,7 @@ fn get_prev_for_before(
         let last = projects.last().expect("element must exist");
 
         let prev_anchor = match anchor {
-            Anchor::BeforeQuery(ref q, _, _) => Anchor::BeforeQuery(
+            Anchor::BeforeQuery(ref q, ..) => Anchor::BeforeQuery(
                 q.clone(),
                 last.sort_field(sort_by)?,
                 last.project_id as u32
@@ -561,7 +561,7 @@ fn get_next_for_before(
         let first = projects.first().expect("element must exist");
 
         let next_anchor = match anchor {
-            Anchor::BeforeQuery(ref q, _, _) => Anchor::AfterQuery(
+            Anchor::BeforeQuery(ref q, ..) => Anchor::AfterQuery(
                 q.clone(),
                 first.sort_field(sort_by)?,
                 first.project_id as u32
@@ -600,7 +600,7 @@ fn get_next_for_after(
 
         let next_anchor = match anchor {
             Anchor::StartQuery(ref q) |
-            Anchor::AfterQuery(ref q, _, _) => Anchor::AfterQuery(
+            Anchor::AfterQuery(ref q, ..) => Anchor::AfterQuery(
                 q.clone(),
                 last.sort_field(sort_by)?,
                 last.project_id as u32
@@ -640,7 +640,7 @@ fn get_prev_for_after(
             let first = projects.first().expect("element must exist");
 
             let prev_anchor = match anchor {
-                Anchor::AfterQuery(ref q, _, _) => Anchor::BeforeQuery(
+                Anchor::AfterQuery(ref q, ..) => Anchor::BeforeQuery(
                     q.clone(),
                     first.sort_field(sort_by)?,
                     first.project_id as u32
