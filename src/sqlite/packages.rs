@@ -230,5 +230,22 @@ mod test {
         );
     }
 
-    // TODO: test create_package duplicate name
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_package_already_exists(pool: Pool) {
+        assert!(
+            matches!(
+                create_package(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    "a_package",
+                    &PackageDataPost {
+                        description: "".into()
+                    },
+                    1699804206419538067
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
 }
