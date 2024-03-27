@@ -112,7 +112,7 @@ mod test {
 
     type Pool = sqlx::Pool<Sqlite>;
 
-        #[sqlx::test(fixtures("users", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_packages_ok(pool: Pool) {
         assert_eq!(
             get_packages(&pool, Project(42)).await.unwrap(),
