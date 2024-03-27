@@ -618,25 +618,47 @@ mod test {
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
 
+    static CUR_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+        ProjectRow {
+            project_id: 42,
+            name: "test_game".into(),
+            description: "Brian's Trademarked Game of Being a Test Case".into(),
+            revision: 3,
+            created_at: 1699804206419538067,
+            modified_at: 1702569006419538067,
+            modified_by: 1,
+            game_title: "A Game of Tests".into(),
+            game_title_sort: "Game of Tests, A".into(),
+            game_publisher: "Test Game Company".into(),
+            game_year: "1979".into(),
+            readme: "".into(),
+            image: None
+        }
+    });
+
+    static OLD_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+        ProjectRow {
+            project_id: 42,
+            name: "test_game".into(),
+            description: "Brian's Trademarked Game of Being a Test Case".into(),
+            revision: 1,
+            created_at: 1699804206419538067,
+            modified_at: 1699804206419538067,
+            modified_by: 1,
+            game_title: "A Game of Tests".into(),
+            game_title_sort: "Game of Tests, A".into(),
+            game_publisher: "Test Game Company".into(),
+            game_year: "1978".into(),
+            readme: "".into(),
+            image: None
+        }
+    });
+
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_row_ok(pool: Pool) {
         assert_eq!(
             get_project_row(&pool, Project(42)).await.unwrap(),
-            ProjectRow {
-                project_id: 42,
-                name: "test_game".into(),
-                description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 3,
-                created_at: 1699804206419538067,
-                modified_at: 1702569006419538067,
-                modified_by: 1,
-                game_title: "A Game of Tests".into(),
-                game_title_sort: "Game of Tests, A".into(),
-                game_publisher: "Test Game Company".into(),
-                game_year: "1979".into(),
-                readme: "".into(),
-                image: None
-            }
+            *CUR_ROW
         );
     }
 
@@ -652,21 +674,7 @@ mod test {
     async fn get_project_row_revision_ok_current(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, Project(42), 3).await.unwrap(),
-            ProjectRow {
-                project_id: 42,
-                name: "test_game".into(),
-                description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 3,
-                created_at: 1699804206419538067,
-                modified_at: 1702569006419538067,
-                modified_by: 1,
-                game_title: "A Game of Tests".into(),
-                game_title_sort: "Game of Tests, A".into(),
-                game_publisher: "Test Game Company".into(),
-                game_year: "1979".into(),
-                readme: "".into(),
-                image: None
-            }
+            *CUR_ROW
         );
     }
 
@@ -674,21 +682,7 @@ mod test {
     async fn get_project_revision_ok_old(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, Project(42), 1).await.unwrap(),
-            ProjectRow {
-                project_id: 42,
-                name: "test_game".into(),
-                description: "Brian's Trademarked Game of Being a Test Case".into(),
-                revision: 1,
-                created_at: 1699804206419538067,
-                modified_at: 1699804206419538067,
-                modified_by: 1,
-                game_title: "A Game of Tests".into(),
-                game_title_sort: "Game of Tests, A".into(),
-                game_publisher: "Test Game Company".into(),
-                game_year: "1978".into(),
-                readme: "".into(),
-                image: None
-            }
+            *OLD_ROW
         );
     }
 
