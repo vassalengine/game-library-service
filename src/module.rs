@@ -34,7 +34,7 @@ fn dump_file(zippath: &str, filepath: &str) -> Result<String, Error> {
 
 fn version_in_moduledata(md: &str) -> Result<String, Error> {
     // extract <version> from moduledata
-    let package = sxd_document::parser::parse(&md)?;
+    let package = sxd_document::parser::parse(md)?;
     let document = package.as_document();
     let value = sxd_xpath::evaluate_xpath(&document, "/data/version")?;
     Ok(value.string())
