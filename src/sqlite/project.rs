@@ -31,7 +31,7 @@ WHERE name = ?
     .ok_or(CoreError::NotAProject)
 }
 
-pub async fn create_project_row<'e, E>(
+async fn create_project_row<'e, E>(
     ex: E,
     user: User,
     proj: &str,
@@ -82,7 +82,7 @@ RETURNING project_id
 }
 
 #[derive(Debug)]
-pub struct ProjectDataRow<'a> {
+struct ProjectDataRow<'a> {
     project_id: i64,
     description: &'a str,
     game_title: &'a str,
@@ -93,7 +93,7 @@ pub struct ProjectDataRow<'a> {
     image: Option<&'a str>
 }
 
-pub async fn create_project_data_row<'e, E>(
+async fn create_project_data_row<'e, E>(
     ex: E,
     row: &ProjectDataRow<'_>
 ) -> Result<i64, CoreError>
@@ -131,7 +131,7 @@ RETURNING project_data_id
 }
 
 #[derive(Debug)]
-pub struct ProjectRevisionRow<'a> {
+struct ProjectRevisionRow<'a> {
     project_id: i64,
     name: &'a str,
     created_at: i64,
@@ -141,7 +141,7 @@ pub struct ProjectRevisionRow<'a> {
     project_data_id: i64
 }
 
-pub async fn create_project_revision_row<'e, E>(
+async fn create_project_revision_row<'e, E>(
     ex: E,
     row: &ProjectRevisionRow<'_>
 ) -> Result<(), CoreError>
@@ -224,7 +224,7 @@ where
     Ok(())
 }
 
-pub async fn update_project_row<'e, E>(
+async fn update_project_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
@@ -415,7 +415,7 @@ LIMIT 1
 }
 
 // TODO: tests
-pub async fn get_project_data_id<'e, E>(
+async fn get_project_data_id<'e, E>(
     ex: E,
     proj: Project,
     revision: i64
