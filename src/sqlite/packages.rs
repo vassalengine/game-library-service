@@ -108,6 +108,8 @@ VALUES (?, ?, ?, ?)
 mod test {
     use super::*;
 
+    use crate::sqlite::project::get_project_row;
+
     type Pool = sqlx::Pool<Sqlite>;
 
         #[sqlx::test(fixtures("users", "projects", "packages"))]
@@ -181,15 +183,22 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn create_package_ok(pool: Pool) {
+        let proj = Project(6);
+
         assert_eq!(
-            get_packages(&pool, Project(6)).await.unwrap(),
+            get_packages(&pool, proj).await.unwrap(),
             []
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            1
         );
 
         create_package(
             &pool,
             Owner(1),
-            Project(6),
+            proj,
             "newpkg",
             &PackageDataPost {
                 description: "".into()
@@ -197,10 +206,8 @@ mod test {
             1699804206419538067
         ).await.unwrap();
 
-// TODO: also check that a revision is made?
-
         assert_eq!(
-            get_packages(&pool, Project(6)).await.unwrap(),
+            get_packages(&pool, proj).await.unwrap(),
             [
                 PackageRow {
                     package_id: 4,
@@ -208,6 +215,11 @@ mod test {
                     created_at: 1699804206419538067
                 }
             ]
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            2
         );
     }
 
