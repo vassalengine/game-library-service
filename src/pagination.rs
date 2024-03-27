@@ -7,8 +7,6 @@ use std::{
     num::NonZeroU8
 };
 
-// TODO: private fields various places
-
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum LimitError {
     #[error("limit {0} out of range")]
