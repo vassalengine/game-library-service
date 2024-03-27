@@ -25,7 +25,7 @@ pub struct ProjectSummaryRow {
     pub image: Option<String>
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct ProjectRow {
     pub project_id: i64,
     pub name: String,

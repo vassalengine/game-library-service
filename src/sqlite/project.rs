@@ -485,6 +485,8 @@ pub async fn update_project_non_project_data(
 mod test {
     use super::*;
 
+    use once_cell::sync::Lazy;
+
     use crate::model::GameData;
 
     type Pool = sqlx::Pool<Sqlite>;
@@ -505,10 +507,8 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users"))]
-    async fn create_project_ok(pool: Pool) {
-        let user = User(1);
-        let row = ProjectRow {
+    static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+        ProjectRow {
             project_id: 1,
             name: "test_game".into(),
             description: "Brian's Trademarked Game of Being a Test Case".into(),
@@ -522,76 +522,51 @@ mod test {
             game_year: "1979".into(),
             readme: "".into(),
             image: None
-        };
+        }
+    });
 
-        let cdata = ProjectDataPost {
-            description: row.description.clone(),
+    static CREATE_DATA: Lazy<ProjectDataPost> = Lazy::new(|| {
+        ProjectDataPost {
+            description: CREATE_ROW.description.clone(),
             tags: vec![],
             game: GameData {
-                title: row.game_title.clone(),
-                title_sort_key: row.game_title_sort.clone(),
-                publisher: row.game_publisher.clone(),
-                year: row.game_year.clone()
+                title: CREATE_ROW.game_title.clone(),
+                title_sort_key: CREATE_ROW.game_title_sort.clone(),
+                publisher: CREATE_ROW.game_publisher.clone(),
+                year: CREATE_ROW.game_year.clone()
             },
             readme: "".into(),
             image: None
-        };
+        }
+    });
 
+    #[sqlx::test(fixtures("users"))]
+    async fn create_project_ok(pool: Pool) {
         assert_eq!(
-            get_project_id(&pool, &row.name).await.unwrap_err(),
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
             CoreError::NotAProject
         );
 
         create_project(
             &pool,
-            user,
-            &row.name,
-            &cdata,
-            row.created_at
+            User(1),
+            &CREATE_ROW.name,
+            &CREATE_DATA,
+            CREATE_ROW.created_at
         ).await.unwrap();
 
-        let proj = get_project_id(&pool, &row.name).await.unwrap();
+        let proj = get_project_id(&pool, &CREATE_ROW.name).await.unwrap();
 
         assert_eq!(
             get_project_row(&pool, proj).await.unwrap(),
-            row
+            *CREATE_ROW
         );
     }
 
     #[sqlx::test(fixtures("users"))]
     async fn create_project_not_a_user(pool: Pool) {
-        let user = User(0);
-        let row = ProjectRow {
-            project_id: 1,
-            name: "test_game".into(),
-            description: "Brian's Trademarked Game of Being a Test Case".into(),
-            revision: 1,
-            created_at: 1699804206419538067,
-            modified_at: 1699804206419538067,
-            modified_by: 1,
-            game_title: "A Game of Tests".into(),
-            game_title_sort: "Game of Tests, A".into(),
-            game_publisher: "Test Game Company".into(),
-            game_year: "1979".into(),
-            readme: "".into(),
-            image: None
-        };
-
-        let cdata = ProjectDataPost {
-            description: row.description.clone(),
-            tags: vec![],
-            game: GameData {
-                title: row.game_title.clone(),
-                title_sort_key: row.game_title_sort.clone(),
-                publisher: row.game_publisher.clone(),
-                year: row.game_year.clone()
-            },
-            readme: "".into(),
-            image: None
-        };
-
         assert_eq!(
-            get_project_id(&pool, &row.name).await.unwrap_err(),
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
             CoreError::NotAProject
         );
 
@@ -599,22 +574,46 @@ mod test {
             matches!(
                 create_project(
                     &pool,
-                    user,
-                    &row.name,
-                    &cdata,
-                    row.created_at
+                    User(0),
+                    &CREATE_ROW.name,
+                    &CREATE_DATA,
+                    CREATE_ROW.created_at
                 ).await.unwrap_err(),
                 CoreError::DatabaseError(_)
             )
         );
 
         assert_eq!(
-            get_project_id(&pool, &row.name).await.unwrap_err(),
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
             CoreError::NotAProject
         );
     }
 
-// TODO: add test for duplicate project name
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn create_project_already_exists(pool: Pool) {
+        let row = ProjectRow {
+            project_id: 42,
+            ..CREATE_ROW.clone()
+        };
+
+        assert_eq!(
+            get_project_id(&pool, &row.name).await.unwrap(),
+            Project(row.project_id)
+        );
+
+        assert!(
+            matches!(
+                create_project(
+                    &pool,
+                    User(1),
+                    &row.name,
+                    &CREATE_DATA,
+                    row.created_at
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
 
 // TODO: add tests for copy_project_revsion
 // TODO: add tests for update_project
