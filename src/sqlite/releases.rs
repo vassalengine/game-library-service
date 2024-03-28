@@ -262,16 +262,17 @@ mod test {
         );
     }
 
-// TODO: can we tell when the package doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_not_a_package(pool: Pool) {
+        // This should not happen; the Package passed in should be good.
+        // However, it's not an error if it does.
         assert_eq!(
             get_releases(&pool, Package(0)).await.unwrap(),
             vec![]
         );
     }
 
-        #[sqlx::test(fixtures("users", "projects", "packages"))]
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_url_ok(pool: Pool) {
         assert_eq!(
             get_release_url(&pool, Package(1)).await.unwrap(),
