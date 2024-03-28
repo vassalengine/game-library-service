@@ -14,8 +14,8 @@ use crate::{
 
 // TODO: can we combine these?
 // TODO: make Version borrow Strings?
-impl<'r> From<&'r ReleaseRow> for Version {
-    fn from(r: &'r ReleaseRow) -> Self {
+impl From<&ReleaseRow> for Version {
+    fn from(r: &ReleaseRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -36,8 +36,8 @@ struct ReducedReleaseRow {
     version_build: String,
 }
 
-impl<'r> From<&'r ReducedReleaseRow> for Version {
-    fn from(r: &'r ReducedReleaseRow) -> Self {
+impl From<&ReducedReleaseRow> for Version {
+    fn from(r: &ReducedReleaseRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
