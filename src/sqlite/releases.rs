@@ -148,7 +148,7 @@ ORDER BY
     Ok(releases)
 }
 
-pub async fn get_release_url<'e, E>(
+pub async fn get_release_version_url<'e, E>(
     ex: E,
     pkg: Package,
     version: &Version
@@ -183,9 +183,8 @@ LIMIT 1
     .ok_or(CoreError::NotAVersion)
 }
 
-// TODO: rename to get_release_url_current?
 // TODO: figure out how to order version_pre
-pub async fn get_package_url<'e, E>(
+pub async fn get_release_url<'e, E>(
     ex: E,
     pkg: Package
 ) -> Result<String, CoreError>
@@ -280,17 +279,17 @@ mod test {
     }
 
         #[sqlx::test(fixtures("users", "projects", "packages"))]
-    async fn get_package_url_ok(pool: Pool) {
+    async fn get_release_url_ok(pool: Pool) {
         assert_eq!(
-            get_package_url(&pool, Package(1)).await.unwrap(),
+            get_release_url(&pool, Package(1)).await.unwrap(),
             "https://example.com/a_package-1.2.4"
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
-    async fn get_package_url_not_a_package(pool: Pool) {
+    async fn get_release_url_not_a_package(pool: Pool) {
         assert_eq!(
-            get_package_url(&pool, Package(0)).await.unwrap_err(),
+            get_release_url(&pool, Package(0)).await.unwrap_err(),
             CoreError::NotAPackage
         );
     }

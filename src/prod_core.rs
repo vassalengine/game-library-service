@@ -206,7 +206,7 @@ where
         pkg: Package
     ) -> Result<String, CoreError>
     {
-        self.db.get_package_url(pkg).await
+        self.db.get_release_url(pkg).await
     }
 
     async fn get_release_version(
@@ -216,7 +216,7 @@ where
         version: &Version
     ) -> Result<String, CoreError>
     {
-        self.db.get_release_url(pkg, version).await
+        self.db.get_release_version_url(pkg, version).await
     }
 
     async fn get_players(

@@ -306,21 +306,21 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         get_authors(&self.0, pkg_ver_id).await
     }
 
-    async fn get_package_url(
+    async fn get_release_url(
         &self,
         pkg: Package
     ) -> Result<String, CoreError>
     {
-        releases::get_package_url(&self.0, pkg).await
+        releases::get_release_url(&self.0, pkg).await
     }
 
-     async fn get_release_url(
+     async fn get_release_version_url(
         &self,
         pkg: Package,
         version: &Version
     ) -> Result<String, CoreError>
     {
-        releases::get_release_url(&self.0, pkg, version).await
+        releases::get_release_version_url(&self.0, pkg, version).await
     }
 
     async fn get_players(
