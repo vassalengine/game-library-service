@@ -12,8 +12,6 @@ use crate::{
     version::Version
 };
 
-// TODO: can we combine these?
-// TODO: make Version borrow Strings?
 impl From<&ReleaseRow> for Version {
     fn from(r: &ReleaseRow) -> Self {
         Version {
