@@ -48,13 +48,13 @@ impl From<&ReducedReleaseRow> for Version {
     }
 }
 
-fn release_row_cmp<R>(a: &R, b: &R) -> Ordering
+fn release_row_desc_cmp<R>(a: &R, b: &R) -> Ordering
 where
     Version: for<'r> From<&'r R>
 {
     let av: Version = a.into();
-    let bv = b.into();
-    av.cmp(&bv)
+    let bv: Version = b.into();
+    bv.cmp(&av)
 }
 
 pub async fn get_releases<'e, E>(
@@ -97,7 +97,7 @@ ORDER BY
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(|a, b| release_row_cmp(b, a));
+    releases.sort_by(release_row_desc_cmp);
     Ok(releases)
 }
 
@@ -144,7 +144,7 @@ ORDER BY
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(|a, b| release_row_cmp(b, a));
+    releases.sort_by(release_row_desc_cmp);
     Ok(releases)
 }
 
@@ -183,7 +183,6 @@ LIMIT 1
     .ok_or(CoreError::NotAVersion)
 }
 
-// TODO: figure out how to order version_pre
 pub async fn get_release_url<'e, E>(
     ex: E,
     pkg: Package
@@ -218,8 +217,8 @@ ORDER BY
     match releases.is_empty() {
         true => Err(CoreError::NotAPackage),
         false => {
-            releases.sort_by(release_row_cmp);
-            Ok(releases.pop().unwrap().url)
+            releases.sort_by(release_row_desc_cmp);
+            Ok(releases.swap_remove(0).url)
         }
     }
 }
