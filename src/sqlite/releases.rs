@@ -190,7 +190,7 @@ pub async fn get_release_url<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let mut releases = sqlx::query_as!(
+    sqlx::query_as!(
         ReducedReleaseRow,
         "
 SELECT
@@ -212,15 +212,11 @@ ORDER BY
         pkg.0
     )
     .fetch_all(ex)
-    .await?;
-
-    match releases.is_empty() {
-        true => Err(CoreError::NotAPackage),
-        false => {
-            releases.sort_by(release_row_desc_cmp);
-            Ok(releases.swap_remove(0).url)
-        }
-    }
+    .await?
+    .into_iter()
+    .min_by(release_row_desc_cmp)
+    .map(|r| r.url)
+    .ok_or(CoreError::NotAPackage)
 }
 
 #[cfg(test)]
