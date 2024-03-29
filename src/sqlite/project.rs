@@ -681,8 +681,6 @@ mod test {
         );
     }
 
-// TODO: add tests for copy_project_revsion
-
     static CUR_ROW: Lazy<ProjectRow> = Lazy::new(|| {
         ProjectRow {
             project_id: 42,
