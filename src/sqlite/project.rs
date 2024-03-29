@@ -615,8 +615,73 @@ mod test {
         );
     }
 
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_ok(pool: Pool) {
+        let proj = Project(42);
+        let orig_row = get_project_row(&pool, proj).await.unwrap();
+
+        let pd = ProjectDataPatch {
+            description: Some("foo".into()),
+            ..Default::default()
+        };
+
+        update_project(
+            &pool,
+            Owner(1),
+            proj,
+            &pd,
+            1702569006419538068
+        ).await.unwrap();
+
+        let new_row = get_project_row(&pool, proj).await.unwrap();
+
+        assert_ne!(orig_row.description, pd.description.as_deref().unwrap());
+        assert_eq!(new_row.description, pd.description.as_deref().unwrap());
+        assert_eq!(new_row.revision, orig_row.revision + 1);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_not_a_project(pool: Pool) {
+        let pd = ProjectDataPatch {
+            description: Some("foo".into()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            update_project(
+                &pool,
+                Owner(1),
+                Project(0),
+                &pd,
+                0
+            ).await.unwrap_err(),
+            CoreError::NotAProject
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_not_a_user(pool: Pool) {
+        // This should not happen; the Owner passed in should be good.
+        let pd = ProjectDataPatch {
+            description: Some("foo".into()),
+            ..Default::default()
+        };
+
+        assert!(
+            matches!(
+                update_project(
+                    &pool,
+                    Owner(0),
+                    Project(42),
+                    &pd,
+                    0
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
 // TODO: add tests for copy_project_revsion
-// TODO: add tests for update_project
 
     static CUR_ROW: Lazy<ProjectRow> = Lazy::new(|| {
         ProjectRow {
