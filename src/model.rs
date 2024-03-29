@@ -150,8 +150,6 @@ pub struct ProjectDataPost {
     pub image: Option<String>
 }
 
-// TODO: maybe use a date type for ctime, mtime?
-
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectSummary {
     pub name: String,
