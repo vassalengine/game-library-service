@@ -414,7 +414,6 @@ LIMIT 1
     .ok_or(CoreError::NotARevision)
 }
 
-// TODO: tests
 async fn get_project_data_id<'e, E>(
     ex: E,
     proj: Project,
@@ -674,6 +673,62 @@ mod test {
                     Owner(0),
                     Project(42),
                     &pd,
+                    0
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_non_project_data_ok(pool: Pool) {
+
+        let proj = Project(42);
+        let orig_row = get_project_row(&pool, proj).await.unwrap();
+
+        let mut tx = pool.begin().await.unwrap();
+
+        update_project_non_project_data(
+            &mut tx,
+            Owner(1),
+            proj,
+            1702569006419538068
+        ).await.unwrap();
+
+        tx.commit().await.unwrap();
+
+        let new_row = get_project_row(&pool, proj).await.unwrap();
+
+        assert_eq!(new_row.revision, orig_row.revision + 1);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_non_project_data_not_a_project(pool: Pool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        // This should not happen; the Project passed in should be good.
+        assert_eq!(
+            update_project_non_project_data(
+                &mut tx,
+                Owner(1),
+                Project(0),
+                0
+            ).await.unwrap_err(),
+            CoreError::NotAProject
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn update_project_non_project_data_not_a_user(pool: Pool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        // This should not happen; the Owner passed in should be good.
+        assert!(
+            matches!(
+                update_project_non_project_data(
+                    &mut tx,
+                    Owner(0),
+                    Project(42),
                     0
                 ).await.unwrap_err(),
                 CoreError::DatabaseError(_)
