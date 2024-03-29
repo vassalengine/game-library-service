@@ -34,14 +34,12 @@ impl MaybeProjectsParams {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
     pub seek: Seek,
     pub limit: Option<Limit>
 }
-
-// TODO: tests
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
@@ -169,5 +167,105 @@ mod test {
             ..Default::default()
         };
         assert!(!mpp.valid());
+    }
+
+    #[test]
+    fn decode_seek_ok() {
+        assert_eq!(
+            decode_seek("cCxhLGEsYWJjLCww").unwrap(),
+            Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::After("abc".into(), 0)
+            }
+        );
+    }
+
+    #[test]
+    fn decode_seek_bad_base64() {
+        assert!(
+            matches!(
+                decode_seek("garbage!!!").unwrap_err(),
+                Error::Base64DecodeError(_)
+            )
+        );
+    }
+
+    #[test]
+    fn decode_seek_bad_utf8() {
+        // ____ decodes to FF FF FF, which is not valid UTF-8
+        assert!(
+            matches!(
+                decode_seek("____").unwrap_err(),
+                Error::Utf8Error(_)
+            )
+        );
+    }
+
+    #[test]
+    fn maybe_projects_params_try_from_ok() {
+        let mpp = MaybeProjectsParams {
+            sort: Some(SortBy::ProjectName),
+            order: Some(Direction::Ascending),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::Start
+            },
+            limit: None
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_try_from_invalid() {
+        let mpp = MaybeProjectsParams {
+            seek: Some("whatever".into()),
+            sort: Some(SortBy::ProjectName),
+            ..Default::default()
+        };
+
+        assert!(
+            matches!(
+                ProjectsParams::try_from(mpp).unwrap_err(),
+                Error::InvalidCombination(_)
+            )
+        );
+    }
+
+    #[test]
+    fn maybe_projects_params_try_from_bad_base64() {
+        let mpp = MaybeProjectsParams {
+            seek: Some("garbage!!!".into()),
+            ..Default::default()
+        };
+
+        assert!(
+            matches!(
+                ProjectsParams::try_from(mpp).unwrap_err(),
+                Error::Base64DecodeError(_)
+            )
+        );
+    }
+
+    #[test]
+    fn maybe_projects_params_try_from_bad_utf8() {
+        // _v7- decodes to FE FE FE, which is not valid UTF-8
+        let mpp = MaybeProjectsParams {
+            seek: Some("_v7-".into()),
+            ..Default::default()
+        };
+
+        assert!(
+            matches!(
+                ProjectsParams::try_from(mpp).unwrap_err(),
+                Error::Utf8Error(_)
+            )
+        );
     }
 }
