@@ -15,7 +15,10 @@ use std::{
 };
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
-use tower_http::cors::CorsLayer;
+use tower_http::{
+    compression::CompressionLayer,
+    cors::CorsLayer,
+};
 
 mod app;
 mod config;
@@ -147,6 +150,7 @@ fn routes(api: &str) -> Router<AppState> {
         .layer(
             ServiceBuilder::new()
                 .layer(CorsLayer::very_permissive())
+                .layer(CompressionLayer::new())
         )
 }
 
@@ -199,7 +203,7 @@ mod test {
         body::{self, Body, Bytes},
         http::{
             Method, Request,
-            header::{AUTHORIZATION, CONTENT_TYPE, LOCATION}
+            header::{ACCEPT_ENCODING, AUTHORIZATION, CONTENT_TYPE, LOCATION}
         }
     };
     use mime::{APPLICATION_JSON, TEXT_PLAIN};
@@ -587,6 +591,45 @@ mod test {
                 "origin".as_bytes()
             ]
         );
+    }
+
+    async fn try_compression(comp: &str) {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects"))
+                .header(ACCEPT_ENCODING, comp)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        assert_eq!(
+            headers(&response, "content-encoding"),
+            [comp.as_bytes()]
+        );
+    }
+
+    #[tokio::test]
+    async fn compression_br() {
+        try_compression("br").await;
+    }
+
+    #[tokio::test]
+    async fn compression_deflate() {
+        try_compression("deflate").await;
+    }
+
+    #[tokio::test]
+    async fn compression_gzip() {
+        try_compression("gzip").await;
+    }
+
+    #[tokio::test]
+    async fn compression_zstd() {
+        try_compression("zstd").await;
     }
 
     #[tokio::test]
