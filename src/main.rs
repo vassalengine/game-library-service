@@ -230,20 +230,19 @@ mod test {
         body_bytes(r).await.is_empty()
     }
 
-// TODO: fill in the fields
     static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(|| {
         ProjectSummary {
             name: "project_a".into(),
-            description: "".into(),
+            description: "whatever".into(),
             revision: 1,
-            created_at: "".into(),
-            modified_at: "".into(),
+            created_at: "2024-03-29T16:51:08+00:00".into(),
+            modified_at: "2024-03-29T16:51:08+00:00".into(),
             tags: vec![],
             game: GameData {
-                title: "".into(),
-                title_sort_key: "".into(),
-                publisher: "".into(),
-                year: "".into()
+                title: "a".into(),
+                title_sort_key: "a".into(),
+                publisher: "p".into(),
+                year: "2024".into()
             }
         }
     });
@@ -251,16 +250,16 @@ mod test {
     static PROJECT_SUMMARY_B: Lazy<ProjectSummary> = Lazy::new(|| {
         ProjectSummary {
             name: "project_b".into(),
-            description: "".into(),
+            description: "la la la".into(),
             revision: 1,
-            created_at: "".into(),
-            modified_at: "".into(),
+            created_at: "2024-03-29T17:00:23+00:00".into(),
+            modified_at: "2024-03-29T17:00:23+00:00".into(),
             tags: vec![],
             game: GameData {
-                title: "".into(),
-                title_sort_key: "".into(),
-                publisher: "".into(),
-                year: "".into()
+                title: "b".into(),
+                title_sort_key: "b".into(),
+                publisher: "p".into(),
+                year: "2024".into()
             }
         }
     });
