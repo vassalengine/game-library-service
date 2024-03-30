@@ -433,8 +433,6 @@ pub struct Pagination {
     pub total: i64
 }
 
-// TODO: many more tests
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -473,6 +471,149 @@ mod test {
         assert!(Limit::try_from("101").is_err());
     }
 
+    #[track_caller]
+    fn assert_anchor_tag_round_trip(a: AnchorTag) {
+        assert_eq!(
+            AnchorTag::try_from(String::from(a).as_str()).unwrap(),
+            a
+        );
+    }
+
+    #[test]
+    fn anchor_tag_round_trip() {
+        assert_anchor_tag_round_trip(AnchorTag::Start);
+        assert_anchor_tag_round_trip(AnchorTag::Before);
+        assert_anchor_tag_round_trip(AnchorTag::After);
+        assert_anchor_tag_round_trip(AnchorTag::StartQuery);
+        assert_anchor_tag_round_trip(AnchorTag::BeforeQuery);
+        assert_anchor_tag_round_trip(AnchorTag::AfterQuery);
+    }
+
+    #[test]
+    fn anchor_tag_string_bad() {
+        assert!(
+            matches!(
+                AnchorTag::try_from("z").unwrap_err(),
+                AnchorTagError(_)
+            )
+        );
+    }
+
+    #[track_caller]
+    fn assert_anchor_round_trip(a: Anchor) {
+        assert_eq!(
+            Anchor::try_from(RawAnchor::from(a.clone())).unwrap(),
+            a
+        );
+    }
+
+    #[test]
+    fn anchor_round_trip() {
+        assert_anchor_round_trip(Anchor::Start);
+        assert_anchor_round_trip(Anchor::Before("a".into(), 1));
+        assert_anchor_round_trip(Anchor::After("a".into(), 1));
+        assert_anchor_round_trip(Anchor::StartQuery("a".into()));
+        assert_anchor_round_trip(Anchor::BeforeQuery("a".into(), "b".into(), 1));
+        assert_anchor_round_trip(Anchor::AfterQuery("a".into(), "b".into(), 1));
+    }
+
+    #[test]
+    fn raw_anchor_bad() {
+        let ra = RawAnchor {
+            tag: AnchorTag::Before,
+            field: None,
+            query: None,
+            id: None
+        };
+        assert!(
+            matches!(
+                Anchor::try_from(ra).unwrap_err(),
+                AnchorError(_)
+            )
+        );
+    }
+
+    #[track_caller]
+    fn assert_direction_round_trip(d: Direction) {
+        assert_eq!(
+            Direction::try_from(String::from(d).as_str()).unwrap(),
+            d
+        );
+    }
+
+    #[test]
+    fn direction_round_trip() {
+        assert_direction_round_trip(Direction::Ascending);
+        assert_direction_round_trip(Direction::Descending);
+    }
+
+    #[test]
+    fn direction_bad() {
+        assert!(
+            matches!(
+                Direction::try_from("q").unwrap_err(),
+                DirectionError(_)
+            )
+        );
+    }
+
+    #[test]
+    fn direction_reverse() {
+        assert_eq!(Direction::Ascending.rev(), Direction::Descending);
+        assert_eq!(Direction::Descending.rev(), Direction::Ascending);
+    }
+
+    #[track_caller]
+    fn assert_sort_by_round_trip(s: SortBy) {
+        assert_eq!(
+            SortBy::try_from(String::from(s).as_str()).unwrap(),
+            s
+        );
+    }
+
+    #[test]
+    fn sort_by_round_trip() {
+        assert_sort_by_round_trip(SortBy::ProjectName);
+        assert_sort_by_round_trip(SortBy::GameTitle);
+        assert_sort_by_round_trip(SortBy::ModificationTime);
+        assert_sort_by_round_trip(SortBy::CreationTime);
+        assert_sort_by_round_trip(SortBy::Relevance);
+    }
+
+    #[test]
+    fn sort_by_bad() {
+        assert!(
+            matches!(
+                SortBy::try_from("z").unwrap_err(),
+                SortByError(_)
+            )
+        );
+    }
+
+    #[test]
+    fn sort_by_default_direction() {
+        assert_eq!(
+            SortBy::ProjectName.default_direction(),
+            Direction::Ascending
+        );
+        assert_eq!(
+            SortBy::GameTitle.default_direction(),
+            Direction::Ascending
+        );
+        assert_eq!(
+            SortBy::ModificationTime.default_direction(),
+            Direction::Descending
+        );
+        assert_eq!(
+            SortBy::CreationTime.default_direction(),
+            Direction::Descending
+        );
+        assert_eq!(
+            SortBy::Relevance.default_direction(),
+            Direction::Ascending
+        );
+    }
+
     #[test]
     fn seek_roundtrip_start() {
         let seek = Seek {
@@ -503,21 +644,6 @@ mod test {
             "p,a,s,,,"
         );
     }
-
-/*
-    #[test]
-    fn xxx() {
-        assert_eq!(
-            &String::from(
-                Seek {
-                    anchor: Anchor::Start,
-                    sort_by: SortBy::GameTitle
-                }
-            ),
-            "cHM6"
-        );
-    }
-*/
 
     #[test]
     fn seek_to_string_end() {
