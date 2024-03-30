@@ -1068,7 +1068,34 @@ mod test {
         );
     }
 
-// TODO: seek string too long?
+    #[tokio::test]
+    async fn get_projects_seek_too_long() {
+        let long = "x".repeat(1000);
+
+        let query = SeekLink::new(
+            &Seek {
+                anchor: Anchor::Before(long, 0),
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending
+            },
+            Limit::new(5)
+        ).unwrap();
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects?seek={query}"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::MalformedQuery)
+        );
+    }
 
     #[tokio::test]
     async fn get_projects_seek_and_limit_ok() {
