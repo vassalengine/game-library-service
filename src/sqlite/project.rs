@@ -31,6 +31,34 @@ WHERE name = ?
     .ok_or(CoreError::NotAProject)
 }
 
+pub async fn is_project_name_available<'e, E>(
+    ex: E,
+    projname: &str
+) -> Result<bool, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let normalized_projname = projname.replace("-", "_");
+
+// TODO: maybe add a collation on the name column so uniqueness prevents
+// unavailable names from being inserted?
+// TODO: maybe add an index for REPLACE(name, '-', '_')
+// TODO: is this sound? do we need to lock the table?
+    Ok(
+        sqlx::query_scalar!(
+            "
+    SELECT name
+    FROM projects
+    WHERE REPLACE(name, '-', '_') = ? COLLATE NOCASE
+            ",
+            normalized_projname
+        )
+        .fetch_optional(ex)
+        .await?
+        .is_none()
+    )
+}
+
 async fn create_project_row<'e, E>(
     ex: E,
     user: User,
@@ -504,6 +532,26 @@ mod test {
             get_project_id(&pool, "bogus").await.unwrap_err(),
             CoreError::NotAProject
         );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn is_project_name_available_exact_match(pool: Pool) {
+        assert!(!is_project_name_available(&pool, "test_game").await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn is_project_name_available_case_match(pool: Pool) {
+        assert!(!is_project_name_available(&pool, "TEST_GAME").await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn is_project_name_available_hyphen_match(pool: Pool) {
+        assert!(!is_project_name_available(&pool, "test-game").await.unwrap());
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn is_project_name_available_yes(pool: Pool) {
+        assert!(is_project_name_available(&pool, "not_used").await.unwrap());
     }
 
     static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(||

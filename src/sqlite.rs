@@ -36,6 +36,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         project::get_project_id(&self.0, name).await
     }
 
+    async fn is_project_name_available(
+        &self,
+        projname: &str
+    ) -> Result<bool, CoreError>
+    {
+        project::is_project_name_available(&self.0, projname).await
+    }
+
     async fn get_projects_count(
         &self,
     ) -> Result<i64, CoreError>

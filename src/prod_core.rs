@@ -5,6 +5,8 @@ use axum::{
 use chrono::{DateTime, Utc};
 use futures::Stream;
 use futures_util::future::try_join_all;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::{
     future::Future,
     io
@@ -130,10 +132,7 @@ where
         ).await
     }
 
-// TODO: require project names to match [A-Za-z0-9][A-Za-z0-9_-]{,63}?
-// TODO: maybe also compare case-insensitively and equate - and _?
 // TODO: length limits on strings
-// TODO: require package names to match [A-Za-z0-9][A-Za-z0-9_-]{,63}?
 // TODO: packages might need display names?
 
     async fn create_project(
@@ -501,6 +500,29 @@ where
 
         Ok((prev, next, psums, total))
     }
+
+    async fn check_new_project_name(
+        &self,
+        projname: &str
+    ) -> Result<(), CoreError>
+    {
+        // Require that project name matches ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$
+        static PAT: Lazy<Regex> = Lazy::new(||
+            Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+                .expect("bad regex")
+        );
+
+        if !PAT.is_match(projname) {
+            Err(CoreError::InvalidProjectName)
+        }
+        // Requre that project name is available
+        else if !self.db.is_project_name_available(projname).await? {
+            Err(CoreError::ProjectNameInUse)
+        }
+        else {
+            Ok(())
+        }
+    }
 }
 
 fn get_prev_for_before(
@@ -775,8 +797,6 @@ fn title_sort_key(title: &str) -> String {
 mod test {
     use super::*;
 
-    use once_cell::sync::Lazy;
-
     use crate::{
         model::GameDataPatch,
         pagination::Direction,
@@ -842,6 +862,57 @@ mod test {
                 year: "".into()
             }
         }
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        core.check_new_project_name("not_used_yet").await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_non_ascii(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.check_new_project_name("💩").await.unwrap_err(),
+            CoreError::InvalidProjectName
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_leading_non_alphanumeric(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.check_new_project_name("-abc").await.unwrap_err(),
+            CoreError::InvalidProjectName
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_too_short(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.check_new_project_name("").await.unwrap_err(),
+            CoreError::InvalidProjectName
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_too_long(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.check_new_project_name(&"x".repeat(100)).await.unwrap_err(),
+            CoreError::InvalidProjectName
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn check_new_project_name_collision(pool: Pool) {
+        let core = make_core(pool, fake_now);
+        assert_eq!(
+            core.check_new_project_name("test_GAME").await.unwrap_err(),
+            CoreError::ProjectNameInUse
+        );
     }
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
