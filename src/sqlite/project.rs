@@ -506,7 +506,7 @@ mod test {
         );
     }
 
-    static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+    static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(||
         ProjectRow {
             project_id: 1,
             name: "test_game".into(),
@@ -522,9 +522,9 @@ mod test {
             readme: "".into(),
             image: None
         }
-    });
+    );
 
-    static CREATE_DATA: Lazy<ProjectDataPost> = Lazy::new(|| {
+    static CREATE_DATA: Lazy<ProjectDataPost> = Lazy::new(||
         ProjectDataPost {
             description: CREATE_ROW.description.clone(),
             tags: vec![],
@@ -537,7 +537,7 @@ mod test {
             readme: "".into(),
             image: None
         }
-    });
+    );
 
     #[sqlx::test(fixtures("users"))]
     async fn create_project_ok(pool: Pool) {
@@ -736,7 +736,7 @@ mod test {
         );
     }
 
-    static CUR_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+    static CUR_ROW: Lazy<ProjectRow> = Lazy::new(||
         ProjectRow {
             project_id: 42,
             name: "test_game".into(),
@@ -752,9 +752,9 @@ mod test {
             readme: "".into(),
             image: None
         }
-    });
+    );
 
-    static OLD_ROW: Lazy<ProjectRow> = Lazy::new(|| {
+    static OLD_ROW: Lazy<ProjectRow> = Lazy::new(||
         ProjectRow {
             project_id: 42,
             name: "test_game".into(),
@@ -770,7 +770,7 @@ mod test {
             readme: "".into(),
             image: None
         }
-    });
+    );
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_row_ok(pool: Pool) {

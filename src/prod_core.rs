@@ -786,11 +786,11 @@ mod test {
 
     const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
 
-    static NOW_DT: Lazy<DateTime<Utc>> = Lazy::new(|| {
+    static NOW_DT: Lazy<DateTime<Utc>> = Lazy::new(||
         DateTime::parse_from_rfc3339(NOW)
             .unwrap()
             .with_timezone(&Utc)
-    });
+    );
 
     fn fake_now() -> DateTime<Utc> {
         *NOW_DT

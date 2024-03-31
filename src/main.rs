@@ -234,7 +234,7 @@ mod test {
         body_bytes(r).await.is_empty()
     }
 
-    static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(|| {
+    static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(||
         ProjectSummary {
             name: "project_a".into(),
             description: "whatever".into(),
@@ -249,9 +249,9 @@ mod test {
                 year: "2024".into()
             }
         }
-    });
+    );
 
-    static PROJECT_SUMMARY_B: Lazy<ProjectSummary> = Lazy::new(|| {
+    static PROJECT_SUMMARY_B: Lazy<ProjectSummary> = Lazy::new(||
         ProjectSummary {
             name: "project_b".into(),
             description: "la la la".into(),
@@ -266,7 +266,7 @@ mod test {
                 year: "2024".into()
             }
         }
-    });
+    );
 
     const BOB_UID: i64 = 1;
 
