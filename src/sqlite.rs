@@ -30,10 +30,10 @@ pub struct SqlxDatabaseClient<DB: Database>(pub sqlx::Pool<DB>);
 impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
-        name: &str
+        projname: &str
     ) -> Result<Project, CoreError>
     {
-        project::get_project_id(&self.0, name).await
+        project::get_project_id(&self.0, projname).await
     }
 
     async fn is_project_name_available(

@@ -12,7 +12,7 @@ use crate::{
 
 pub async fn get_project_id<'e, E>(
     ex: E,
-    name: &str
+    projname: &str
 ) -> Result<Project, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -23,7 +23,7 @@ SELECT project_id
 FROM projects
 WHERE name = ?
         ",
-        name
+        projname
     )
     .fetch_optional(ex)
     .await?

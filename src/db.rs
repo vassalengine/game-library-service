@@ -72,7 +72,7 @@ pub struct ReleaseRow {
 pub trait DatabaseClient {
     async fn get_project_id(
         &self,
-        _project: &str
+        _projname: &str
     ) -> Result<Project, CoreError>;
 
     async fn is_project_name_available(
