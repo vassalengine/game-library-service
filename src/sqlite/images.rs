@@ -137,7 +137,6 @@ VALUES (?, ?, ?, ?, ?)
     Ok(())
 }
 
-// TODO: tests
 pub async fn add_image_url<'a, A>(
     conn: A,
     owner: Owner,
@@ -206,6 +205,64 @@ mod test {
         assert_eq!(
             get_image_url(&pool, Project(42), "bogus").await.unwrap_err(),
             CoreError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn add_image_url_ok(pool: Pool) {
+        assert_eq!(
+            get_image_url(&pool, Project(42), "image.png").await.unwrap_err(),
+            CoreError::NotFound
+        );
+
+        add_image_url(
+            &pool,
+            Owner(1),
+            Project(42),
+            "image.png",
+            "https://example.com/image.png",
+            1699804206419538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_image_url(&pool, Project(42), "image.png").await.unwrap(),
+            "https://example.com/image.png"
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn add_image_url_not_a_user(pool: Pool) {
+        // This should not happen; the Owner passed in should be good.
+        assert!(
+            matches!(
+                add_image_url(
+                    &pool,
+                    Owner(0),
+                    Project(42),
+                    "image.png",
+                    "https://example.com/image.png",
+                    1699804206419538067
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn add_image_url_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert!(
+            matches!(
+                add_image_url(
+                    &pool,
+                    Owner(1),
+                    Project(0),
+                    "image.png",
+                    "https://example.com/image.png",
+                    1699804206419538067
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
         );
     }
 }
