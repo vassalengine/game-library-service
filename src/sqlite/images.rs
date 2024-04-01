@@ -33,7 +33,6 @@ LIMIT 1
     .ok_or(CoreError::NotFound)
 }
 
-// TODO: tests
 pub async fn get_image_url_at<'e, E>(
     ex: E,
     proj: Project,
@@ -62,7 +61,6 @@ LIMIT 1
     .ok_or(CoreError::NotFound)
 }
 
-// TODO: tests
 async fn update_image_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -102,7 +100,6 @@ SET url = excluded.url,
     Ok(())
 }
 
-// TODO: tests
 async fn create_image_revision_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -209,6 +206,35 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn get_image_url_at_ok(pool: Pool) {
+        assert_eq!(
+            get_image_url_at(
+                &pool,
+                Project(42),
+                "img.png",
+                1712012874000000000
+            ).await.unwrap(),
+            "https://example.com/images/img.png"
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn get_image_url_at_not_a_project(pool: Pool) {
+        assert_eq!(
+            get_image_url_at(&pool, Project(1), "img.png", 0).await.unwrap_err(),
+            CoreError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
+    async fn get_image_url_at_not_an_image(pool: Pool) {
+        assert_eq!(
+            get_image_url_at(&pool, Project(42), "bogus", 0).await.unwrap_err(),
+            CoreError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn add_image_url_ok(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, Project(42), "image.png").await.unwrap_err(),
@@ -221,7 +247,7 @@ mod test {
             Project(42),
             "image.png",
             "https://example.com/image.png",
-            1699804206419538067
+            1703980420641538067
         ).await.unwrap();
 
         assert_eq!(
@@ -241,7 +267,7 @@ mod test {
                     Project(42),
                     "image.png",
                     "https://example.com/image.png",
-                    1699804206419538067
+                    0
                 ).await.unwrap_err(),
                 CoreError::DatabaseError(_)
             )
@@ -259,7 +285,7 @@ mod test {
                     Project(0),
                     "image.png",
                     "https://example.com/image.png",
-                    1699804206419538067
+                    0
                 ).await.unwrap_err(),
                 CoreError::DatabaseError(_)
             )
