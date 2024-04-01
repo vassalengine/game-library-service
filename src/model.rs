@@ -2,9 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::Pagination;
 
-// TODO: rationalize struct naming---names should reflect whether the
-// structs are input or ouptut
-
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct User(pub i64);
 
