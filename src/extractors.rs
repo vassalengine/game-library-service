@@ -86,10 +86,10 @@ where
         .0
 }
 
-async fn get_path_vec<S>(
+async fn get_path_iter<S>(
     parts: &mut Parts,
     state: &S
-) -> Result<Vec<(String, String)>, AppError>
+) -> Result<impl Iterator<Item=String>, AppError>
 where
     S: Send + Sync,
     CoreArc: FromRef<S>
@@ -100,6 +100,8 @@ where
             .await
             .map_err(|_| AppError::InternalError)?
             .0
+            .into_iter()
+            .map(|p| p.1)
     )
 }
 
@@ -112,15 +114,13 @@ where
     CoreArc: FromRef<S>
 {
     // extract the first path element, which is the project name
-    get_path_vec(parts, state)
+    get_path_iter(parts, state)
         .await?
-        .into_iter()
         .next()
         .ok_or(AppError::InternalError)
-        .map(|p| p.1)
 }
 
-async fn get_project_and_package<S>(
+async fn get_project_package<S>(
     parts: &mut Parts,
     state: &S
 ) -> Result<(String, String), AppError>
@@ -128,16 +128,15 @@ where
     S: Send + Sync,
     CoreArc: FromRef<S>
 {
-    let mut path_captures = get_path_vec(parts, state).await?.into_iter();
-    // extract the first path element, which is the project name
-    let proj = path_captures.next()
-        .ok_or(AppError::InternalError)
-        .map(|p| p.1)?;
-    // extract the second path element, which is the package name
-    let pkg = path_captures.next()
-        .ok_or(AppError::InternalError)
-        .map(|p| p.1)?;
-    Ok((proj, pkg))
+    let mut path_captures = get_path_iter(parts, state).await?;
+    Ok(
+        (
+            // extract the first path element, which is the project name
+            path_captures.next().ok_or(AppError::InternalError)?,
+            // extract the second path element, which is the package name
+            path_captures.next().ok_or(AppError::InternalError)?
+        )
+    )
 }
 
 async fn get_project_package_version<S>(
@@ -148,20 +147,17 @@ where
     S: Send + Sync,
     CoreArc: FromRef<S>
 {
-    let mut path_captures = get_path_vec(parts, state).await?.into_iter();
-    // extract the first path element, which is the project name
-    let proj = path_captures.next()
-        .ok_or(AppError::InternalError)
-        .map(|p| p.1)?;
-    // extract the second path element, which is the package name
-    let pkg = path_captures.next()
-        .ok_or(AppError::InternalError)
-        .map(|p| p.1)?;
-    // extract the third path element, which is the version
-    let version = path_captures.next()
-        .ok_or(AppError::InternalError)
-        .map(|p| p.1)?;
-    Ok((proj, pkg, version))
+    let mut path_captures = get_path_iter(parts, state).await?;
+    Ok(
+        (
+            // extract the first path element, which is the project name
+            path_captures.next().ok_or(AppError::InternalError)?,
+            // extract the second path element, which is the package name
+            path_captures.next().ok_or(AppError::InternalError)?,
+            // extract the third path element, which is the version
+            path_captures.next().ok_or(AppError::InternalError)?
+        )
+    )
 }
 
 #[async_trait]
@@ -217,10 +213,10 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        let (proj, pkg) = get_project_and_package(parts, state).await?;
+        let (proj, pkg) = get_project_package(parts, state).await?;
         let core = get_state(parts, state).await;
 
-// TODO: could combine project-package lookup
+// TODO: could combine project-package lookup?
         // look up the project id
         let proj = core.get_project_id(&proj).await?;
 
@@ -249,13 +245,14 @@ where
         let (proj, pkg, ver) = get_project_package_version(parts, state).await?;
         let core = get_state(parts, state).await;
 
-// TODO: could combine project-package lookup
+// TODO: could combine project-package lookup?
         // look up the project id
         let proj = core.get_project_id(&proj).await?;
 
         // look up the package id
         let pkg = core.get_package_id(proj, &pkg).await?;
 
+        // parse the version
         let ver = ver.parse::<Version>()
             .or(Err(AppError::NotFound))?;
 
