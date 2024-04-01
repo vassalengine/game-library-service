@@ -2098,7 +2098,6 @@ mod test {
         );
     }
 
-
     #[tokio::test]
     async fn bad_path() {
         let response = try_request(
