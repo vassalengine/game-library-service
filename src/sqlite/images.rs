@@ -63,7 +63,7 @@ LIMIT 1
 }
 
 // TODO: tests
-pub async fn update_image_row<'e, E>(
+async fn update_image_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
@@ -103,7 +103,7 @@ SET url = excluded.url,
 }
 
 // TODO: tests
-pub async fn create_image_revision_row<'e, E>(
+async fn create_image_revision_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
