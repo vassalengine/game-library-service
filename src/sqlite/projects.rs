@@ -78,8 +78,6 @@ impl Direction {
     }
 }
 
-// TODO: can we simplify cursors by using a subquery to get the value?
-
 pub async fn get_projects_end_window<'e, E>(
     ex: E,
     sort_by: SortBy,
