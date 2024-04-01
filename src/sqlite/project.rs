@@ -295,8 +295,6 @@ where
     Ok(())
 }
 
-// TODO: update project mtime when packages change
-
 pub async fn update_project<'a, A>(
     conn: A,
     owner: Owner,

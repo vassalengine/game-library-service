@@ -145,7 +145,7 @@ where
         let now = (self.now)()
             .timestamp_nanos_opt()
             .ok_or(CoreError::InternalError)?;
-// FIXME: generate a sort key?
+// TODO: generate a sort key?
 //        let mut proj_data = proj_data;
 //        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
         self.db.create_project(user, proj, proj_data, now).await

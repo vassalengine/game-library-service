@@ -217,6 +217,8 @@ ORDER BY
     .ok_or(CoreError::NotAPackage)
 }
 
+// TODO: update project mtime when release is added
+
 #[cfg(test)]
 mod test {
     use super::*;
