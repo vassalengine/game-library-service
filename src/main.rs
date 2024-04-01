@@ -270,6 +270,46 @@ mod test {
 
     const BOB_UID: i64 = 1;
 
+    static EIA_PROJECT_DATA: Lazy<ProjectData> = Lazy::new(||
+        ProjectData {
+            name: "eia".into(),
+            description: "A module for Empires in Arms".into(),
+            revision: 1,
+            created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
+            modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+            tags: vec![],
+            game: GameData {
+                title: "Empires in Arms".into(),
+                title_sort_key: "Empires in Arms".into(),
+                publisher: "Avalon Hill".into(),
+                year: "1983".into()
+            },
+            readme: "".into(),
+            image: None,
+            owners: vec!["alice".into(), "bob".into()],
+// TODO: fill in more
+            packages: vec![
+                PackageData {
+                    name: "".into(),
+                    description: "".into(),
+                    releases: vec![
+                        ReleaseData {
+                            version: "".into(),
+                            filename: "".into(),
+                            url: "".into(),
+                            size: 0,
+                            checksum: "".into(),
+                            published_at: "".into(),
+                            published_by: "".into(),
+                            requires: "".into(),
+                            authors: vec![]
+                        }
+                    ]
+                }
+            ]
+        }
+    );
+
     #[derive(Clone)]
     struct TestCore { }
 
@@ -383,44 +423,7 @@ mod test {
             _proj: Project,
         ) -> Result<ProjectData, CoreError>
         {
-            Ok(
-                ProjectData {
-                    name: "eia".into(),
-                    description: "A module for Empires in Arms".into(),
-                    revision: 1,
-                    created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
-                    modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                    tags: vec![],
-                    game: GameData {
-                        title: "Empires in Arms".into(),
-                        title_sort_key: "Empires in Arms".into(),
-                        publisher: "Avalon Hill".into(),
-                        year: "1983".into()
-                    },
-                    readme: "".into(),
-                    image: None,
-                    owners: vec!["alice".into(), "bob".into()],
-                    packages: vec![
-                        PackageData {
-                            name: "".into(),
-                            description: "".into(),
-                            releases: vec![
-                                ReleaseData {
-                                    version: "".into(),
-                                    filename: "".into(),
-                                    url: "".into(),
-                                    size: 0,
-                                    checksum: "".into(),
-                                    published_at: "".into(),
-                                    published_by: "".into(),
-                                    requires: "".into(),
-                                    authors: vec![]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            )
+            Ok(EIA_PROJECT_DATA.clone())
         }
 
         async fn create_project(
@@ -1221,43 +1224,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<ProjectData>(response).await,
-            ProjectData {
-                name: "eia".into(),
-                description: "A module for Empires in Arms".into(),
-                revision: 1,
-                created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
-                modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                tags: vec![],
-                game: GameData {
-                    title: "Empires in Arms".into(),
-                    title_sort_key: "Empires in Arms".into(),
-                    publisher: "Avalon Hill".into(),
-                    year: "1983".into()
-                },
-                readme: "".into(),
-                image: None,
-                owners: vec!["alice".into(), "bob".into()],
-// TODO: fill in more
-                packages: vec![
-                    PackageData {
-                        name: "".into(),
-                        description: "".into(),
-                        releases: vec![
-                            ReleaseData {
-                                version: "".into(),
-                                filename: "".into(),
-                                url: "".into(),
-                                size: 0,
-                                checksum: "".into(),
-                                published_at: "".into(),
-                                published_by: "".into(),
-                                requires: "".into(),
-                                authors: vec![]
-                            }
-                        ]
-                    }
-                ]
-            }
+            *EIA_PROJECT_DATA
         );
     }
 
@@ -1545,42 +1512,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<ProjectData>(response).await,
-            ProjectData {
-                name: "eia".into(),
-                description: "A module for Empires in Arms".into(),
-                revision: 1,
-                created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
-                modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                tags: vec![],
-                game: GameData {
-                    title: "Empires in Arms".into(),
-                    title_sort_key: "Empires in Arms".into(),
-                    publisher: "Avalon Hill".into(),
-                    year: "1983".into()
-                },
-                readme: "".into(),
-                image: None,
-                owners: vec!["alice".into(), "bob".into()],
-                packages: vec![
-                    PackageData {
-                        name: "".into(),
-                        description: "".into(),
-                        releases: vec![
-                            ReleaseData {
-                                version: "".into(),
-                                filename: "".into(),
-                                url: "".into(),
-                                size: 0,
-                                checksum: "".into(),
-                                published_at: "".into(),
-                                published_by: "".into(),
-                                requires: "".into(),
-                                authors: vec![]
-                            }
-                        ]
-                    }
-                ]
-            }
+            *EIA_PROJECT_DATA
         );
     }
 

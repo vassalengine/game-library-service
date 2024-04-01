@@ -33,7 +33,7 @@ pub struct GameData {
     pub year: String
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ReleaseData {
     pub version: String,
     pub filename: String,
@@ -47,7 +47,7 @@ pub struct ReleaseData {
 }
 
 // TODO: probably needs slug
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,
     pub description: String,
@@ -61,7 +61,7 @@ pub struct PackageDataPost {
     pub description: String
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectData {
     pub name: String,
     pub description: String,
