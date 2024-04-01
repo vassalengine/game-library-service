@@ -86,6 +86,7 @@ CREATE TABLE image_revisions (
 CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   modified_at INTEGER NOT NULL,
   modified_by INTEGER NOT NULL,
@@ -98,6 +99,7 @@ CREATE TABLE projects (
   readme TEXT NOT NULL,
   image TEXT,
   UNIQUE(name),
+  UNIQUE(normalized_name),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
   FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );

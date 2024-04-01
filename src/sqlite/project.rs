@@ -31,32 +31,8 @@ WHERE name = ?
     .ok_or(CoreError::NotAProject)
 }
 
-pub async fn is_project_name_available<'e, E>(
-    ex: E,
-    projname: &str
-) -> Result<bool, CoreError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    let normalized_projname = projname.replace("-", "_");
-
-// TODO: maybe add a collation on the name column so uniqueness prevents
-// unavailable names from being inserted?
-// TODO: maybe add an index for REPLACE(name, '-', '_')
-// TODO: is this sound? do we need to lock the table?
-    Ok(
-        sqlx::query_scalar!(
-            "
-    SELECT name
-    FROM projects
-    WHERE REPLACE(name, '-', '_') = ? COLLATE NOCASE
-            ",
-            normalized_projname
-        )
-        .fetch_optional(ex)
-        .await?
-        .is_none()
-    )
+fn normalize_project_name(proj: &str) -> String {
+    proj.to_lowercase().replace("-", "_")
 }
 
 async fn create_project_row<'e, E>(
@@ -69,12 +45,15 @@ async fn create_project_row<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+    let proj_norm = normalize_project_name(proj);
+
     Ok(
         Project(
             sqlx::query_scalar!(
                 "
 INSERT INTO projects (
     name,
+    normalized_name,
     created_at,
     description,
     game_title,
@@ -87,10 +66,11 @@ INSERT INTO projects (
     modified_by,
     revision
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_id
                 ",
                 proj,
+                proj_norm,
                 now,
                 proj_data.description,
                 proj_data.game.title,
@@ -534,24 +514,12 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "projects"))]
-    async fn is_project_name_available_exact_match(pool: Pool) {
-        assert!(!is_project_name_available(&pool, "test_game").await.unwrap());
-    }
-
-    #[sqlx::test(fixtures("users", "projects"))]
-    async fn is_project_name_available_case_match(pool: Pool) {
-        assert!(!is_project_name_available(&pool, "TEST_GAME").await.unwrap());
-    }
-
-    #[sqlx::test(fixtures("users", "projects"))]
-    async fn is_project_name_available_hyphen_match(pool: Pool) {
-        assert!(!is_project_name_available(&pool, "test-game").await.unwrap());
-    }
-
-    #[sqlx::test(fixtures("users", "projects"))]
-    async fn is_project_name_available_yes(pool: Pool) {
-        assert!(is_project_name_available(&pool, "not_used").await.unwrap());
+    #[test]
+    fn normalize_project_names() {
+        assert_eq!(normalize_project_name("foo"), "foo");
+        assert_eq!(normalize_project_name("FoO"), "foo");
+        assert_eq!(normalize_project_name("foo_bar"), "foo_bar");
+        assert_eq!(normalize_project_name("foo-BAR"), "foo_bar");
     }
 
     static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(||
@@ -637,14 +605,68 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn create_project_already_exists(pool: Pool) {
+    async fn create_project_already_exists_exact_match(pool: Pool) {
         let row = ProjectRow {
             project_id: 42,
             ..CREATE_ROW.clone()
         };
 
         assert_eq!(
-            get_project_id(&pool, &row.name).await.unwrap(),
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
+            Project(row.project_id)
+        );
+
+        assert!(
+            matches!(
+                create_project(
+                    &pool,
+                    User(1),
+                    &row.name,
+                    &CREATE_DATA,
+                    row.created_at
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn create_project_already_exists_no_case_match(pool: Pool) {
+        let row = ProjectRow {
+            project_id: 42,
+            name: CREATE_ROW.name.to_uppercase(),
+            ..CREATE_ROW.clone()
+        };
+
+        assert_eq!(
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
+            Project(row.project_id)
+        );
+
+        assert!(
+            matches!(
+                create_project(
+                    &pool,
+                    User(1),
+                    &row.name,
+                    &CREATE_DATA,
+                    row.created_at
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn create_project_already_exists_hyphen_match(pool: Pool) {
+        let row = ProjectRow {
+            project_id: 42,
+            name: CREATE_ROW.name.replace("_", "-"),
+            ..CREATE_ROW.clone()
+        };
+
+        assert_eq!(
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
             Project(row.project_id)
         );
 

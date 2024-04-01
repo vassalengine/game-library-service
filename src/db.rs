@@ -75,11 +75,6 @@ pub trait DatabaseClient {
         _projname: &str
     ) -> Result<Project, CoreError>;
 
-    async fn is_project_name_available(
-        &self,
-        _projname: &str
-    ) -> Result<bool, CoreError>;
-
     async fn get_projects_count(
         &self,
     ) -> Result<i64, CoreError>;

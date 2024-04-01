@@ -1,6 +1,7 @@
 INSERT INTO projects (
   project_id,
   name,
+  normalized_name,
   created_at,
   description,
   game_title,
@@ -17,6 +18,7 @@ VALUES
   (
     42,
     "test_game",
+    "test_game",
     1699804206419538067,
     "Brian's Trademarked Game of Being a Test Case",
     "A Game of Tests",
@@ -31,6 +33,7 @@ VALUES
   ),
   (
     6,
+    "a_game",
     "a_game",
     1573573806419538067,
     "Another game",
