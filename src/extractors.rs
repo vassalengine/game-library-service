@@ -13,6 +13,7 @@ use axum_extra::{
         authorization::Bearer
     }
 };
+use itertools::Itertools;
 // TODO: replace with into_ok() when that's available
 use unwrap_infallible::UnwrapInfallible;
 
@@ -113,51 +114,10 @@ where
     S: Send + Sync,
     CoreArc: FromRef<S>
 {
-    // extract the first path element, which is the project name
     get_path_iter(parts, state)
         .await?
         .next()
         .ok_or(AppError::InternalError)
-}
-
-async fn get_project_package<S>(
-    parts: &mut Parts,
-    state: &S
-) -> Result<(String, String), AppError>
-where
-    S: Send + Sync,
-    CoreArc: FromRef<S>
-{
-    let mut path_captures = get_path_iter(parts, state).await?;
-    Ok(
-        (
-            // extract the first path element, which is the project name
-            path_captures.next().ok_or(AppError::InternalError)?,
-            // extract the second path element, which is the package name
-            path_captures.next().ok_or(AppError::InternalError)?
-        )
-    )
-}
-
-async fn get_project_package_version<S>(
-    parts: &mut Parts,
-    state: &S
-) -> Result<(String, String, String), AppError>
-where
-    S: Send + Sync,
-    CoreArc: FromRef<S>
-{
-    let mut path_captures = get_path_iter(parts, state).await?;
-    Ok(
-        (
-            // extract the first path element, which is the project name
-            path_captures.next().ok_or(AppError::InternalError)?,
-            // extract the second path element, which is the package name
-            path_captures.next().ok_or(AppError::InternalError)?,
-            // extract the third path element, which is the version
-            path_captures.next().ok_or(AppError::InternalError)?
-        )
-    )
 }
 
 #[async_trait]
@@ -173,7 +133,11 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        let proj = get_project(parts, state).await?;
+        let (proj, ) = get_path_iter(parts, state)
+            .await?
+            .next_tuple()
+            .ok_or(AppError::InternalError)?;
+
         let core = get_state(parts, state).await;
 
         // look up the project id
@@ -213,7 +177,11 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        let (proj, pkg) = get_project_package(parts, state).await?;
+        let (proj, pkg) = get_path_iter(parts, state)
+            .await?
+            .next_tuple()
+            .ok_or(AppError::InternalError)?;
+
         let core = get_state(parts, state).await;
 
 // TODO: could combine project-package lookup?
@@ -242,7 +210,11 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        let (proj, pkg, ver) = get_project_package_version(parts, state).await?;
+        let (proj, pkg, ver) = get_path_iter(parts, state)
+            .await?
+            .next_tuple()
+            .ok_or(AppError::InternalError)?;
+
         let core = get_state(parts, state).await;
 
 // TODO: could combine project-package lookup?
