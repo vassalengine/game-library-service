@@ -539,7 +539,7 @@ mod test {
 
     fn token(uid: i64) -> String {
         let ekey = EncodingKey::from_secret(KEY);
-        let token = jwt::issue(&ekey, uid, 899999999999).unwrap();
+        let token = jwt::issue(&ekey, uid, 0, 899999999999).unwrap();
         format!("Bearer {token}")
     }
 

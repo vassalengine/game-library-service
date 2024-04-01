@@ -358,7 +358,12 @@ mod test {
 
     fn token(key: &[u8], claims: &Claims) -> String {
         let ekey = EncodingKey::from_secret(key);
-        let token = jwt::issue(&ekey, claims.sub, claims.exp).unwrap();
+        let token = jwt::issue(
+            &ekey,
+            claims.sub,
+            claims.iat,
+            claims.exp
+        ).unwrap();
         format!("Bearer {token}")
     }
 
@@ -377,10 +382,10 @@ mod test {
         let mut parts;
         (parts, _) = request.into_parts();
 
-        let act = Claims::from_request_parts(&mut parts, &dkey).await.unwrap();
-        assert_eq!(act.sub, exp.sub);
-        assert_eq!(act.exp, exp.exp);
-        // TODO: check iat
+        assert_eq!(
+            Claims::from_request_parts(&mut parts, &dkey).await.unwrap(),
+            exp
+        );
     }
 
     #[tokio::test]

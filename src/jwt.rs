@@ -1,11 +1,11 @@
-use jsonwebtoken::{Header, Validation, get_current_timestamp};
+use jsonwebtoken::{Header, Validation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("{0}")]
 pub struct Error(#[from] jsonwebtoken::errors::Error);
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Claims {
     pub sub: i64,
     pub exp: u64,
@@ -41,11 +41,17 @@ impl EncodingKey {
 }
 
 
-pub fn issue(key: &EncodingKey, uid: i64, expiry: u64) -> Result<String, Error> {
+pub fn issue(
+    key: &EncodingKey,
+    uid: i64,
+    now: u64,
+    expiry: u64
+) -> Result<String, Error>
+{
     let claims = Claims {
         sub: uid,
         exp: expiry,
-        iat: get_current_timestamp()
+        iat: now
     };
 
     Ok(jsonwebtoken::encode(&Header::default(), &claims, &key.0)?)
