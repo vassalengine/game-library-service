@@ -32,7 +32,7 @@ WHERE name = ?
 }
 
 fn normalize_project_name(proj: &str) -> String {
-    proj.to_lowercase().replace("-", "_")
+    proj.to_lowercase().replace('-', "_")
 }
 
 async fn create_project_row<'e, E>(
@@ -661,7 +661,7 @@ mod test {
     async fn create_project_already_exists_hyphen_match(pool: Pool) {
         let row = ProjectRow {
             project_id: 42,
-            name: CREATE_ROW.name.replace("_", "-"),
+            name: CREATE_ROW.name.replace('_', "-"),
             ..CREATE_ROW.clone()
         };
 
