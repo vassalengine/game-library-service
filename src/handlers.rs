@@ -8,7 +8,7 @@ use std::io;
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::{ProjectAndPackage, Wrapper},
+    extractors::{ProjectPackage, ProjectPackageVersion, Wrapper},
     model::{Owned, Package, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
     version::Version
@@ -133,25 +133,18 @@ pub async fn packages_post(
 //pub async fn packages_patch(
 
 pub async fn release_get(
-    proj: Project,
-    pkg: Package,
+    ProjectPackage(proj, pkg): ProjectPackage,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
     Ok(Redirect::to(&core.get_release(proj, pkg).await?))
 }
 
-
-// TODO: Version extractor?
 pub async fn release_version_get(
-    ProjectAndPackage(proj, pkg): ProjectAndPackage,
-    Path((_, _, version)): Path<(String, String, String)>,
+    ProjectPackageVersion(proj, pkg, version): ProjectPackageVersion,
     State(core): State<CoreArc>
 ) -> Result<Redirect, AppError>
 {
-    let version = version.parse::<Version>()
-        .or(Err(AppError::NotFound))?;
-
     Ok(
         Redirect::to(
             &core.get_release_version(proj, pkg, &version).await?

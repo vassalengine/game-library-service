@@ -20,7 +20,8 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, Owner, Package, Project, User}
+    model::{Owned, Owner, Package, Project, User},
+    version::Version
 };
 
 #[async_trait]
@@ -139,6 +140,30 @@ where
     Ok((proj, pkg))
 }
 
+async fn get_project_package_version<S>(
+    parts: &mut Parts,
+    state: &S
+) -> Result<(String, String, String), AppError>
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    let mut path_captures = get_path_vec(parts, state).await?.into_iter();
+    // extract the first path element, which is the project name
+    let proj = path_captures.next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)?;
+    // extract the second path element, which is the package name
+    let pkg = path_captures.next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)?;
+    // extract the third path element, which is the version
+    let version = path_captures.next()
+        .ok_or(AppError::InternalError)
+        .map(|p| p.1)?;
+    Ok((proj, pkg, version))
+}
+
 #[async_trait]
 impl<S> FromRequestParts<S> for Project
 where
@@ -173,14 +198,14 @@ where
         state: &S
     ) -> Result<Self, Self::Rejection>
     {
-        Ok(ProjectAndPackage::from_request_parts(parts, state).await?.1)
+        Ok(ProjectPackage::from_request_parts(parts, state).await?.1)
     }
 }
 
-pub struct ProjectAndPackage(pub Project, pub Package);
+pub struct ProjectPackage(pub Project, pub Package);
 
 #[async_trait]
-impl<S> FromRequestParts<S> for ProjectAndPackage
+impl<S> FromRequestParts<S> for ProjectPackage
 where
     S: Send + Sync,
     CoreArc: FromRef<S>
@@ -195,13 +220,46 @@ where
         let (proj, pkg) = get_project_and_package(parts, state).await?;
         let core = get_state(parts, state).await;
 
+// TODO: could combine project-package lookup
         // look up the project id
         let proj = core.get_project_id(&proj).await?;
 
         // look up the package id
         let pkg = core.get_package_id(proj, &pkg).await?;
 
-        Ok(ProjectAndPackage(proj, pkg))
+        Ok(ProjectPackage(proj, pkg))
+    }
+}
+
+pub struct ProjectPackageVersion(pub Project, pub Package, pub Version);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ProjectPackageVersion
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
+        let (proj, pkg, ver) = get_project_package_version(parts, state).await?;
+        let core = get_state(parts, state).await;
+
+// TODO: could combine project-package lookup
+        // look up the project id
+        let proj = core.get_project_id(&proj).await?;
+
+        // look up the package id
+        let pkg = core.get_package_id(proj, &pkg).await?;
+
+        let ver = ver.parse::<Version>()
+            .or(Err(AppError::NotFound))?;
+
+        Ok(ProjectPackageVersion(proj, pkg, ver))
     }
 }
 
