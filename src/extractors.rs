@@ -106,20 +106,6 @@ where
     )
 }
 
-async fn get_project<S>(
-    parts: &mut Parts,
-    state: &S
-) -> Result<String, AppError>
-where
-    S: Send + Sync,
-    CoreArc: FromRef<S>
-{
-    get_path_iter(parts, state)
-        .await?
-        .next()
-        .ok_or(AppError::InternalError)
-}
-
 #[async_trait]
 impl<S> FromRequestParts<S> for Project
 where
