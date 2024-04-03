@@ -55,6 +55,18 @@ impl Version {
     }
 }
 
+impl From<&Version> for String {
+    fn from(v: &Version) -> Self {
+        match &v.pre {
+            None => format!("{}.{}.{}", v.major, v.minor, v.patch),
+            Some(pre) => match &v.build {
+                None => format!("{}.{}.{}-{}", v.major, v.minor, v.patch, pre),
+                Some(build) => format!("{}.{}.{}-{}+{}", v.major, v.minor, v.patch, pre, build)
+            }
+        }
+    }
+}
+
 impl TryFrom<&str> for Version {
     type Error = MalformedVersion;
 
@@ -244,6 +256,42 @@ mod test {
                 MalformedVersion(_)
             )
         );
+    }
+
+    #[test]
+    fn version_to_string() {
+        let v = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+        assert_eq!(String::from(&v), "1.2.3");
+    }
+
+    #[test]
+    fn version_to_string_pre() {
+        let v = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: Some("abc".into()),
+            build: None
+        };
+        assert_eq!(String::from(&v), "1.2.3-abc");
+    }
+
+    #[test]
+    fn version_to_string_pre_build() {
+        let v = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: Some("abc".into()),
+            build: Some("def".into())
+        };
+        assert_eq!(String::from(&v), "1.2.3-abc+def");
     }
 
     #[test]
