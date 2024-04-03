@@ -142,9 +142,7 @@ where
         proj_data: &ProjectDataPost
     ) -> Result<(), CoreError>
     {
-        let now = (self.now)()
-            .timestamp_nanos_opt()
-            .ok_or(CoreError::InternalError)?;
+        let now = self.now_nanos()?;
 // TODO: generate a sort key?
 //        let mut proj_data = proj_data;
 //        proj_data.game.title_sort_key = title_sort_key(&proj_data.game.title);
@@ -158,9 +156,7 @@ where
         proj_data: &ProjectDataPatch
     ) -> Result<(), CoreError>
     {
-        let now = (self.now)()
-            .timestamp_nanos_opt()
-            .ok_or(CoreError::InternalError)?;
+        let now = self.now_nanos()?;
         self.db.update_project(owner, proj, proj_data, now).await
     }
 
@@ -193,9 +189,7 @@ where
         pkg_data: &PackageDataPost
     ) -> Result<(), CoreError>
     {
-        let now = (self.now)()
-            .timestamp_nanos_opt()
-            .ok_or(CoreError::InternalError)?;
+        let now = self.now_nanos()?;
         self.db.create_package(owner, proj, pkg, pkg_data, now).await
     }
 
@@ -277,9 +271,7 @@ where
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
     ) -> Result<(), CoreError>
     {
-        let now = (self.now)()
-            .timestamp_nanos_opt()
-            .ok_or(CoreError::InternalError)?;
+        let now = self.now_nanos()?;
 
 // TODO: check that the file is not too large
 // TOOD: check that the file is an image
@@ -301,6 +293,12 @@ where
     C: DatabaseClient + Send + Sync,
     U: Uploader + Send + Sync
 {
+    fn now_nanos(&self) -> Result<i64, CoreError> {
+        (self.now)()
+            .timestamp_nanos_opt()
+            .ok_or(CoreError::InternalError)
+    }
+
     async fn make_version_data(
         &self,
         rr: ReleaseRow
