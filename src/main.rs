@@ -156,6 +156,8 @@ fn routes(api: &str) -> Router<AppState> {
 
 #[tokio::main]
 async fn main() {
+// TODO: handle errors
+
     let config = Config {
         db_path: "projects.db".into(),
 // TODO: read key from file? env?
@@ -165,7 +167,6 @@ async fn main() {
         listen_port: 3000
     };
 
-// TODO: handle error?
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&format!("sqlite://{}", &config.db_path))
@@ -287,20 +288,19 @@ mod test {
             readme: "".into(),
             image: None,
             owners: vec!["alice".into(), "bob".into()],
-// TODO: fill in more
             packages: vec![
                 PackageData {
-                    name: "".into(),
-                    description: "".into(),
+                    name: "a_package".into(),
+                    description: "Some package".into(),
                     releases: vec![
                         ReleaseData {
-                            version: "".into(),
-                            filename: "".into(),
-                            url: "".into(),
+                            version: "1.2.3".into(),
+                            filename: "eia.vmod".into(),
+                            url: "https://example.com/eia.vmod".into(),
                             size: 0,
-                            checksum: "".into(),
-                            published_at: "".into(),
-                            published_by: "".into(),
+                            checksum: "deadbeef".into(),
+                            published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                            published_by: "alice".into(),
                             requires: "".into(),
                             authors: vec![]
                         }
