@@ -168,7 +168,6 @@ where
     {
         let proj_row = self.db.get_project_row_revision(proj, revision)
             .await?;
-
         let mtime = proj_row.modified_at;
 
         let package_rows = self.db.get_packages_at(proj, mtime).await?;
@@ -254,11 +253,8 @@ where
         img_name: &str
     ) -> Result<String, CoreError>
     {
-        // TODO: this could be a join
         let proj_row = self.db.get_project_row_revision(proj, revision).await?;
-
         let mtime = proj_row.modified_at;
-
         self.db.get_image_url_at(proj, img_name, mtime).await
     }
 
