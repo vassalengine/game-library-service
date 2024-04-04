@@ -50,7 +50,7 @@ pub struct PackageRow {
 //    description: String
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct ReleaseRow {
     pub release_id: i64,
     pub version: String,
@@ -236,6 +236,19 @@ pub trait DatabaseClient {
         _pkg: Package,
         _version: &Version
     ) -> Result<String, CoreError>;
+
+    async fn add_release_url(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _version: &Version,
+        _filename: &str,
+        _size: i64,
+        _checksum: &str,
+        _url: &str,
+        _now: i64
+    ) -> Result<(), CoreError>;
 
     async fn get_players(
         &self,

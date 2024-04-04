@@ -323,6 +323,33 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         releases::get_release_version_url(&self.0, pkg, version).await
     }
 
+    async fn add_release_url(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        version: &Version,
+        filename: &str,
+        size: i64,
+        checksum: &str,
+        url: &str,
+        now: i64
+    ) -> Result<(), CoreError>
+    {
+        releases::add_release_url(
+            &self.0,
+            owner,
+            proj,
+            pkg,
+            version,
+            filename,
+            size,
+            checksum,
+            url,
+            now
+        ).await
+    }
+
     async fn get_players(
         &self,
         proj: Project

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use sqlx::{
-    Executor,
+    Acquire, Executor,
     sqlite::Sqlite
 };
 use std::cmp::Ordering;
@@ -8,7 +8,8 @@ use std::cmp::Ordering;
 use crate::{
     core::CoreError,
     db::ReleaseRow,
-    model::Package,
+    model::{Owner, Package, Project},
+    sqlite::project::update_project_non_project_data,
     version::Version
 };
 
@@ -217,50 +218,152 @@ ORDER BY
     .ok_or(CoreError::NotAPackage)
 }
 
-// TODO: update project mtime when release is added
+async fn create_release_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    pkg: Package,
+    version: &Version,
+    filename: &str,
+    size: i64,
+    checksum: &str,
+    url: &str,
+    now: i64
+) -> Result<(), CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let vstr = String::from(version);
+    let pre = version.pre.as_deref().unwrap_or("");
+    let build = version.build.as_deref().unwrap_or("");
+
+    sqlx::query!(
+        "
+INSERT INTO releases (
+    package_id,
+    version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
+    url,
+    filename,
+    size,
+    checksum,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ",
+        pkg.0,
+        vstr,
+        version.major,
+        version.minor,
+        version.patch,
+        pre,
+        build,
+        url,
+        filename,
+        size,
+        checksum,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn add_release_url<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    pkg: Package,
+    version: &Version,
+    filename: &str,
+    size: i64,
+    checksum: &str,
+    url: &str,
+    now: i64
+) -> Result<(), CoreError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // insert release row
+    create_release_row(
+        &mut *tx,
+        owner,
+        proj,
+        pkg,
+        version,
+        filename,
+        size,
+        checksum,
+        url,
+        now
+    ).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod test {
     use super::*;
 
+    use once_cell::sync::Lazy;
+
     type Pool = sqlx::Pool<Sqlite>;
+
+    static RR_1_2_3: Lazy<ReleaseRow> = Lazy::new(||
+        ReleaseRow {
+            release_id: 1,
+            version: "1.2.3".into(),
+            version_major: 1,
+            version_minor: 2,
+            version_patch: 3,
+            version_pre: "".into(),
+            version_build: "".into(),
+            url: "https://example.com/a_package-1.2.3".into(),
+            filename: "a_package-1.2.3".into(),
+            size: 1234,
+            checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
+            published_at: 1702137389180282477,
+            published_by: "bob".into()
+        }
+    );
+
+    static RR_1_2_4: Lazy<ReleaseRow> = Lazy::new(||
+        ReleaseRow {
+            release_id: 2,
+            version: "1.2.4".into(),
+            version_major: 1,
+            version_minor: 2,
+            version_patch: 4,
+            version_pre: "".into(),
+            version_build: "".into(),
+            url: "https://example.com/a_package-1.2.4".into(),
+            filename: "a_package-1.2.4".into(),
+            size: 5678,
+            checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
+            published_at: 1702223789180282477,
+            published_by: "alice".into()
+        }
+    );
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_ok(pool: Pool) {
         assert_eq!(
             get_releases(&pool, Package(1)).await.unwrap(),
-            vec![
-                ReleaseRow {
-                    release_id: 2,
-                    version: "1.2.4".into(),
-                    version_major: 1,
-                    version_minor: 2,
-                    version_patch: 4,
-                    version_pre: "".into(),
-                    version_build: "".into(),
-                    url: "https://example.com/a_package-1.2.4".into(),
-                    filename: "a_package-1.2.4".into(),
-                    size: 5678,
-                    checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                    published_at: 1702223789180282477,
-                    published_by: "alice".into()
-                },
-                ReleaseRow {
-                    release_id: 1,
-                    version: "1.2.3".into(),
-                    version_major: 1,
-                    version_minor: 2,
-                    version_patch: 3,
-                    version_pre: "".into(),
-                    version_build: "".into(),
-                    url: "https://example.com/a_package-1.2.3".into(),
-                    filename: "a_package-1.2.3".into(),
-                    size: 1234,
-                    checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                    published_at: 1702137389180282477,
-                    published_by: "bob".into()
-                }
-            ]
+            [ RR_1_2_4.clone(), RR_1_2_3.clone() ]
         );
     }
 
@@ -270,7 +373,45 @@ mod test {
         // However, it's not an error if it does.
         assert_eq!(
             get_releases(&pool, Package(0)).await.unwrap(),
-            vec![]
+            []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_releases_at_all(pool: Pool) {
+        assert_eq!(
+            get_releases_at(&pool, Package(1), 1705223789180282477)
+                .await
+                .unwrap(),
+            [ RR_1_2_4.clone(), RR_1_2_3.clone() ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_releases_at_some(pool: Pool) {
+        assert_eq!(
+            get_releases_at(&pool, Package(1), 1702137399180282477)
+                .await
+                .unwrap(),
+            [ RR_1_2_3.clone() ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_releases_at_none(pool: Pool) {
+        assert_eq!(
+            get_releases_at(&pool, Package(1), 0).await.unwrap(),
+            []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_releases_at_not_a_package(pool: Pool) {
+        // This should not happen; the Package passed in should be good.
+        // However, it's not an error if it does.
+        assert_eq!(
+            get_releases_at(&pool, Package(0), 0).await.unwrap(),
+            []
         );
     }
 
@@ -287,6 +428,197 @@ mod test {
         assert_eq!(
             get_release_url(&pool, Package(0)).await.unwrap_err(),
             CoreError::NotAPackage
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_release_version_url_ok(pool: Pool) {
+        let pkg = Package(1);
+        let version = Version {
+            major: 1,
+            minor: 2,
+            patch: 4,
+            pre: None,
+            build: None
+        };
+        assert_eq!(
+            get_release_version_url(&pool, pkg, &version).await.unwrap(),
+            "https://example.com/a_package-1.2.4"
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_release_version_url_not_a_package(pool: Pool) {
+        // FIXME: this is weird; maybe should return a generic NotFound?
+        let pkg = Package(0);
+        let version = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+        assert_eq!(
+            get_release_version_url(&pool, pkg, &version).await.unwrap_err(),
+            CoreError::NotAVersion
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_release_version_url_not_a_version(pool: Pool) {
+        let pkg = Package(1);
+        let version = Version {
+            major: 1,
+            minor: 2,
+            patch: 5,
+            pre: None,
+            build: None
+        };
+        assert_eq!(
+            get_release_version_url(&pool, pkg, &version).await.unwrap_err(),
+            CoreError::NotAVersion
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn add_release_url_ok(pool: Pool) {
+        let pkg = Package(1);
+        let version = Version {
+            major: 1,
+            minor: 2,
+            patch: 5,
+            pre: None,
+            build: None
+        };
+
+        assert_eq!(
+            get_release_version_url(&pool, pkg, &version).await.unwrap_err(),
+            CoreError::NotAVersion
+        );
+
+        add_release_url(
+            &pool,
+            Owner(1),
+            Project(42),
+            Package(1),
+            &version,
+            "new_thing.vmod",
+            123456,
+            "",
+            "https://example.com/new_thing.vmod",
+            0
+        ).await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn add_release_url_not_a_user(pool: Pool) {
+        // This should not happen; the Owner passed in should be good.
+        assert!(
+            matches!(
+                add_release_url(
+                    &pool,
+                    Owner(0),
+                    Project(42),
+                    Package(1),
+                    &Version {
+                        major: 1,
+                        minor: 2,
+                        patch: 5,
+                        pre: None,
+                        build: None
+                    },
+                    "new_thing.vmod",
+                    123456,
+                    "",
+                    "https://example.com/new_thing.vmod",
+                    0
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn add_release_url_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert!(
+            matches!(
+                add_release_url(
+                    &pool,
+                    Owner(1),
+                    Project(0),
+                    Package(1),
+                    &Version {
+                        major: 1,
+                        minor: 2,
+                        patch: 5,
+                        pre: None,
+                        build: None
+                    },
+                    "new_thing.vmod",
+                    123456,
+                    "",
+                    "https://example.com/new_thing.vmod",
+                    0
+                ).await.unwrap_err(),
+                CoreError::NotAProject
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn add_release_url_not_package(pool: Pool) {
+        // This should not happen; the Package passed in should be good.
+        assert!(
+            matches!(
+                add_release_url(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    Package(0),
+                    &Version {
+                        major: 1,
+                        minor: 2,
+                        patch: 5,
+                        pre: None,
+                        build: None
+                    },
+                    "new_thing.vmod",
+                    123456,
+                    "",
+                    "https://example.com/new_thing.vmod",
+                    0
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn add_release_url_duplicate_version(pool: Pool) {
+        // This should not happen; the Package passed in should be good.
+        assert!(
+            matches!(
+                add_release_url(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    Package(1),
+                    &Version {
+                        major: 1,
+                        minor: 2,
+                        patch: 3,
+                        pre: None,
+                        build: None
+                    },
+                    "new_thing.vmod",
+                    123456,
+                    "",
+                    "https://example.com/new_thing.vmod",
+                    0
+                ).await.unwrap_err(),
+                CoreError::DatabaseError(_)
+            )
         );
     }
 }
