@@ -10,6 +10,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::{
+    io,
     net::SocketAddr,
     sync::Arc
 };
@@ -154,10 +155,16 @@ fn routes(api: &str) -> Router<AppState> {
         )
 }
 
-#[tokio::main]
-async fn main() {
-// TODO: handle errors
+#[derive(Debug, thiserror::Error)]
+enum StartupError {
+    #[error("{0}")]
+    DatabaseError(#[from] sqlx::Error),
+    #[error("{0}")]
+    IOError(#[from] io::Error)
+}
 
+#[tokio::main]
+async fn main() -> Result<(), StartupError> {
     let config = Config {
         db_path: "projects.db".into(),
 // TODO: read key from file? env?
@@ -170,8 +177,7 @@ async fn main() {
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&format!("sqlite://{}", &config.db_path))
-        .await
-        .unwrap();
+        .await?;
 
     let core = ProdCore {
         db: SqlxDatabaseClient(db_pool),
@@ -190,10 +196,10 @@ async fn main() {
         .with_state(state);
 
     let addr = SocketAddr::from((config.listen_ip, config.listen_port));
-    let listener = TcpListener::bind(addr).await.unwrap();
-    serve(listener, app)
-        .await
-        .unwrap();
+    let listener = TcpListener::bind(addr).await?;
+    serve(listener, app).await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
