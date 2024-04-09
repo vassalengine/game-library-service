@@ -10,8 +10,9 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::{
+    fs,
     io,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
     sync::Arc
 };
 use tokio::net::TcpListener;
@@ -158,6 +159,10 @@ fn routes(api: &str) -> Router<AppState> {
 #[derive(Debug, thiserror::Error)]
 enum StartupError {
     #[error("{0}")]
+    AddrParseError(#[from] std::net::AddrParseError),
+    #[error("{0}")]
+    TomlParseError(#[from] toml::de::Error),
+    #[error("{0}")]
     DatabaseError(#[from] sqlx::Error),
     #[error("{0}")]
     IOError(#[from] io::Error)
@@ -165,14 +170,7 @@ enum StartupError {
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
-    let config = Config {
-        db_path: "projects.db".into(),
-// TODO: read key from file? env?
-        jwt_key: b"@wlD+3L)EHdv28u)OFWx@83_*TxhVf9IdUncaAz6ICbM~)j+dH=sR2^LXp(tW31z".to_vec(),
-        api_base_path: "/api/v1".into(),
-        listen_ip: [0, 0, 0, 0],
-        listen_port: 3000
-    };
+    let config: Config = toml::from_str(&fs::read_to_string("config.toml")?)?;
 
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -186,7 +184,7 @@ async fn main() -> Result<(), StartupError> {
     };
 
     let state = AppState {
-        key: DecodingKey::from_secret(&config.jwt_key),
+        key: DecodingKey::from_secret(config.jwt_key.as_bytes()),
         core: Arc::new(core) as CoreArc
     };
 
@@ -195,7 +193,8 @@ async fn main() -> Result<(), StartupError> {
     let app: Router = routes(api)
         .with_state(state);
 
-    let addr = SocketAddr::from((config.listen_ip, config.listen_port));
+    let ip: IpAddr = config.listen_ip.parse()?;
+    let addr = SocketAddr::from((ip, config.listen_port));
     let listener = TcpListener::bind(addr).await?;
     serve(listener, app).await?;
 
