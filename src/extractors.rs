@@ -70,6 +70,7 @@ where
         let claims = Claims::from_request_parts(parts, state).await?;
         // extract the user id
         Ok(User(claims.sub))
+// TODO: insert missing users into users table
     }
 }
 
