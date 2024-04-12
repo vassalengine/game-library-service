@@ -408,6 +408,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     }
 }
 
+// TODO: move this... somewhere else
 async fn get_authors<'e, E>(
     ex: E,
     pkg_ver_id: i64
@@ -451,7 +452,6 @@ mod test {
         );
     }
 
-// TODO: can we tell when the package version doesn't exist?
     #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
     async fn get_authors_not_a_release(pool: Pool) {
         assert_eq!(
