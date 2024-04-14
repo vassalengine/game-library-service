@@ -24,19 +24,9 @@ pub enum AppError {
     #[error("Bad request")]
     MalformedVersion,
     #[error("Not found")]
-    NotAPackage,
-    #[error("Not found")]
-    NotAProject,
-    #[error("Not found")]
-    NotARevision,
-    #[error("Not found")]
     NotAUser,
     #[error("Not found")]
-    NotAVersion,
-    #[error("Not found")]
     NotFound,
-    #[error("Not implemented")]
-    NotImplemented,
     #[error("Unauthorized")]
     Unauthorized
 }
@@ -49,11 +39,11 @@ impl From<CoreError> for AppError {
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
             CoreError::MalformedQuery => AppError::MalformedQuery,
             CoreError::NotFound => AppError::NotFound,
-            CoreError::NotAPackage => AppError::NotAPackage,
-            CoreError::NotAProject => AppError::NotAProject,
-            CoreError::NotARevision => AppError::NotARevision,
+            CoreError::NotAPackage => AppError::NotFound,
+            CoreError::NotAProject => AppError::NotFound,
+            CoreError::NotARevision => AppError::NotFound,
             CoreError::NotAUser => AppError::NotAUser,
-            CoreError::NotAVersion => AppError::NotAVersion,
+            CoreError::NotAVersion => AppError::NotFound,
             CoreError::InternalError => AppError::InternalError,
             CoreError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CoreError::TimeError(_) => AppError::InternalError,

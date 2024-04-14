@@ -62,13 +62,8 @@ impl From<&AppError> for StatusCode {
             AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
             AppError::MalformedQuery => StatusCode::BAD_REQUEST,
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
-            AppError::NotAPackage => StatusCode::NOT_FOUND,
-            AppError::NotAProject => StatusCode::NOT_FOUND,
-            AppError::NotARevision => StatusCode::NOT_FOUND,
             AppError::NotAUser => StatusCode::NOT_FOUND,
-            AppError::NotAVersion => StatusCode::NOT_FOUND,
             AppError::NotFound => StatusCode::NOT_FOUND,
-            AppError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
     }
@@ -1247,7 +1242,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1535,7 +1530,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1553,7 +1548,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotARevision)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1589,7 +1584,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1607,7 +1602,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAPackage)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1643,7 +1638,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1661,7 +1656,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAPackage)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1720,7 +1715,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1757,7 +1752,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1873,7 +1868,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -1993,7 +1988,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -2028,7 +2023,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -2063,7 +2058,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
@@ -2099,7 +2094,7 @@ mod test {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotAProject)
+            HttpError::from(AppError::NotFound)
         );
     }
 
