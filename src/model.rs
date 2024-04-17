@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::pagination::Pagination;
 
@@ -81,6 +81,15 @@ pub struct GameDataPatch {
     pub year: Option<String>
 }
 
+fn double_option<'de, T, D>(de: D) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>
+{
+    // Ensure that explicit null in the JSON is mapped to Some(None)
+    Deserialize::deserialize(de).map(Some)
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeProjectDataPatch {
     pub description: Option<String>,
@@ -88,6 +97,7 @@ pub struct MaybeProjectDataPatch {
     #[serde(default)]
     pub game: GameDataPatch,
     pub readme: Option<String>,
+    #[serde(deserialize_with = "double_option")]
     pub image: Option<Option<String>>
 }
 
@@ -159,4 +169,50 @@ pub struct ProjectSummary {
 pub struct Projects {
     pub projects: Vec<ProjectSummary>,
     pub meta: Pagination
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn try_from_project_data_patch_description() {
+        assert_eq!(
+            ProjectDataPatch::try_from(
+                MaybeProjectDataPatch {
+                    description: Some("d".into()),
+                    ..Default::default()
+                }
+            ).unwrap(),
+            ProjectDataPatch {
+                description: Some("d".into()),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_image_clear() {
+        assert_eq!(
+            ProjectDataPatch::try_from(
+                MaybeProjectDataPatch {
+                    image: Some(None),
+                    ..Default::default()
+                }
+            ).unwrap(),
+            ProjectDataPatch {
+                image: Some(None),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_err() {
+        assert_eq!(
+            ProjectDataPatch::try_from(MaybeProjectDataPatch::default())
+                .unwrap_err(),
+            ProjectDataPatchError(MaybeProjectDataPatch::default())
+        );
+    }
 }

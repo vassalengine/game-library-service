@@ -1391,8 +1391,9 @@ mod test {
     }
 
     #[tokio::test]
-    async fn patch_project_no_data() {
+    async fn patch_project_clear_image_ok() {
         let proj_data = ProjectDataPatch {
+            image: Some(None),
             ..Default::default()
         };
 
@@ -1403,6 +1404,23 @@ mod test {
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[tokio::test]
+    async fn patch_project_no_data() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from("{}"))
                 .unwrap()
         )
         .await;
