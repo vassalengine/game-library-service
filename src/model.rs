@@ -96,7 +96,7 @@ pub struct MaybeProjectDataPatch {
     pub tags: Option<Vec<String>>,
     pub game: Option<GameDataPatch>,
     pub readme: Option<String>,
-    #[serde(deserialize_with = "double_option")]
+    #[serde(default, deserialize_with = "double_option")]
     pub image: Option<Option<String>>
 }
 
@@ -187,6 +187,45 @@ pub struct Projects {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn maybe_project_data_patch_from_json_game_title() {
+        let json = "{\"game\":{\"title\":\"foo\"}}";
+        assert_eq!(
+            serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
+            MaybeProjectDataPatch {
+                game: Some(GameDataPatch {
+                    title: Some("foo".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn maybe_project_data_patch_from_json_image() {
+        let json = "{\"image\": \"foo.png\"}";
+        assert_eq!(
+            serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
+            MaybeProjectDataPatch {
+                image: Some(Some("foo.png".into())),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn maybe_project_data_patch_from_json_image_clear() {
+        let json = "{\"image\": null}";
+        assert_eq!(
+            serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
+            MaybeProjectDataPatch {
+                image: Some(None),
+                ..Default::default()
+            }
+        );
+    }
 
     #[test]
     fn maybe_project_data_patch_default_empty() {
