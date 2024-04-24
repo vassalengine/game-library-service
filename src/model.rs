@@ -94,11 +94,31 @@ where
 pub struct MaybeProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
-    #[serde(default)]
-    pub game: GameDataPatch,
+    pub game: Option<GameDataPatch>,
     pub readme: Option<String>,
     #[serde(deserialize_with = "double_option")]
     pub image: Option<Option<String>>
+}
+
+impl MaybeProjectDataPatch {
+    fn empty(&self) -> bool {
+        match self {
+            MaybeProjectDataPatch {
+                description: None,
+                tags: None,
+                game: None | Some(GameDataPatch {
+                    title: None,
+                    title_sort_key: None,
+                    publisher: None,
+                    year: None
+                }),
+                readme: None,
+                image: None
+            }
+            => true,
+            _ => false
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -106,6 +126,7 @@ pub struct MaybeProjectDataPatch {
 pub struct ProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
+    #[serde(default)]
     pub game: GameDataPatch,
     pub readme: Option<String>,
     pub image: Option<Option<String>>
@@ -120,15 +141,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
 
     fn try_from(m: MaybeProjectDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
-        if m.description.is_none() &&
-           m.tags.is_none() &&
-           m.game.title.is_none() &&
-           m.game.title_sort_key.is_none() &&
-           m.game.publisher.is_none() &&
-           m.game.year.is_none() &&
-           m.readme.is_none() &&
-           m.image.is_none()
-        {
+        if m.empty() {
             Err(ProjectDataPatchError(m))
         }
         else {
@@ -136,7 +149,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
                 ProjectDataPatch {
                     description: m.description,
                     tags: m.tags,
-                    game: m.game,
+                    game: m.game.unwrap_or_default(),
                     readme: m.readme,
                     image: m.image
                 }
@@ -175,6 +188,43 @@ pub struct Projects {
 mod test {
     use super::*;
 
+    #[test]
+    fn maybe_project_data_patch_default_empty() {
+        assert!(MaybeProjectDataPatch::default().empty());
+    }
+
+    #[test]
+    fn maybe_project_data_patch_default_and_game_empty() {
+        assert!(
+            MaybeProjectDataPatch {
+                game: Some(GameDataPatch::default()),
+                ..Default::default()
+            }.empty()
+        );
+    }
+
+    #[test]
+    fn maybe_project_data_patch_not_empty() {
+        assert!(
+            !MaybeProjectDataPatch {
+                readme: Some("foo".into()),
+                ..Default::default()
+            }.empty()
+        );
+    }
+
+    #[test]
+    fn maybe_project_data_patch_game_not_empty() {
+        assert!(
+            !MaybeProjectDataPatch {
+                game: Some(GameDataPatch {
+                    year: Some("1979".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }.empty()
+        );
+    }
     #[test]
     fn try_from_project_data_patch_description() {
         assert_eq!(
