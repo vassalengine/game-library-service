@@ -636,6 +636,24 @@ mod test {
     }
 
     #[tokio::test]
+    async fn bad_path() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/bogus/whatever"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[tokio::test]
     async fn root_ok() {
         let response = try_request(
             Request::builder()
@@ -2104,24 +2122,6 @@ mod test {
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
-    }
-
-    #[tokio::test]
-    async fn bad_path() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/bogus/whatever"))
                 .body(Body::empty())
                 .unwrap()
         )
