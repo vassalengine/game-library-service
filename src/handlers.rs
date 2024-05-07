@@ -180,20 +180,6 @@ pub async fn release_put(
     Ok(())
 }
 
-/*
-pub async fn release_put(
-    _: Owner,
-    proj: Project,
-    pkg: Package,
-    Path((_, _, pkg_version): Path<(String, String, String)>,
-    State(core): State<CoreArc>
-) -> Result<Redirect, AppError>
-{
-    // 307 preserves the original method and body, which is essential
-    // for a PUT uploading a file; we cannot use a 303 here
-}
-*/
-
 pub async fn image_get(
     proj: Project,
     Path((_, img_name)): Path<(String, String)>,

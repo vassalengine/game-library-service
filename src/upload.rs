@@ -100,5 +100,3 @@ impl Uploader for LocalUploader {
         Ok(format!("http://localhost:3000/uploads/{filename}"))
     }
 }
-
-
