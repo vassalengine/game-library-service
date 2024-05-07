@@ -258,14 +258,14 @@ where
     }
 
 // TODO: tests
-    async fn add_image<'s>(
+    async fn add_image(
         &self,
         owner: Owner,
         proj: Project,
         img_name: &str,
         content_type: &Mime,
         content_length: u64,
-        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + 's>
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
     ) -> Result<(), CoreError>
     {
         // santiy checks

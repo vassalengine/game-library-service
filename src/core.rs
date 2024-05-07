@@ -258,14 +258,14 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn add_image<'s>(
+    async fn add_image(
         &self,
         _owner: Owner,
         _proj: Project,
         _img_name: &str,
         _content_type: &Mime,
         _content_length: u64,
-        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + 's>
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
     ) -> Result<(), CoreError>
     {
         unimplemented!();
