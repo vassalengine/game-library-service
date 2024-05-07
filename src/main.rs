@@ -176,7 +176,8 @@ async fn main() -> Result<(), StartupError> {
     let core = ProdCore {
         db: SqlxDatabaseClient(db_pool),
         uploader: LocalUploader { uploads_directory: "uploads".into() },
-        now: Utc::now
+        now: Utc::now,
+        max_image_size: (config.max_image_size as u64) << 20 // MB to bytes
     };
 
     let state = AppState {

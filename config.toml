@@ -3,3 +3,5 @@ jwt_key = "whatever"
 api_base_path = "/api/v1"
 listen_ip = "0.0.0.0"
 listen_port = 3000
+max_release_size = 300
+max_image_size = 5
