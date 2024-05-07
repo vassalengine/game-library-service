@@ -3,6 +3,7 @@ use axum::{
     body::Bytes
 };
 use futures::Stream;
+use mime::Mime;
 use std::{
     io,
     mem,
@@ -20,6 +21,10 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum CoreError {
+    #[error("Unsupported media type")]
+    BadMimeType,
+    #[error("File too large")]
+    TooLarge,
     #[error("Cannot remove last owner")]
     CannotRemoveLastOwner,
     #[error("Invalid project name")]
@@ -253,12 +258,14 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn add_image(
+    async fn add_image<'s>(
         &self,
         _owner: Owner,
         _proj: Project,
         _img_name: &str,
-        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        _content_type: &Mime,
+        _content_length: u64,
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + 's>
     ) -> Result<(), CoreError>
     {
         unimplemented!();

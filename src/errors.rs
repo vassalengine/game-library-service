@@ -7,6 +7,8 @@ use crate::core::CoreError;
 pub enum AppError {
     #[error("Unsupported media type")]
     BadMimeType,
+    #[error("Payload too large")]
+    TooLarge,
 //    #[error("Cannot remove last project owner")]
     #[error("Bad request")]
     CannotRemoveLastOwner,
@@ -34,6 +36,8 @@ pub enum AppError {
 impl From<CoreError> for AppError {
     fn from(err: CoreError) -> Self {
         match err {
+            CoreError::BadMimeType => AppError::BadMimeType,
+            CoreError::TooLarge => AppError::TooLarge,
             CoreError::CannotRemoveLastOwner => AppError::CannotRemoveLastOwner  ,
             CoreError::InvalidProjectName => AppError::MalformedQuery, // FIXME
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME

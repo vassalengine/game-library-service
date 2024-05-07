@@ -55,6 +55,7 @@ impl From<&AppError> for StatusCode {
     fn from(err: &AppError) -> Self {
         match err {
             AppError::BadMimeType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            AppError::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             AppError::CannotRemoveLastOwner => StatusCode::BAD_REQUEST,
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,

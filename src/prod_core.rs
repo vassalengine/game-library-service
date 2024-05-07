@@ -256,18 +256,26 @@ where
     }
 
 // TODO: tests
-    async fn add_image(
+    async fn add_image<'s>(
         &self,
         owner: Owner,
         proj: Project,
         img_name: &str,
-        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        content_type: &Mime,
+        content_length: u64,
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + 's>
     ) -> Result<(), CoreError>
     {
-        let now = self.now_nanos()?;
+        // santiy checks
+        if !image_mime_type_ok(content_type) {
+          return Err(CoreError::BadMimeType);
+        }
 
-// TODO: check that the file is not too large
-// TOOD: check that the file is an image
+        if content_length > self.max_image_size {
+          return Err(CoreError::TooLarge);
+        }
+
+        let now = self.now_nanos()?;
 
         // write file
         let url = self.uploader.upload(img_name, Box::into_pin(stream))
@@ -279,6 +287,19 @@ where
 
         Ok(())
     }
+}
+
+fn image_mime_type_ok(mime: &Mime) -> bool {
+    mime == &mime::IMAGE_PNG ||
+    mime == &mime::IMAGE_GIF ||
+    mime == &mime::IMAGE_JPEG ||
+    mime == &mime::IMAGE_SVG ||
+    (
+        mime.type_() == mime::IMAGE && (
+            mime.subtype() == "avif" ||
+            mime.subtype() == "webp"
+        )
+    )
 }
 
 impl<C, U> ProdCore<C, U>
