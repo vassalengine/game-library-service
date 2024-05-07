@@ -204,10 +204,11 @@ mod test {
         body::{self, Body, Bytes},
         http::{
             Method, Request,
-            header::{ACCEPT_ENCODING, AUTHORIZATION, CONTENT_TYPE, LOCATION}
+            header::{ACCEPT_ENCODING, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, LOCATION}
         }
     };
-    use mime::{APPLICATION_JSON, TEXT_PLAIN};
+    use futures::Stream;
+    use mime::{APPLICATION_JSON, IMAGE_PNG, TEXT_PLAIN, Mime};
     use once_cell::sync::Lazy;
     use tower::ServiceExt; // for oneshot
 
@@ -527,6 +528,19 @@ mod test {
             else {
                 Err(CoreError::NotFound)
             }
+        }
+
+        async fn add_image<'s>(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            _img_name: &str,
+            _content_type: &Mime,
+            _content_length: u64,
+            _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + 's>
+        ) -> Result<(), CoreError>
+        {
+            Ok(())
         }
     }
 
@@ -2129,6 +2143,67 @@ mod test {
         assert_eq!(
             body_as::<HttpError>(response).await,
             HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_unauth() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_no_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1234)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
         );
     }
 }

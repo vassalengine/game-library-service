@@ -214,19 +214,22 @@ pub async fn image_revision_get(
 pub async fn image_post(
     Owned(owner, proj): Owned,
     Path((_, img_name)): Path<(String, String)>,
+    content_type: Option<TypedHeader<ContentType>>,
+    TypedHeader(content_length): TypedHeader<ContentLength>,
     State(core): State<CoreArc>,
     request: Request
 ) -> Result<(), AppError>
 {
-    let stream = request.into_body()
-        .into_data_stream()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
-
-    core.add_image(owner, proj, &img_name, Box::new(stream))
-        .await
-        .or(Err(AppError::InternalError))?;
-
-    Ok(())
+    Ok(
+        core.add_image(
+            owner,
+            proj,
+            &img_name,
+            &content_type.ok_or(AppError::BadMimeType)?.0.into(),
+            content_length.0,
+            into_stream(request)
+        ).await?
+    )
 }
 
 pub async fn flag_post(
