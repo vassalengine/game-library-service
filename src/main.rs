@@ -2077,6 +2077,24 @@ mod test {
     }
 
     #[tokio::test]
+    async fn put_players_unauth() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
     async fn delete_players_ok() {
         let response = try_request(
             Request::builder()
@@ -2112,6 +2130,24 @@ mod test {
     }
 
     #[tokio::test]
+    async fn delete_players_unauth() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
     async fn get_image_ok() {
         let response = try_request(
             Request::builder()
@@ -2135,6 +2171,24 @@ mod test {
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+   #[tokio::test]
+    async fn get_image_not_an_image() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/projects/a_project/images/not_a.png"))
                 .body(Body::empty())
                 .unwrap()
         )
