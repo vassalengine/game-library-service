@@ -211,6 +211,8 @@ pub async fn image_post(
     request: Request
 ) -> Result<(), AppError>
 {
+    // NB: No ContentType header will result in BAD_REQUEST by default, so
+    // have to make it optional and check manually
     Ok(
         core.add_image(
             owner,

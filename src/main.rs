@@ -1495,6 +1495,31 @@ mod test {
     }
 
     #[tokio::test]
+    async fn patch_project_not_owner() {
+        let proj_data = ProjectDataPatch {
+            description: Some("A module for Empires in Arms".into()),
+            ..Default::default()
+        };
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project"))
+                .header(AUTHORIZATION, token(0))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
     async fn patch_project_wrong_json() {
         let response = try_request(
             Request::builder()
@@ -1817,6 +1842,25 @@ mod test {
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn put_owners_not_owner() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::PUT)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -1929,6 +1973,25 @@ mod test {
 
     #[tokio::test]
     async fn delete_owners_unauth() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn delete_owners_not_owner() {
         let response = try_request(
             Request::builder()
                 .method(Method::DELETE)
@@ -2234,6 +2297,27 @@ mod test {
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_not_owner() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(0))
                 .header(CONTENT_LENGTH, 1234)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
