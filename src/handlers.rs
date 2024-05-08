@@ -206,7 +206,7 @@ pub async fn image_post(
     Owned(owner, proj): Owned,
     Path((_, img_name)): Path<(String, String)>,
     content_type: Option<TypedHeader<ContentType>>,
-    TypedHeader(content_length): TypedHeader<ContentLength>,
+    content_length: Option<TypedHeader<ContentLength>>,
     State(core): State<CoreArc>,
     request: Request
 ) -> Result<(), AppError>
@@ -217,7 +217,7 @@ pub async fn image_post(
             proj,
             &img_name,
             &content_type.ok_or(AppError::BadMimeType)?.0.into(),
-            content_length.0,
+            content_length.map(|h| h.0.0),
             into_stream(request)
         ).await?
     )

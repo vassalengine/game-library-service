@@ -264,7 +264,7 @@ where
         proj: Project,
         img_name: &str,
         content_type: &Mime,
-        content_length: u64,
+        content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
     ) -> Result<(), CoreError>
     {
@@ -273,7 +273,7 @@ where
           return Err(CoreError::BadMimeType);
         }
 
-        if content_length > self.max_image_size {
+        if content_length > Some(self.max_image_size) {
           return Err(CoreError::TooLarge);
         }
 

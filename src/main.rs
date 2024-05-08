@@ -538,11 +538,16 @@ mod test {
             _proj: Project,
             _img_name: &str,
             _content_type: &Mime,
-            _content_length: u64,
+            content_length: Option<u64>,
             _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
         ) -> Result<(), CoreError>
         {
-            Ok(())
+            if content_length > Some(1 << 20) {
+                Err(CoreError::TooLarge)
+            }
+            else {
+                Ok(())
+            }
         }
     }
 
@@ -2262,4 +2267,26 @@ mod test {
             HttpError::from(AppError::BadMimeType)
         );
     }
+
+    #[tokio::test]
+    async fn post_image_too_large() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, u64::MAX)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
 }
