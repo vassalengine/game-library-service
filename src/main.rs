@@ -537,13 +537,16 @@ mod test {
             _owner: Owner,
             _proj: Project,
             _img_name: &str,
-            _content_type: &Mime,
+            content_type: &Mime,
             content_length: Option<u64>,
             _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
         ) -> Result<(), CoreError>
         {
             if content_length > Some(1 << 20) {
                 Err(CoreError::TooLarge)
+            }
+            else if content_type == &TEXT_PLAIN {
+                Err(CoreError::BadMimeType)
             }
             else {
                 Ok(())
@@ -2339,6 +2342,27 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1234)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_bad_mime_type() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, 1234)
                 .body(Body::empty())
                 .unwrap()
