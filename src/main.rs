@@ -13,13 +13,18 @@ use std::{
     fs,
     io,
     net::{IpAddr, SocketAddr},
-    sync::Arc
+    sync::Arc,
+    time::Duration
 };
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    signal
+};
 use tower::ServiceBuilder;
 use tower_http::{
     compression::CompressionLayer,
     cors::CorsLayer,
+    timeout::TimeoutLayer
 };
 
 mod app;
@@ -149,6 +154,8 @@ fn routes(api: &str) -> Router<AppState> {
             ServiceBuilder::new()
                 .layer(CorsLayer::very_permissive())
                 .layer(CompressionLayer::new())
+                // ensure requests don't block shutdown
+                .layer(TimeoutLayer::new(Duration::from_secs(10)))
         )
 }
 
@@ -162,6 +169,26 @@ enum StartupError {
     DatabaseError(#[from] sqlx::Error),
     #[error("{0}")]
     IOError(#[from] io::Error)
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => eprintln!("exiting on Ctrl+C"),
+        _ = terminate => eprintln!("exiting on SIGTERM")
+    }
 }
 
 #[tokio::main]
@@ -193,7 +220,9 @@ async fn main() -> Result<(), StartupError> {
     let ip: IpAddr = config.listen_ip.parse()?;
     let addr = SocketAddr::from((ip, config.listen_port));
     let listener = TcpListener::bind(addr).await?;
-    serve(listener, app).await?;
+    serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }
@@ -212,6 +241,11 @@ mod test {
     use futures::Stream;
     use mime::{APPLICATION_JSON, IMAGE_PNG, TEXT_PLAIN, Mime};
     use once_cell::sync::Lazy;
+    use nix::{
+        sys::{self, signal::Signal},
+        unistd::Pid
+    };
+    use std::future::IntoFuture;
     use tower::ServiceExt; // for oneshot
 
     use crate::{
@@ -590,6 +624,26 @@ mod test {
 
         values.sort();
         values
+    }
+
+    #[tokio::test]
+    async fn graceful_shutdown_test() {
+        let listener = TcpListener::bind("localhost:0").await.unwrap();
+        let app = Router::new();
+        let pid = Pid::this();
+
+        let server_handle = tokio::spawn(
+            serve(listener, app)
+                .with_graceful_shutdown(shutdown_signal())
+                .into_future()
+        );
+
+        // ensure that the server has a chance to start
+        tokio::task::yield_now().await;
+
+        sys::signal::kill(pid, Signal::SIGTERM).unwrap();
+
+        server_handle.await.unwrap().unwrap();
     }
 
     #[tokio::test]
@@ -2396,5 +2450,4 @@ mod test {
             HttpError::from(AppError::TooLarge)
         );
     }
-
 }
