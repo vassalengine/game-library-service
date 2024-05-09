@@ -1743,6 +1743,8 @@ mod test {
         );
     }
 
+// TODO: get_release tests
+
     #[tokio::test]
     async fn get_release_version_ok() {
         let response = try_request(
@@ -2348,6 +2350,24 @@ mod test {
         );
     }
 
+   #[tokio::test]
+    async fn post_image_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
     #[tokio::test]
     async fn post_image_unauth() {
         let response = try_request(
@@ -2450,4 +2470,6 @@ mod test {
             HttpError::from(AppError::TooLarge)
         );
     }
+
+// TODO: post release tests
 }
