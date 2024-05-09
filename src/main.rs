@@ -1744,7 +1744,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_release_ok() {
+    async fn get_release_version_ok() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1762,7 +1762,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_release_not_a_project() {
+    async fn get_release_version_not_a_project() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1780,7 +1780,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_release_not_a_package() {
+    async fn get_release_version_not_a_package() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
@@ -1798,7 +1798,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_release_not_a_version() {
+    async fn get_release_version_not_a_version() {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
