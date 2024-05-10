@@ -16,10 +16,7 @@ use std::{
     sync::Arc,
     time::Duration
 };
-use tokio::{
-    net::TcpListener,
-    signal
-};
+use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
     compression::CompressionLayer,
@@ -172,22 +169,22 @@ enum StartupError {
 }
 
 async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
+    use tokio::signal::unix::{signal, SignalKind};
 
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
+    let mut interrupt = signal(SignalKind::interrupt())
+        .expect("failed to install signal handler");
+
+    // Docker sends SIGQUIT for some unfathomable reason
+    let mut quit = signal(SignalKind::quit())
+        .expect("failed to install signal handler");
+
+    let mut terminate = signal(SignalKind::terminate())
+        .expect("failed to install signal handler");
 
     tokio::select! {
-        _ = ctrl_c => eprintln!("exiting on Ctrl+C"),
-        _ = terminate => eprintln!("exiting on SIGTERM")
+        _ = interrupt.recv() => eprintln!("exiting on SIGINT"),
+        _ = quit.recv() => eprintln!("exiting on SIGQUIT"),
+        _ = terminate.recv() => eprintln!("exiting on SIGTERM")
     }
 }
 
@@ -626,8 +623,7 @@ mod test {
         values
     }
 
-    #[tokio::test]
-    async fn graceful_shutdown_test() {
+    async fn assert_shutdown(sig: Signal) {
         let listener = TcpListener::bind("localhost:0").await.unwrap();
         let app = Router::new();
         let pid = Pid::this();
@@ -641,9 +637,24 @@ mod test {
         // ensure that the server has a chance to start
         tokio::task::yield_now().await;
 
-        sys::signal::kill(pid, Signal::SIGTERM).unwrap();
+        sys::signal::kill(pid, sig).unwrap();
 
         server_handle.await.unwrap().unwrap();
+    }
+
+    #[tokio::test]
+    async fn graceful_shutdown_sigint() {
+        assert_shutdown(Signal::SIGTERM).await;
+    }
+
+    #[tokio::test]
+    async fn graceful_shutdown_sigquit() {
+        assert_shutdown(Signal::SIGQUIT).await;
+    }
+
+    #[tokio::test]
+    async fn graceful_shutdown_sigterm() {
+        assert_shutdown(Signal::SIGTERM).await;
     }
 
     #[tokio::test]
