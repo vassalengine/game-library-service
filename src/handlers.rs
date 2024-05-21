@@ -157,6 +157,17 @@ pub async fn release_version_get(
     )
 }
 
+fn into_stream(
+    request: Request
+) -> Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+{
+    Box::new(
+        request.into_body()
+            .into_data_stream()
+            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    )
+}
+
 pub async fn release_put(
     Owned(owner, proj): Owned,
     Path((_, pkg, version)): Path<(String, String, String)>,
