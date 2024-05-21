@@ -8,7 +8,6 @@ use axum_extra::{
     headers::{ContentLength, ContentType}
 };
 use futures::{Stream, TryStreamExt};
-use futures_util::StreamExt;
 use std::io;
 
 use crate::{
@@ -177,7 +176,7 @@ pub async fn release_put(
 ) -> Result<(), AppError>
 {
     let version = version.parse::<Version>()
-        .or(Err(AppError::NotAVersion))?;
+        .or(Err(AppError::NotFound))?;
 
 /*
     let stream = request.into_body()
