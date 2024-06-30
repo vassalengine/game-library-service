@@ -358,11 +358,14 @@ where
                 .map(|vr| self.make_release_version_data(vr))
         ).await?;
 
+        let files = vec![];
+
         Ok(
             PackageData {
                 name: pr.name,
                 description: "".into(),
-                releases
+                releases,
+                files
             }
         )
     }
@@ -1658,12 +1661,14 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
                             }
-                        ]
+                        ],
+                        files: vec![]
                     },
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        releases: vec![]
+                        releases: vec![],
+                        files: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
@@ -1680,7 +1685,8 @@ mod test {
                                 requires: "".into(),
                                 authors: vec![]
                             }
-                        ]
+                        ],
+                        files: vec![]
                     }
                 ]
             }
@@ -1735,17 +1741,20 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into()]
                             }
-                        ]
+                        ],
+                        files: vec![]
                     },
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        releases: vec![]
+                        releases: vec![],
+                        files: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        releases: vec![]
+                        releases: vec![],
+                        files: vec![]
                     }
                 ]
             }
@@ -1777,12 +1786,14 @@ mod test {
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        releases: vec![]
+                        releases: vec![],
+                        files: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        releases: vec![]
+                        releases: vec![],
+                        files: vec![]
                     }
                 ]
             }

@@ -49,6 +49,7 @@ pub struct PackageData {
     pub name: String,
     pub description: String,
     pub releases: Vec<FileData>,
+    pub files: Vec<FileData>
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]

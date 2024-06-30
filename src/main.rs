@@ -338,7 +338,8 @@ mod test {
                             requires: "".into(),
                             authors: vec![]
                         }
-                    ]
+                    ],
+                    files: vec![]
                 }
             ]
         }
