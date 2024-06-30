@@ -18,7 +18,7 @@ use std::{
 
 use crate::{
     core::{Core, CoreError},
-    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, FileRow},
     model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, FileData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -133,7 +133,8 @@ where
             proj,
             self.db.get_project_row(proj).await?,
             self.db.get_packages(proj).await?,
-            |pc, pkg| pc.db.get_releases(pkg)
+            |pc, pkg| pc.db.get_releases(pkg),
+            |pc, pkg| pc.db.get_files(pkg)
         ).await
     }
 
@@ -178,7 +179,8 @@ where
             proj,
             proj_row,
             package_rows,
-            |pc, pkg| pc.db.get_releases_at(pkg, mtime)
+            |pc, pkg| pc.db.get_releases_at(pkg, mtime),
+            |pc, pkg| pc.db.get_files_at(pkg, mtime)
         ).await
     }
 
@@ -318,47 +320,55 @@ where
             .ok_or(CoreError::InternalError)
     }
 
-    async fn make_release_version_data(
+    async fn make_version_data(
         &self,
-        rr: ReleaseRow
+        r: FileRow
     ) -> Result<FileData, CoreError>
     {
-        let authors = self.db.get_authors(rr.release_id)
+        let authors = self.db.get_authors(r.id)
             .await?
             .users;
 
         Ok(
             FileData {
-                version: rr.version,
-                filename: rr.filename,
-                url: rr.url,
-                size: rr.size,
-                checksum: rr.checksum,
-                published_at: nanos_to_rfc3339(rr.published_at)?,
-                published_by: rr.published_by,
+                version: r.version,
+                filename: r.filename,
+                url: r.url,
+                size: r.size,
+                checksum: r.checksum,
+                published_at: nanos_to_rfc3339(r.published_at)?,
+                published_by: r.published_by,
                 requires: "".into(),
                 authors
             }
         )
     }
 
-    async fn make_package_data<'s, F, R>(
+    async fn make_package_data<'s, RF, RR, FF, FR>(
         &'s self,
         pr: PackageRow,
-        get_release_rows: &F
+        get_release_rows: &RF,
+        get_files_rows: &FF
     ) -> Result<PackageData, CoreError>
     where
-        F: Fn(&'s Self, Package) -> R,
-        R: Future<Output = Result<Vec<ReleaseRow>, CoreError>>
+        RF: Fn(&'s Self, Package) -> RR,
+        RR: Future<Output = Result<Vec<FileRow>, CoreError>>,
+        FF: Fn(&'s Self, Package) -> FR,
+        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
         let releases = try_join_all(
             get_release_rows(self, Package(pr.package_id))
                 .await?
                 .into_iter()
-                .map(|vr| self.make_release_version_data(vr))
+                .map(|vr| self.make_version_data(vr))
         ).await?;
 
-        let files = vec![];
+        let files = try_join_all(
+            get_files_rows(self, Package(pr.package_id))
+                .await?
+                .into_iter()
+                .map(|vr| self.make_version_data(vr))
+        ).await?;
 
         Ok(
             PackageData {
@@ -370,16 +380,19 @@ where
         )
     }
 
-    async fn get_project_impl<'s, F, R>(
+    async fn get_project_impl<'s, RF, RR, FF, FR>(
         &'s self,
         proj: Project,
         proj_row: ProjectRow,
         package_rows: Vec<PackageRow>,
-        get_release_rows: F
+        get_release_rows: RF,
+        get_file_rows: FF,
     ) -> Result<ProjectData, CoreError>
     where
-        F: Fn(&'s Self, Package) -> R,
-        R: Future<Output = Result<Vec<ReleaseRow>, CoreError>>
+        RF: Fn(&'s Self, Package) -> RR,
+        RR: Future<Output = Result<Vec<FileRow>, CoreError>>,
+        FF: Fn(&'s Self, Package) -> FR,
+        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
         let owners = self.get_owners(proj)
             .await?
@@ -388,7 +401,11 @@ where
         let packages = try_join_all(
             package_rows
                 .into_iter()
-                .map(|pr| self.make_package_data(pr, &get_release_rows))
+                .map(|pr| self.make_package_data(
+                    pr,
+                    &get_release_rows,
+                    &get_file_rows
+                ))
         ).await?;
 
         Ok(

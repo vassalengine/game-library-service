@@ -14,7 +14,7 @@ mod users;
 
 use crate::{
     core::CoreError,
-    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow},
     model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
@@ -284,7 +284,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_releases(
         &self,
         pkg: Package
-    ) -> Result<Vec<ReleaseRow>, CoreError>
+    ) -> Result<Vec<FileRow>, CoreError>
     {
         releases::get_releases(&self.0, pkg).await
     }
@@ -293,9 +293,26 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg: Package,
         date: i64
-    ) -> Result<Vec<ReleaseRow>, CoreError>
+    ) -> Result<Vec<FileRow>, CoreError>
     {
         releases::get_releases_at(&self.0, pkg, date).await
+    }
+
+    async fn get_files(
+        &self,
+        pkg: Package
+    ) -> Result<Vec<FileRow>, CoreError>
+    {
+        releases::get_files(&self.0, pkg).await
+    }
+
+    async fn get_files_at(
+        &self,
+        pkg: Package,
+        date: i64
+    ) -> Result<Vec<FileRow>, CoreError>
+    {
+        releases::get_files_at(&self.0, pkg, date).await
     }
 
     async fn get_authors(

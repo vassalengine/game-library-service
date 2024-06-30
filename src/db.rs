@@ -51,8 +51,8 @@ pub struct PackageRow {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct ReleaseRow {
-    pub release_id: i64,
+pub struct FileRow {
+    pub id: i64,
     pub version: String,
     pub version_major: i64,
     pub version_minor: i64,
@@ -213,13 +213,24 @@ pub trait DatabaseClient {
     async fn get_releases(
         &self,
         _pkg: Package
-    ) -> Result<Vec<ReleaseRow>, CoreError>;
+    ) -> Result<Vec<FileRow>, CoreError>;
 
     async fn get_releases_at(
         &self,
         _pkg: Package,
         _date: i64
-    ) -> Result<Vec<ReleaseRow>, CoreError>;
+    ) -> Result<Vec<FileRow>, CoreError>;
+
+    async fn get_files(
+        &self,
+        _pkg: Package
+    ) -> Result<Vec<FileRow>, CoreError>;
+
+    async fn get_files_at(
+        &self,
+        _pkg: Package,
+        _date: i64
+    ) -> Result<Vec<FileRow>, CoreError>;
 
     async fn get_authors(
         &self,

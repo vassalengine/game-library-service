@@ -61,6 +61,25 @@ CREATE TABLE releases (
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
+CREATE TABLE files (
+  file_id INTEGER PRIMARY KEY NOT NULL,
+  package_id INTEGER NOT NULL,
+  version TEXT NOT NULL,
+  version_major INTEGER NOT NULL,
+  version_minor INTEGER NOT NULL,
+  version_patch INTEGER NOT NULL,
+  version_pre TEXT NOT NULL,
+  version_build TEXT NOT NULL,
+  url TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  checksum TEXT NOT NULL,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  FOREIGN KEY(package_id) REFERENCES packages(package_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id)
+);
+
 CREATE TABLE images (
   project_id INTEGER NOT NULL,
   filename TEXT NOT NULL,

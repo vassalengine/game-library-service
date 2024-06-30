@@ -7,14 +7,14 @@ use std::cmp::Ordering;
 
 use crate::{
     core::CoreError,
-    db::ReleaseRow,
+    db::FileRow,
     model::{Owner, Package, Project},
     sqlite::project::update_project_non_project_data,
     version::Version
 };
 
-impl From<&ReleaseRow> for Version {
-    fn from(r: &ReleaseRow) -> Self {
+impl From<&FileRow> for Version {
+    fn from(r: &FileRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -26,7 +26,7 @@ impl From<&ReleaseRow> for Version {
 }
 
 #[derive(Debug, Deserialize)]
-struct ReducedReleaseRow {
+struct ReducedFileRow {
     url: String,
     version_major: i64,
     version_minor: i64,
@@ -35,8 +35,8 @@ struct ReducedReleaseRow {
     version_build: String,
 }
 
-impl From<&ReducedReleaseRow> for Version {
-    fn from(r: &ReducedReleaseRow) -> Self {
+impl From<&ReducedFileRow> for Version {
+    fn from(r: &ReducedFileRow) -> Self {
         Version {
             major: r.version_major,
             minor: r.version_minor,
@@ -47,7 +47,7 @@ impl From<&ReducedReleaseRow> for Version {
     }
 }
 
-fn release_row_desc_cmp<R>(a: &R, b: &R) -> Ordering
+fn file_row_desc_cmp<R>(a: &R, b: &R) -> Ordering
 where
     Version: for<'r> From<&'r R>
 {
@@ -59,21 +59,21 @@ where
 pub async fn get_releases<'e, E>(
     ex: E,
     pkg: Package
-) -> Result<Vec<ReleaseRow>, CoreError>
+) -> Result<Vec<FileRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     let mut releases = sqlx::query_as!(
-        ReleaseRow,
+        FileRow,
         "
 SELECT
-    releases.release_id,
+    releases.release_id AS id,
     releases.version,
-    version_major,
-    version_minor,
-    version_patch,
-    version_pre,
-    version_build,
+    releases.version_major,
+    releases.version_minor,
+    releases.version_patch,
+    releases.version_pre,
+    releases.version_build,
     releases.url,
     releases.filename,
     releases.size,
@@ -83,20 +83,20 @@ SELECT
 FROM releases
 JOIN users
 ON releases.published_by = users.user_id
-WHERE package_id = ?
+WHERE releases.package_id = ?
 ORDER BY
-    version_major DESC,
-    version_minor DESC,
-    version_patch DESC,
-    version_pre ASC,
-    version_build ASC
+    releases.version_major DESC,
+    releases.version_minor DESC,
+    releases.version_patch DESC,
+    releases.version_pre ASC,
+    releases.version_build ASC
         ",
         pkg.0
     )
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(release_row_desc_cmp);
+    releases.sort_by(file_row_desc_cmp);
     Ok(releases)
 }
 
@@ -104,21 +104,21 @@ pub async fn get_releases_at<'e, E>(
     ex: E,
     pkg: Package,
     date: i64
-) -> Result<Vec<ReleaseRow>, CoreError>
+) -> Result<Vec<FileRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     let mut releases = sqlx::query_as!(
-        ReleaseRow,
+        FileRow,
         "
 SELECT
-    releases.release_id,
+    releases.release_id AS id,
     releases.version,
-    version_major,
-    version_minor,
-    version_patch,
-    version_pre,
-    version_build,
+    releases.version_major,
+    releases.version_minor,
+    releases.version_patch,
+    releases.version_pre,
+    releases.version_build,
     releases.url,
     releases.filename,
     releases.size,
@@ -128,14 +128,14 @@ SELECT
 FROM releases
 JOIN users
 ON releases.published_by = users.user_id
-WHERE package_id = ?
-    AND published_at <= ?
+WHERE releases.package_id = ?
+    AND releases.published_at <= ?
 ORDER BY
-    version_major DESC,
-    version_minor DESC,
-    version_patch DESC,
-    version_pre ASC,
-    version_build ASC
+    releases.version_major DESC,
+    releases.version_minor DESC,
+    releases.version_patch DESC,
+    releases.version_pre ASC,
+    releases.version_build ASC
         ",
         pkg.0,
         date
@@ -143,8 +143,99 @@ ORDER BY
     .fetch_all(ex)
     .await?;
 
-    releases.sort_by(release_row_desc_cmp);
+    releases.sort_by(file_row_desc_cmp);
     Ok(releases)
+}
+
+pub async fn get_files<'e, E>(
+    ex: E,
+    pkg: Package
+) -> Result<Vec<FileRow>, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut files = sqlx::query_as!(
+        FileRow,
+        "
+SELECT
+    files.file_id AS id,
+    files.version,
+    files.version_major,
+    files.version_minor,
+    files.version_patch,
+    files.version_pre,
+    files.version_build,
+    files.url,
+    files.filename,
+    files.size,
+    files.checksum,
+    files.published_at,
+    users.username AS published_by
+FROM files
+JOIN users
+ON files.published_by = users.user_id
+WHERE files.package_id = ?
+ORDER BY
+    files.version_major DESC,
+    files.version_minor DESC,
+    files.version_patch DESC,
+    files.version_pre ASC,
+    files.version_build ASC
+        ",
+        pkg.0
+    )
+    .fetch_all(ex)
+    .await?;
+
+    files.sort_by(file_row_desc_cmp);
+    Ok(files)
+}
+
+pub async fn get_files_at<'e, E>(
+    ex: E,
+    pkg: Package,
+    date: i64
+) -> Result<Vec<FileRow>, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut files = sqlx::query_as!(
+        FileRow,
+        "
+SELECT
+    files.file_id AS id,
+    files.version,
+    files.version_major,
+    files.version_minor,
+    files.version_patch,
+    files.version_pre,
+    files.version_build,
+    files.url,
+    files.filename,
+    files.size,
+    files.checksum,
+    files.published_at,
+    users.username AS published_by
+FROM files
+JOIN users
+ON files.published_by = users.user_id
+WHERE files.package_id = ?
+    AND files.published_at <= ?
+ORDER BY
+    files.version_major DESC,
+    files.version_minor DESC,
+    files.version_patch DESC,
+    files.version_pre ASC,
+    files.version_build ASC
+        ",
+        pkg.0,
+        date
+    )
+    .fetch_all(ex)
+    .await?;
+
+    files.sort_by(file_row_desc_cmp);
+    Ok(files)
 }
 
 pub async fn get_release_version_url<'e, E>(
@@ -190,7 +281,7 @@ where
     E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_as!(
-        ReducedReleaseRow,
+        ReducedFileRow,
         "
 SELECT
     url,
@@ -213,7 +304,7 @@ ORDER BY
     .fetch_all(ex)
     .await?
     .into_iter()
-    .min_by(release_row_desc_cmp)
+    .min_by(file_row_desc_cmp)
     .map(|r| r.url)
     .ok_or(CoreError::NotAPackage)
 }
@@ -323,9 +414,9 @@ mod test {
 
     type Pool = sqlx::Pool<Sqlite>;
 
-    static RR_1_2_3: Lazy<ReleaseRow> = Lazy::new(||
-        ReleaseRow {
-            release_id: 1,
+    static RR_1_2_3: Lazy<FileRow> = Lazy::new(||
+        FileRow {
+            id: 1,
             version: "1.2.3".into(),
             version_major: 1,
             version_minor: 2,
@@ -341,9 +432,9 @@ mod test {
         }
     );
 
-    static RR_1_2_4: Lazy<ReleaseRow> = Lazy::new(||
-        ReleaseRow {
-            release_id: 2,
+    static RR_1_2_4: Lazy<FileRow> = Lazy::new(||
+        FileRow {
+            id: 2,
             version: "1.2.4".into(),
             version_major: 1,
             version_minor: 2,
