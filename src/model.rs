@@ -31,7 +31,7 @@ pub struct GameData {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ReleaseData {
+pub struct FileData {
     pub version: String,
     pub filename: String,
     pub url: String,
@@ -48,7 +48,7 @@ pub struct ReleaseData {
 pub struct PackageData {
     pub name: String,
     pub description: String,
-    pub releases: Vec<ReleaseData>
+    pub releases: Vec<FileData>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]

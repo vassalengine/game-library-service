@@ -19,7 +19,7 @@ use std::{
 use crate::{
     core::{Core, CoreError},
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
-    model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
+    model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, FileData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -318,17 +318,17 @@ where
             .ok_or(CoreError::InternalError)
     }
 
-    async fn make_version_data(
+    async fn make_release_version_data(
         &self,
         rr: ReleaseRow
-    ) -> Result<ReleaseData, CoreError>
+    ) -> Result<FileData, CoreError>
     {
         let authors = self.db.get_authors(rr.release_id)
             .await?
             .users;
 
         Ok(
-            ReleaseData {
+            FileData {
                 version: rr.version,
                 filename: rr.filename,
                 url: rr.url,
@@ -355,7 +355,7 @@ where
             get_release_rows(self, Package(pr.package_id))
                 .await?
                 .into_iter()
-                .map(|vr| self.make_version_data(vr))
+                .map(|vr| self.make_release_version_data(vr))
         ).await?;
 
         Ok(
@@ -1636,7 +1636,7 @@ mod test {
                         name: "a_package".into(),
                         description: "".into(),
                         releases: vec![
-                            ReleaseData {
+                            FileData {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
@@ -1647,7 +1647,7 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
-                            ReleaseData {
+                            FileData {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
@@ -1669,7 +1669,7 @@ mod test {
                         name: "c_package".into(),
                         description: "".into(),
                         releases: vec![
-                            ReleaseData {
+                            FileData {
                                 version: "0.1.0".into(),
                                 filename: "c_package-0.1.0".into(),
                                 url: "https://example.com/c_package-0.1.0".into(),
@@ -1713,7 +1713,7 @@ mod test {
                         name: "a_package".into(),
                         description: "".into(),
                         releases: vec![
-                            ReleaseData {
+                            FileData {
                                 version: "1.2.4".into(),
                                 filename: "a_package-1.2.4".into(),
                                 url: "https://example.com/a_package-1.2.4".into(),
@@ -1724,7 +1724,7 @@ mod test {
                                 requires: "".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
-                            ReleaseData {
+                            FileData {
                                 version: "1.2.3".into(),
                                 filename: "a_package-1.2.3".into(),
                                 url: "https://example.com/a_package-1.2.3".into(),
