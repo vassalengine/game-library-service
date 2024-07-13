@@ -22,6 +22,10 @@ pub struct ProjectSummaryRow {
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String,
+    pub game_players_min: Option<i64>,
+    pub game_players_max: Option<i64>,
+    pub game_length_min: Option<i64>,
+    pub game_length_max: Option<i64>,
     pub image: Option<String>
 }
 
@@ -38,6 +42,10 @@ pub struct ProjectRow {
     pub game_title_sort: String,
     pub game_publisher: String,
     pub game_year: String,
+    pub game_players_min: Option<i64>,
+    pub game_players_max: Option<i64>,
+    pub game_length_min: Option<i64>,
+    pub game_length_max: Option<i64>,
     pub image: Option<String>,
     pub readme: String
 }

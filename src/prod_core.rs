@@ -420,7 +420,11 @@ where
                     title: proj_row.game_title,
                     title_sort_key: proj_row.game_title_sort,
                     publisher: proj_row.game_publisher,
-                    year: proj_row.game_year
+                    year: proj_row.game_year,
+                    players_min: proj_row.game_players_min,
+                    players_max: proj_row.game_players_max,
+                    length_min: proj_row.game_length_min,
+                    length_max: proj_row.game_length_max
                 },
                 readme: proj_row.readme,
                 image: proj_row.image,
@@ -795,7 +799,11 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                     title: r.game_title,
                     title_sort_key: r.game_title_sort,
                     publisher: r.game_publisher,
-                    year: r.game_year
+                    year: r.game_year,
+                    players_min: None,
+                    players_max: None,
+                    length_min: None,
+                    length_max: None
                 }
             }
         )
@@ -870,7 +878,11 @@ mod test {
                 title: "".into(),
                 title_sort_key: "".into(),
                 publisher: "".into(),
-                year: "".into()
+                year: "".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             }
         }
     }
@@ -1646,7 +1658,11 @@ mod test {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
-                    year: "1979".into()
+                    year: "1979".into(),
+                    players_min: None,
+                    players_max: None,
+                    length_min: None,
+                    length_max: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1726,7 +1742,11 @@ mod test {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
-                    year: "1979".into()
+                    year: "1979".into(),
+                    players_min: None,
+                    players_max: None,
+                    length_min: None,
+                    length_max: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1794,7 +1814,11 @@ mod test {
                     title: "A Game of Tests".into(),
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
-                    year: "1978".into()
+                    year: "1978".into(),
+                    players_min: None,
+                    players_max: None,
+                    length_min: None,
+                    length_max: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1834,7 +1858,11 @@ mod test {
                 title: "Some New Game".into(),
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
-                year: "1999".into()
+                year: "1999".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None,
@@ -1849,7 +1877,11 @@ mod test {
                 title: data.game.title.clone(),
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
-                year: data.game.year.clone()
+                year: data.game.year.clone(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None
@@ -1876,7 +1908,11 @@ mod test {
                 title: "Some New Game".into(),
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
-                year: "1999".into()
+                year: "1999".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None,
@@ -1891,7 +1927,11 @@ mod test {
                 title: Some(new_data.game.title.clone()),
                 title_sort_key: Some(new_data.game.title_sort_key.clone()),
                 publisher: Some(new_data.game.publisher.clone()),
-                year: Some(new_data.game.year.clone())
+                year: Some(new_data.game.year.clone()),
+                players_min: Some(new_data.game.players_min.clone()),
+                players_max: Some(new_data.game.players_max.clone()),
+                length_min: Some(new_data.game.length_min.clone()),
+                length_max: Some(new_data.game.length_max.clone())
             },
             readme: Some("".into()),
             image: None

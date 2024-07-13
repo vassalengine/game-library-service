@@ -102,6 +102,10 @@ SELECT
     game_title_sort,
     game_publisher,
     game_year,
+    game_players_min,
+    game_players_max,
+    game_length_min,
+    game_length_max,
     image
 FROM projects
 ORDER BY "
@@ -144,6 +148,10 @@ SELECT
     projects.game_title_sort,
     projects.game_publisher,
     projects.game_year,
+    projects.game_players_min,
+    projects.game_players_max,
+    projects.game_length_min,
+    projects.game_length_max,
     projects.image
 FROM projects
 JOIN projects_fts AS fts
@@ -192,6 +200,10 @@ SELECT
     game_title_sort,
     game_publisher,
     game_year,
+    game_players_min,
+    game_players_max,
+    game_length_min,
+    game_length_max,
     image
 FROM projects
 WHERE "
@@ -254,6 +266,10 @@ SELECT
     projects.game_title_sort,
     projects.game_publisher,
     projects.game_year,
+    projects.game_players_min,
+    projects.game_players_max,
+    projects.game_length_min,
+    projects.game_length_max,
     projects.image
 FROM projects
 JOIN (

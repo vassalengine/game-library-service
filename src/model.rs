@@ -27,7 +27,11 @@ pub struct GameData {
     pub title: String,
     pub title_sort_key: String,
     pub publisher: String,
-    pub year: String
+    pub year: String,
+    pub players_min: Option<i64>,
+    pub players_max: Option<i64>,
+    pub length_min: Option<i64>,
+    pub length_max: Option<i64>
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -74,14 +78,6 @@ pub struct ProjectData {
     pub packages: Vec<PackageData>
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GameDataPatch {
-    pub title: Option<String>,
-    pub title_sort_key: Option<String>,
-    pub publisher: Option<String>,
-    pub year: Option<String>
-}
-
 fn double_option<'de, T, D>(de: D) -> Result<Option<Option<T>>, D::Error>
 where
     T: Deserialize<'de>,
@@ -89,6 +85,22 @@ where
 {
     // Ensure that explicit null in the JSON is mapped to Some(None)
     Deserialize::deserialize(de).map(Some)
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GameDataPatch {
+    pub title: Option<String>,
+    pub title_sort_key: Option<String>,
+    pub publisher: Option<String>,
+    pub year: Option<String>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub players_min: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub players_max: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub length_min: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub length_max: Option<Option<i64>>
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -111,7 +123,11 @@ impl MaybeProjectDataPatch {
                     title: None,
                     title_sort_key: None,
                     publisher: None,
-                    year: None
+                    year: None,
+                    players_min: None,
+                    players_max: None,
+                    length_min: None,
+                    length_max: None
                 }),
                 readme: None,
                 image: None

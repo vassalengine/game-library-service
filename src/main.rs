@@ -281,7 +281,11 @@ mod test {
                 title: "a".into(),
                 title_sort_key: "a".into(),
                 publisher: "p".into(),
-                year: "2024".into()
+                year: "2024".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             }
         }
     );
@@ -298,7 +302,11 @@ mod test {
                 title: "b".into(),
                 title_sort_key: "b".into(),
                 publisher: "p".into(),
-                year: "2024".into()
+                year: "2024".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             }
         }
     );
@@ -317,7 +325,11 @@ mod test {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
-                year: "1983".into()
+                year: "1983".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None,
@@ -1363,7 +1375,11 @@ mod test {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
-                year: "1983".into()
+                year: "1983".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None
@@ -1393,7 +1409,11 @@ mod test {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
-                year: "1983".into()
+                year: "1983".into(),
+                players_min: None,
+                players_max: None,
+                length_min: None,
+                length_max: None
             },
             readme: "".into(),
             image: None

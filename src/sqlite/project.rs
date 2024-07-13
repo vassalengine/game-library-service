@@ -367,6 +367,10 @@ SELECT
     game_title_sort,
     game_publisher,
     game_year,
+    game_players_min,
+    game_players_max,
+    game_length_min,
+    game_length_max,
     readme,
     image
 FROM projects
@@ -403,6 +407,10 @@ SELECT
     project_data.game_title_sort,
     project_data.game_publisher,
     project_data.game_year,
+    project_data.game_players_min,
+    project_data.game_players_max,
+    project_data.game_length_min,
+    project_data.game_length_max,
     project_data.image,
     project_data.readme
 FROM project_revisions
@@ -533,6 +541,10 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
+            game_players_min: None,
+            game_players_max: None,
+            game_length_min: None,
+            game_length_max: None,
             readme: "".into(),
             image: None
         }
@@ -546,7 +558,11 @@ mod test {
                 title: CREATE_ROW.game_title.clone(),
                 title_sort_key: CREATE_ROW.game_title_sort.clone(),
                 publisher: CREATE_ROW.game_publisher.clone(),
-                year: CREATE_ROW.game_year.clone()
+                year: CREATE_ROW.game_year.clone(),
+                players_min: CREATE_ROW.game_players_min.clone(),
+                players_max: CREATE_ROW.game_players_max.clone(),
+                length_min: CREATE_ROW.game_length_min.clone(),
+                length_max: CREATE_ROW.game_length_max.clone()
             },
             readme: "".into(),
             image: None
@@ -817,6 +833,10 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
+            game_players_min: None,
+            game_players_max: None,
+            game_length_min: None,
+            game_length_max: None,
             readme: "".into(),
             image: None
         }
@@ -835,6 +855,10 @@ mod test {
             game_title_sort: "Game of Tests, A".into(),
             game_publisher: "Test Game Company".into(),
             game_year: "1978".into(),
+            game_players_min: None,
+            game_players_max: None,
+            game_length_min: None,
+            game_length_max: None,
             readme: "".into(),
             image: None
         }
