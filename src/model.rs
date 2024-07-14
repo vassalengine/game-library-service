@@ -23,15 +23,19 @@ pub struct Owner(pub i64);
 pub struct Owned(pub Owner, pub Project);
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Range {
+    pub min: Option<i64>,
+    pub max: Option<i64>
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
     pub title_sort_key: String,
     pub publisher: String,
     pub year: String,
-    pub players_min: Option<i64>,
-    pub players_max: Option<i64>,
-    pub length_min: Option<i64>,
-    pub length_max: Option<i64>
+    pub players: Option<Range>,
+    pub length: Option<Range>
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -88,19 +92,21 @@ where
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RangePatch {
+    #[serde(default, deserialize_with = "double_option")]
+    pub min: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "double_option")]
+    pub max: Option<Option<i64>>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameDataPatch {
     pub title: Option<String>,
     pub title_sort_key: Option<String>,
     pub publisher: Option<String>,
     pub year: Option<String>,
-    #[serde(default, deserialize_with = "double_option")]
-    pub players_min: Option<Option<i64>>,
-    #[serde(default, deserialize_with = "double_option")]
-    pub players_max: Option<Option<i64>>,
-    #[serde(default, deserialize_with = "double_option")]
-    pub length_min: Option<Option<i64>>,
-    #[serde(default, deserialize_with = "double_option")]
-    pub length_max: Option<Option<i64>>
+    pub players: Option<RangePatch>,
+    pub length: Option<RangePatch>
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -124,10 +130,14 @@ impl MaybeProjectDataPatch {
                     title_sort_key: None,
                     publisher: None,
                     year: None,
-                    players_min: None,
-                    players_max: None,
-                    length_min: None,
-                    length_max: None
+                    players: None | Some(RangePatch {
+                        min: None,
+                        max: None
+                    }),
+                    length: None | Some(RangePatch {
+                        min: None,
+                        max: None
+                    }),
                 }),
                 readme: None,
                 image: None

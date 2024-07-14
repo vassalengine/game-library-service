@@ -500,7 +500,7 @@ mod test {
 
     use once_cell::sync::Lazy;
 
-    use crate::model::GameData;
+    use crate::model::{GameData, Range};
 
     type Pool = sqlx::Pool<Sqlite>;
 
@@ -559,10 +559,18 @@ mod test {
                 title_sort_key: CREATE_ROW.game_title_sort.clone(),
                 publisher: CREATE_ROW.game_publisher.clone(),
                 year: CREATE_ROW.game_year.clone(),
-                players_min: CREATE_ROW.game_players_min.clone(),
-                players_max: CREATE_ROW.game_players_max.clone(),
-                length_min: CREATE_ROW.game_length_min.clone(),
-                length_max: CREATE_ROW.game_length_max.clone()
+                players: Some(
+                    Range {
+                        min: CREATE_ROW.game_players_min.clone(),
+                        max: CREATE_ROW.game_players_max.clone()
+                    }
+                ),
+                length: Some(
+                    Range {
+                        min: CREATE_ROW.game_length_min.clone(),
+                        max: CREATE_ROW.game_length_max.clone()
+                    }
+                )
             },
             readme: "".into(),
             image: None

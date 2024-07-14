@@ -19,7 +19,7 @@ use std::{
 use crate::{
     core::{Core, CoreError},
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, FileRow},
-    model::{GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, FileData, User, Users},
+    model::{FileData, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -309,6 +309,15 @@ fn image_mime_type_ok(mime: &Mime) -> bool {
     )
 }
 
+fn range_if_some(min: Option<i64>, max: Option<i64>) -> Option<Range> {
+    if min.is_some() || max.is_some() {
+        Some(Range { min, max })
+    }
+    else {
+        None
+    }
+}
+
 impl<C, U> ProdCore<C, U>
 where
     C: DatabaseClient + Send + Sync,
@@ -421,10 +430,14 @@ where
                     title_sort_key: proj_row.game_title_sort,
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year,
-                    players_min: proj_row.game_players_min,
-                    players_max: proj_row.game_players_max,
-                    length_min: proj_row.game_length_min,
-                    length_max: proj_row.game_length_max
+                    players: range_if_some(
+                        proj_row.game_players_min,
+                        proj_row.game_players_max
+                    ),
+                    length: range_if_some(
+                        proj_row.game_length_min,
+                        proj_row.game_length_max
+                    )
                 },
                 readme: proj_row.readme,
                 image: proj_row.image,
@@ -800,10 +813,8 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                     title_sort_key: r.game_title_sort,
                     publisher: r.game_publisher,
                     year: r.game_year,
-                    players_min: None,
-                    players_max: None,
-                    length_min: None,
-                    length_max: None
+                    players: None,
+                    length: None
                 }
             }
         )
@@ -879,10 +890,8 @@ mod test {
                 title_sort_key: "".into(),
                 publisher: "".into(),
                 year: "".into(),
-                players_min: None,
-                players_max: None,
-                length_min: None,
-                length_max: None
+                players: None,
+                length: None
             }
         }
     }
@@ -1659,10 +1668,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players_min: None,
-                    players_max: None,
-                    length_min: None,
-                    length_max: None
+                    players: None,
+                    length: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1743,10 +1750,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players_min: None,
-                    players_max: None,
-                    length_min: None,
-                    length_max: None
+                    players: None,
+                    length: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1815,10 +1820,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1978".into(),
-                    players_min: None,
-                    players_max: None,
-                    length_min: None,
-                    length_max: None
+                    players: None,
+                    length: None
                 },
                 readme: "".into(),
                 image: None,
@@ -1859,10 +1862,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players_min: None,
-                players_max: None,
-                length_min: None,
-                length_max: None
+                players: None,
+                length: None
             },
             readme: "".into(),
             image: None,
@@ -1878,10 +1879,8 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone(),
-                players_min: None,
-                players_max: None,
-                length_min: None,
-                length_max: None
+                players: None,
+                length: None
             },
             readme: "".into(),
             image: None
@@ -1909,10 +1908,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players_min: None,
-                players_max: None,
-                length_min: None,
-                length_max: None
+                players: None,
+                length: None,
             },
             readme: "".into(),
             image: None,
@@ -1928,10 +1925,8 @@ mod test {
                 title_sort_key: Some(new_data.game.title_sort_key.clone()),
                 publisher: Some(new_data.game.publisher.clone()),
                 year: Some(new_data.game.year.clone()),
-                players_min: Some(new_data.game.players_min.clone()),
-                players_max: Some(new_data.game.players_max.clone()),
-                length_min: Some(new_data.game.length_min.clone()),
-                length_max: Some(new_data.game.length_max.clone())
+                players: None,
+                length: None
             },
             readme: Some("".into()),
             image: None
