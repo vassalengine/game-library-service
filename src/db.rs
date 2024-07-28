@@ -4,7 +4,7 @@ use sqlx::FromRow;
 
 use crate::{
     core::CoreError,
-    model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -319,4 +319,15 @@ pub trait DatabaseClient {
         _proj: Project,
         _date: i64
     ) -> Result<Vec<String>, CoreError>;
+
+    async fn get_gallery(
+        &self,
+        _proj: Project
+    ) -> Result<Vec<GalleryImage>, CoreError>;
+
+    async fn get_gallery_at(
+        &self,
+        _proj: Project,
+        _date: i64
+    ) -> Result<Vec<GalleryImage>, CoreError>;
 }

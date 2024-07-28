@@ -15,7 +15,7 @@ mod users;
 use crate::{
     core::CoreError,
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow},
-    model::{Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
     version::Version
@@ -441,6 +441,21 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<String>, CoreError>
     {
         tags::get_tags_at(&self.0, proj, date).await
+    }
+
+    async fn get_gallery(
+        &self,
+        proj: Project
+    ) -> Result<Vec<GalleryImage>, CoreError> {
+        images::get_gallery(&self.0, proj).await
+    }
+
+    async fn get_gallery_at(
+        &self,
+        proj: Project,
+        date: i64
+    ) -> Result<Vec<GalleryImage>, CoreError> {
+        images::get_gallery_at(&self.0, proj, date).await
     }
 }
 

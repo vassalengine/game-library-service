@@ -19,7 +19,7 @@ use std::{
 use crate::{
     core::{Core, CoreError},
     db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, FileRow},
-    model::{FileData, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, User, Users},
+    model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -133,6 +133,7 @@ where
             proj,
             self.db.get_project_row(proj).await?,
             self.db.get_tags(proj).await?,
+            self.db.get_gallery(proj).await?,
             self.db.get_packages(proj).await?,
             |pc, pkg| pc.db.get_releases(pkg),
             |pc, pkg| pc.db.get_files(pkg)
@@ -175,12 +176,14 @@ where
         let mtime = proj_row.modified_at;
 
         let tags = self.db.get_tags_at(proj, mtime).await?;
+        let gallery = self.db.get_gallery_at(proj, mtime).await?;
         let package_rows = self.db.get_packages_at(proj, mtime).await?;
 
         self.get_project_impl(
             proj,
             proj_row,
             tags,
+            gallery,
             package_rows,
             |pc, pkg| pc.db.get_releases_at(pkg, mtime),
             |pc, pkg| pc.db.get_files_at(pkg, mtime)
@@ -397,6 +400,7 @@ where
         proj: Project,
         proj_row: ProjectRow,
         tags: Vec<String>,
+        gallery: Vec<GalleryImage>,
         package_rows: Vec<PackageRow>,
         get_release_rows: RF,
         get_file_rows: FF,
@@ -446,7 +450,8 @@ where
                 readme: proj_row.readme,
                 image: proj_row.image,
                 owners,
-                packages
+                packages,
+                gallery
             }
         )
     }
@@ -1732,7 +1737,8 @@ mod test {
                         ],
                         files: vec![]
                     }
-                ]
+                ],
+                gallery: vec![]
             }
         );
     }
@@ -1802,7 +1808,8 @@ mod test {
                         releases: vec![],
                         files: vec![]
                     }
-                ]
+                ],
+                gallery: vec![]
             }
         );
     }
@@ -1843,7 +1850,8 @@ mod test {
                         releases: vec![],
                         files: vec![]
                     }
-                ]
+                ],
+                gallery: vec![]
             }
         );
     }
@@ -1872,7 +1880,8 @@ mod test {
             readme: "".into(),
             image: None,
             owners: vec!["bob".into()],
-            packages: vec![]
+            packages: vec![],
+            gallery: vec![]
         };
 
         let cdata = ProjectDataPost {
@@ -1918,7 +1927,8 @@ mod test {
             readme: "".into(),
             image: None,
             owners: vec!["bob".into()],
-            packages: vec![]
+            packages: vec![],
+            gallery: vec![]
         };
 
         let cdata = ProjectDataPatch {

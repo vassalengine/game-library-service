@@ -5,7 +5,7 @@ use sqlx::{
 
 use crate::{
     core::CoreError,
-    model::{Owner, Project},
+    model::{GalleryImage, Owner, Project},
     sqlite::project::update_project_non_project_data
 };
 
@@ -173,6 +173,58 @@ where
     tx.commit().await?;
 
     Ok(())
+}
+
+pub async fn get_gallery<'e, E>(
+    ex: E,
+    proj: Project
+) -> Result<Vec<GalleryImage>, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+       sqlx::query_as!(
+            GalleryImage,
+            "
+SELECT filename, description
+FROM galleries
+WHERE project_id = ?
+    AND removed_at IS NULL
+ORDER BY published_at ASC
+            ",
+            proj.0
+        )
+        .fetch_all(ex)
+        .await?
+    )
+}
+
+pub async fn get_gallery_at<'e, E>(
+    ex: E,
+    proj: Project,
+    date: i64
+) -> Result<Vec<GalleryImage>, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+   Ok(
+       sqlx::query_as!(
+            GalleryImage,
+            "
+SELECT filename, description
+FROM galleries
+WHERE project_id = ?
+    AND published_at <= ?
+    AND (removed_at > ? OR removed_at IS NULL)
+ORDER BY published_at ASC
+            ",
+            proj.0,
+            date,
+            date
+        )
+        .fetch_all(ex)
+        .await?
+    )
 }
 
 #[cfg(test)]

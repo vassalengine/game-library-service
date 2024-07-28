@@ -347,7 +347,8 @@ mod test {
                     ],
                     files: vec![]
                 }
-            ]
+            ],
+            gallery: vec![]
         }
     );
 

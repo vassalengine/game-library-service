@@ -104,6 +104,25 @@ CREATE TABLE image_revisions (
   UNIQUE(project_id, filename, published_at)
 );
 
+CREATE TABLE galleries (
+  project_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  description TEXT NOT NULL,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  removed_at INTEGER,
+  removed_by INTEGER,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id),
+  FOREIGN KEY(removed_by) REFERENCES users(user_id),
+  FOREIGN KEY(project_id, filename) REFERENCES images(project_id, filename),
+  UNIQUE(project_id, filename),
+  CHECK(
+    (removed_at IS NULL AND removed_by IS NULL) OR
+    (removed_at IS NOT NULL AND removed_by IS NOT NULL)
+  )
+);
+
 CREATE TABLE tags (
   project_id INTEGER NOT NULL,
   tag TEXT NOT NULL,

@@ -51,6 +51,12 @@ pub struct FileData {
     pub authors: Vec<String>
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GalleryImage {
+    pub filename: String,
+    pub description: String
+}
+
 // TODO: probably needs slug
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
@@ -79,7 +85,8 @@ pub struct ProjectData {
     pub readme: String,
     pub image: Option<String>,
     pub owners: Vec<String>,
-    pub packages: Vec<PackageData>
+    pub packages: Vec<PackageData>,
+    pub gallery: Vec<GalleryImage>
 }
 
 fn double_option<'de, T, D>(de: D) -> Result<Option<Option<T>>, D::Error>
