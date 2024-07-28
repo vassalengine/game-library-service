@@ -10,6 +10,7 @@ mod players;
 mod project;
 mod projects;
 mod releases;
+mod tags;
 mod users;
 
 use crate::{
