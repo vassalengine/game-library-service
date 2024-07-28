@@ -77,6 +77,7 @@ CREATE TABLE files (
   checksum TEXT NOT NULL,
   published_at INTEGER NOT NULL,
   published_by INTEGER NOT NULL,
+  UNIQUE(package_id, version_major, version_minor, version_patch, version_pre, version_build, filename),
   FOREIGN KEY(package_id) REFERENCES packages(package_id),
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
