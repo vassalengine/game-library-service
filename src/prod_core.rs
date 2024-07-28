@@ -347,7 +347,7 @@ where
                 checksum: r.checksum,
                 published_at: nanos_to_rfc3339(r.published_at)?,
                 published_by: r.published_by,
-                requires: "".into(),
+                requires: r.requires,
                 authors
             }
         )
@@ -1687,7 +1687,7 @@ mod test {
                                 checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "alice".into(),
-                                requires: "".into(),
+                                requires: ">= 3.7.12".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
                             FileData {
@@ -1698,7 +1698,7 @@ mod test {
                                 checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "bob".into(),
-                                requires: "".into(),
+                                requires: ">= 3.2.17".into(),
                                 authors: vec!["alice".into()]
                             }
                         ],
@@ -1769,7 +1769,7 @@ mod test {
                                 checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                 published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                 published_by: "alice".into(),
-                                requires: "".into(),
+                                requires: ">= 3.7.12".into(),
                                 authors: vec!["alice".into(), "bob".into()]
                             },
                             FileData {
@@ -1780,7 +1780,7 @@ mod test {
                                 checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                 published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                 published_by: "bob".into(),
-                                requires: "".into(),
+                                requires: ">= 3.2.17".into(),
                                 authors: vec!["alice".into()]
                             }
                         ],

@@ -349,6 +349,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         filename: &str,
         size: i64,
         checksum: &str,
+        requires: &str,
         url: &str,
         now: i64
     ) -> Result<(), CoreError>
@@ -362,6 +363,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             filename,
             size,
             checksum,
+            requires,
             url,
             now
         ).await

@@ -54,6 +54,7 @@ CREATE TABLE releases (
   filename TEXT NOT NULL,
   size INTEGER NOT NULL,
   checksum TEXT NOT NULL,
+  requires TEXT NOT NULL,
   published_at INTEGER NOT NULL,
   published_by INTEGER NOT NULL,
   UNIQUE(package_id, version_major, version_minor, version_patch, version_pre, version_build),

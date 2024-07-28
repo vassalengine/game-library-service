@@ -71,9 +71,9 @@ pub struct FileRow {
     pub url: String,
     pub size: i64,
     pub checksum: String,
+    pub requires: String,
     pub published_at: i64,
     pub published_by: String
-//    requires: String
 }
 
 #[async_trait]
@@ -265,6 +265,7 @@ pub trait DatabaseClient {
         _filename: &str,
         _size: i64,
         _checksum: &str,
+        _requires: &str,
         _url: &str,
         _now: i64
     ) -> Result<(), CoreError>;

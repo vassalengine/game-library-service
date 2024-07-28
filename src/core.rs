@@ -206,6 +206,7 @@ pub trait Core {
         _proj: Project,
         _pkg: Package,
         _version: &Version,
+        _requires: &str,
         _filename: &str,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
     ) -> Result<(), CoreError>

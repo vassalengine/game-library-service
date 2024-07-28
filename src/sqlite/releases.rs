@@ -78,6 +78,7 @@ SELECT
     releases.filename,
     releases.size,
     releases.checksum,
+    releases.requires,
     releases.published_at,
     users.username AS published_by
 FROM releases
@@ -123,6 +124,7 @@ SELECT
     releases.filename,
     releases.size,
     releases.checksum,
+    releases.requires,
     releases.published_at,
     users.username AS published_by
 FROM releases
@@ -169,6 +171,7 @@ SELECT
     files.filename,
     files.size,
     files.checksum,
+    '' AS requires,
     files.published_at,
     users.username AS published_by
 FROM files
@@ -214,6 +217,7 @@ SELECT
     files.filename,
     files.size,
     files.checksum,
+    '' AS requires,
     files.published_at,
     users.username AS published_by
 FROM files
@@ -318,6 +322,7 @@ async fn create_release_row<'e, E>(
     filename: &str,
     size: i64,
     checksum: &str,
+    requires: &str,
     url: &str,
     now: i64
 ) -> Result<(), CoreError>
@@ -342,10 +347,11 @@ INSERT INTO releases (
     filename,
     size,
     checksum,
+    requires,
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ",
         pkg.0,
         vstr,
@@ -358,6 +364,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         filename,
         size,
         checksum,
+        requires,
         now,
         owner.0
     )
@@ -376,6 +383,7 @@ pub async fn add_release_url<'a, A>(
     filename: &str,
     size: i64,
     checksum: &str,
+    requires: &str,
     url: &str,
     now: i64
 ) -> Result<(), CoreError>
@@ -394,6 +402,7 @@ where
         filename,
         size,
         checksum,
+        requires,
         url,
         now
     ).await?;
@@ -427,6 +436,7 @@ mod test {
             filename: "a_package-1.2.3".into(),
             size: 1234,
             checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
+            requires: ">= 3.2.17".into(),
             published_at: 1702137389180282477,
             published_by: "bob".into()
         }
@@ -445,6 +455,7 @@ mod test {
             filename: "a_package-1.2.4".into(),
             size: 5678,
             checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
+            requires: ">= 3.7.12".into(),
             published_at: 1702223789180282477,
             published_by: "alice".into()
         }
@@ -596,6 +607,7 @@ mod test {
             "new_thing.vmod",
             123456,
             "",
+            "",
             "https://example.com/new_thing.vmod",
             0
         ).await.unwrap();
@@ -620,6 +632,7 @@ mod test {
                     },
                     "new_thing.vmod",
                     123456,
+                    "",
                     "",
                     "https://example.com/new_thing.vmod",
                     0
@@ -649,6 +662,7 @@ mod test {
                     "new_thing.vmod",
                     123456,
                     "",
+                    "",
                     "https://example.com/new_thing.vmod",
                     0
                 ).await.unwrap_err(),
@@ -677,6 +691,7 @@ mod test {
                     "new_thing.vmod",
                     123456,
                     "",
+                    "",
                     "https://example.com/new_thing.vmod",
                     0
                 ).await.unwrap_err(),
@@ -704,6 +719,7 @@ mod test {
                     },
                     "new_thing.vmod",
                     123456,
+                    "",
                     "",
                     "https://example.com/new_thing.vmod",
                     0
