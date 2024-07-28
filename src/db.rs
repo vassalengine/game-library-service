@@ -308,4 +308,15 @@ pub trait DatabaseClient {
         _url: &str,
         _now: i64
     ) -> Result<(), CoreError>;
+
+    async fn get_tags(
+        &self,
+        _proj: Project
+    ) -> Result<Vec<String>, CoreError>;
+
+    async fn get_tags_at(
+        &self,
+        _proj: Project,
+        _date: i64
+    ) -> Result<Vec<String>, CoreError>;
 }

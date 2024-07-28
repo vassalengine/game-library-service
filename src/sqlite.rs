@@ -425,6 +425,23 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     {
         images::add_image_url(&self.0, owner, proj, img_name, url, now).await
     }
+
+    async fn get_tags(
+        &self,
+        proj: Project
+    ) -> Result<Vec<String>, CoreError>
+    {
+        tags::get_tags(&self.0, proj).await
+    }
+
+    async fn get_tags_at(
+        &self,
+        proj: Project,
+        date: i64
+    ) -> Result<Vec<String>, CoreError>
+    {
+        tags::get_tags_at(&self.0, proj, date).await
+    }
 }
 
 // TODO: move this... somewhere else

@@ -132,6 +132,7 @@ where
         self.get_project_impl(
             proj,
             self.db.get_project_row(proj).await?,
+            self.db.get_tags(proj).await?,
             self.db.get_packages(proj).await?,
             |pc, pkg| pc.db.get_releases(pkg),
             |pc, pkg| pc.db.get_files(pkg)
@@ -173,11 +174,13 @@ where
             .await?;
         let mtime = proj_row.modified_at;
 
+        let tags = self.db.get_tags_at(proj, mtime).await?;
         let package_rows = self.db.get_packages_at(proj, mtime).await?;
 
         self.get_project_impl(
             proj,
             proj_row,
+            tags,
             package_rows,
             |pc, pkg| pc.db.get_releases_at(pkg, mtime),
             |pc, pkg| pc.db.get_files_at(pkg, mtime)
@@ -393,6 +396,7 @@ where
         &'s self,
         proj: Project,
         proj_row: ProjectRow,
+        tags: Vec<String>,
         package_rows: Vec<PackageRow>,
         get_release_rows: RF,
         get_file_rows: FF,
@@ -424,7 +428,7 @@ where
                 revision: proj_row.revision,
                 created_at: nanos_to_rfc3339(proj_row.created_at)?,
                 modified_at: nanos_to_rfc3339(proj_row.modified_at)?,
-                tags: vec![],
+                tags,
                 game: GameData {
                     title: proj_row.game_title,
                     title_sort_key: proj_row.game_title_sort,

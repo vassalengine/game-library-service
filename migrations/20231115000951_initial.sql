@@ -104,6 +104,13 @@ CREATE TABLE image_revisions (
   UNIQUE(project_id, filename, published_at)
 );
 
+CREATE TABLE tags (
+  project_id INTEGER NOT NULL,
+  tag TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  UNIQUE(project_id, tag)
+);
+
 CREATE TABLE projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
