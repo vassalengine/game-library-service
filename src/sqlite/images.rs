@@ -190,7 +190,7 @@ SELECT filename, description
 FROM galleries
 WHERE project_id = ?
     AND removed_at IS NULL
-ORDER BY published_at ASC
+ORDER BY position
             ",
             proj.0
         )
@@ -216,7 +216,7 @@ FROM galleries
 WHERE project_id = ?
     AND published_at <= ?
     AND (removed_at > ? OR removed_at IS NULL)
-ORDER BY published_at ASC
+ORDER BY position
             ",
             proj.0,
             date,
