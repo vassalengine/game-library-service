@@ -35,6 +35,7 @@ pub async fn get_projects_query_count<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+    let query = fts5_quote(query);
     Ok(
         sqlx::query_scalar!(
             "
@@ -123,6 +124,13 @@ ORDER BY "
     )
 }
 
+fn fts5_quote(s: &str) -> String {
+    // Wrapping a query in double quotes ensures that it is interpreted as
+    // a string in the FTS5 query langauge, but then internal double quotes
+    // must also be escaped with an extra double quote.
+    format!("\"{}\"", s.replace("\"", "\"\""))
+}
+
 pub async fn get_projects_query_end_window<'e, E>(
     ex: E,
     query: &str,
@@ -158,7 +166,7 @@ JOIN projects_fts AS fts
 ON projects.project_id = fts.rowid
 WHERE projects_fts MATCH "
         )
-        .push_bind(query)
+        .push_bind(fts5_quote(query))
         .push(" ORDER BY ")
         .push(sort_by.field())
         .push(" ")
@@ -279,7 +287,7 @@ JOIN (
     FROM projects_fts
     WHERE projects_fts MATCH "
         )
-        .push_bind(query)
+        .push_bind(fts5_quote(query))
         .push(") AS fts ON fts.rowid = projects.project_id WHERE ")
         .push(sort_by.field())
         .push(dir.op())
@@ -312,6 +320,18 @@ mod test {
     use super::*;
 
     type Pool = sqlx::Pool<Sqlite>;
+
+    async fn fts5_quote_abc() {
+        assert_eq!("\"abc\"", fts5_quote("abc"));
+    }
+
+    async fn fts5_quote_abc_def() {
+        assert_eq!("\"abc def\"", fts5_quote("abc def"));
+    }
+
+    async fn fts5_quote_abcq_def() {
+        assert_eq!("\"abc\"\" def\"", fts5_quote("abc\" def"));
+    }
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_projects_count_ok(pool: Pool) {
