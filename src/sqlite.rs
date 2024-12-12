@@ -15,8 +15,8 @@ mod users;
 
 use crate::{
     core::CoreError,
-    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow},
-    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
+    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
     version::Version
@@ -285,7 +285,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_releases(
         &self,
         pkg: Package
-    ) -> Result<Vec<FileRow>, CoreError>
+    ) -> Result<Vec<ReleaseRow>, CoreError>
     {
         releases::get_releases(&self.0, pkg).await
     }
@@ -294,26 +294,26 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg: Package,
         date: i64
-    ) -> Result<Vec<FileRow>, CoreError>
+    ) -> Result<Vec<ReleaseRow>, CoreError>
     {
         releases::get_releases_at(&self.0, pkg, date).await
     }
 
     async fn get_files(
         &self,
-        pkg: Package
+        rel: Release
     ) -> Result<Vec<FileRow>, CoreError>
     {
-        releases::get_files(&self.0, pkg).await
+        releases::get_files(&self.0, rel).await
     }
 
     async fn get_files_at(
         &self,
-        pkg: Package,
+        rel: Release,
         date: i64
     ) -> Result<Vec<FileRow>, CoreError>
     {
-        releases::get_files_at(&self.0, pkg, date).await
+        releases::get_files_at(&self.0, rel, date).await
     }
 
     async fn get_authors(

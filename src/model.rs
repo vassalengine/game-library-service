@@ -11,6 +11,9 @@ pub struct Users {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Release(pub i64);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Package(pub i64);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -40,7 +43,6 @@ pub struct GameData {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FileData {
-    pub version: String,
     pub filename: String,
     pub url: String,
     pub size: i64,
@@ -52,9 +54,9 @@ pub struct FileData {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GalleryImage {
-    pub filename: String,
-    pub description: String
+pub struct ReleaseData {
+    pub version: String,
+    pub files: Vec<FileData>
 }
 
 // TODO: probably needs slug
@@ -62,14 +64,19 @@ pub struct GalleryImage {
 pub struct PackageData {
     pub name: String,
     pub description: String,
-    pub releases: Vec<FileData>,
-    pub files: Vec<FileData>
+    pub releases: Vec<ReleaseData>
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageDataPost {
 // TODO: display name?
 //    pub name: String,
+    pub description: String
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GalleryImage {
+    pub filename: String,
     pub description: String
 }
 

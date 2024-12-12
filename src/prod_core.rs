@@ -18,8 +18,8 @@ use std::{
 
 use crate::{
     core::{Core, CoreError},
-    db::{DatabaseClient, PackageRow, ProjectRow, ProjectSummaryRow, FileRow},
-    model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, User, Users},
+    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
@@ -136,7 +136,7 @@ where
             self.db.get_gallery(proj).await?,
             self.db.get_packages(proj).await?,
             |pc, pkg| pc.db.get_releases(pkg),
-            |pc, pkg| pc.db.get_files(pkg)
+            |pc, rel| pc.db.get_files(rel)
         ).await
     }
 
@@ -186,7 +186,7 @@ where
             gallery,
             package_rows,
             |pc, pkg| pc.db.get_releases_at(pkg, mtime),
-            |pc, pkg| pc.db.get_files_at(pkg, mtime)
+            |pc, rel| pc.db.get_files_at(rel, mtime)
         ).await
     }
 
@@ -335,7 +335,7 @@ where
             .ok_or(CoreError::InternalError)
     }
 
-    async fn make_version_data(
+    async fn make_file_data(
         &self,
         r: FileRow
     ) -> Result<FileData, CoreError>
@@ -346,7 +346,6 @@ where
 
         Ok(
             FileData {
-                version: r.version,
                 filename: r.filename,
                 url: r.url,
                 size: r.size,
@@ -359,6 +358,30 @@ where
         )
     }
 
+    async fn make_release_data<'s, FF, FR>(
+        &'s self,
+        rr: ReleaseRow,
+        get_files_rows: &FF
+    ) -> Result<ReleaseData, CoreError>
+    where
+        FF: Fn(&'s Self, Release) -> FR,
+        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
+    {
+        let files = try_join_all(
+            get_files_rows(self, Release(rr.release_id))
+                .await?
+                .into_iter()
+                .map(|fr| self.make_file_data(fr))
+        ).await?;
+
+        Ok(
+            ReleaseData {
+                version: rr.version,
+                files
+            }
+        )
+    }
+
     async fn make_package_data<'s, RF, RR, FF, FR>(
         &'s self,
         pr: PackageRow,
@@ -367,30 +390,25 @@ where
     ) -> Result<PackageData, CoreError>
     where
         RF: Fn(&'s Self, Package) -> RR,
-        RR: Future<Output = Result<Vec<FileRow>, CoreError>>,
-        FF: Fn(&'s Self, Package) -> FR,
+        RR: Future<Output = Result<Vec<ReleaseRow>, CoreError>>,
+        FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
         let releases = try_join_all(
             get_release_rows(self, Package(pr.package_id))
                 .await?
                 .into_iter()
-                .map(|vr| self.make_version_data(vr))
-        ).await?;
-
-        let files = try_join_all(
-            get_files_rows(self, Package(pr.package_id))
-                .await?
-                .into_iter()
-                .map(|vr| self.make_version_data(vr))
+                .map(|rr| self.make_release_data(
+                    rr,
+                    &get_files_rows
+                ))
         ).await?;
 
         Ok(
             PackageData {
                 name: pr.name,
                 description: "".into(),
-                releases,
-                files
+                releases
             }
         )
     }
@@ -407,8 +425,8 @@ where
     ) -> Result<ProjectData, CoreError>
     where
         RF: Fn(&'s Self, Package) -> RR,
-        RR: Future<Output = Result<Vec<FileRow>, CoreError>>,
-        FF: Fn(&'s Self, Package) -> FR,
+        RR: Future<Output = Result<Vec<ReleaseRow>, CoreError>>,
+        FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
         let owners = self.get_owners(proj)
@@ -1688,54 +1706,63 @@ mod test {
                         name: "a_package".into(),
                         description: "".into(),
                         releases: vec![
-                            FileData {
+                            ReleaseData {
                                 version: "1.2.4".into(),
-                                filename: "a_package-1.2.4".into(),
-                                url: "https://example.com/a_package-1.2.4".into(),
-                                size: 5678,
-                                checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                                published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
-                                published_by: "alice".into(),
-                                requires: ">= 3.7.12".into(),
-                                authors: vec!["alice".into(), "bob".into()]
+                                files: vec![
+                                    FileData {
+                                        filename: "a_package-1.2.4".into(),
+                                        url: "https://example.com/a_package-1.2.4".into(),
+                                        size: 5678,
+                                        checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
+                                        published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                                        published_by: "alice".into(),
+                                        requires: ">= 3.7.12".into(),
+                                        authors: vec!["alice".into(), "bob".into()]
+                                    },
+                                ],
                             },
-                            FileData {
+                            ReleaseData {
                                 version: "1.2.3".into(),
-                                filename: "a_package-1.2.3".into(),
-                                url: "https://example.com/a_package-1.2.3".into(),
-                                size: 1234,
-                                checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                                published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
-                                published_by: "bob".into(),
-                                requires: ">= 3.2.17".into(),
-                                authors: vec!["alice".into()]
+                                files: vec![
+                                    FileData {
+                                        filename: "a_package-1.2.3".into(),
+                                        url: "https://example.com/a_package-1.2.3".into(),
+                                        size: 1234,
+                                        checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
+                                        published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                                        published_by: "bob".into(),
+                                        requires: ">= 3.2.17".into(),
+                                        authors: vec!["alice".into()]
+                                    }
+                                ]
                             }
-                        ],
-                        files: vec![]
+                        ]
                     },
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        releases: vec![],
-                        files: vec![]
+                        releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
                         releases: vec![
-                            FileData {
+                            ReleaseData {
                                 version: "0.1.0".into(),
-                                filename: "c_package-0.1.0".into(),
-                                url: "https://example.com/c_package-0.1.0".into(),
-                                size: 123456,
-                                checksum: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
-                                published_at: "2023-12-15T15:56:29.180282477+00:00".into(),
-                                published_by: "chuck".into(),
-                                requires: "".into(),
-                                authors: vec![]
+                                files: vec![
+                                    FileData {
+                                        filename: "c_package-0.1.0".into(),
+                                        url: "https://example.com/c_package-0.1.0".into(),
+                                        size: 123456,
+                                        checksum: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
+                                        published_at: "2023-12-15T15:56:29.180282477+00:00".into(),
+                                        published_by: "chuck".into(),
+                                        requires: "".into(),
+                                        authors: vec![]
+                                    }
+                                ]
                             }
-                        ],
-                        files: vec![]
+                        ]
                     }
                 ],
                 gallery: vec![]
@@ -1771,42 +1798,47 @@ mod test {
                         name: "a_package".into(),
                         description: "".into(),
                         releases: vec![
-                            FileData {
+                            ReleaseData {
                                 version: "1.2.4".into(),
-                                filename: "a_package-1.2.4".into(),
-                                url: "https://example.com/a_package-1.2.4".into(),
-                                size: 5678,
-                                checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                                published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
-                                published_by: "alice".into(),
-                                requires: ">= 3.7.12".into(),
-                                authors: vec!["alice".into(), "bob".into()]
+                                files: vec![
+                                    FileData {
+                                        filename: "a_package-1.2.4".into(),
+                                        url: "https://example.com/a_package-1.2.4".into(),
+                                        size: 5678,
+                                        checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
+                                        published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                                        published_by: "alice".into(),
+                                        requires: ">= 3.7.12".into(),
+                                        authors: vec!["alice".into(), "bob".into()]
+                                    },
+                                ]
                             },
-                            FileData {
+                            ReleaseData {
                                 version: "1.2.3".into(),
-                                filename: "a_package-1.2.3".into(),
-                                url: "https://example.com/a_package-1.2.3".into(),
-                                size: 1234,
-                                checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                                published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
-                                published_by: "bob".into(),
-                                requires: ">= 3.2.17".into(),
-                                authors: vec!["alice".into()]
+                                files: vec![
+                                    FileData {
+                                        filename: "a_package-1.2.3".into(),
+                                        url: "https://example.com/a_package-1.2.3".into(),
+                                        size: 1234,
+                                        checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
+                                        published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                                        published_by: "bob".into(),
+                                        requires: ">= 3.2.17".into(),
+                                        authors: vec!["alice".into()]
+                                    }
+                                ]
                             }
-                        ],
-                        files: vec![]
+                        ]
                     },
                     PackageData {
                         name: "b_package".into(),
                         description: "".into(),
-                        releases: vec![],
-                        files: vec![]
+                        releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
-                        releases: vec![],
-                        files: vec![]
+                        releases: vec![]
                     }
                 ],
                 gallery: vec![]
@@ -1842,13 +1874,11 @@ mod test {
                         name: "b_package".into(),
                         description: "".into(),
                         releases: vec![],
-                        files: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
                         description: "".into(),
                         releases: vec![],
-                        files: vec![]
                     }
                 ],
                 gallery: vec![]

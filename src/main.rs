@@ -248,7 +248,7 @@ mod test {
     use crate::{
         core::{Core, CoreError},
         jwt::{self, EncodingKey},
-        model::{GameData, Owner, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, FileData, User, Users},
+        model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams,
         version::Version
@@ -333,19 +333,22 @@ mod test {
                     name: "a_package".into(),
                     description: "Some package".into(),
                     releases: vec![
-                        FileData {
+                        ReleaseData {
                             version: "1.2.3".into(),
-                            filename: "eia.vmod".into(),
-                            url: "https://example.com/eia.vmod".into(),
-                            size: 0,
-                            checksum: "deadbeef".into(),
-                            published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
-                            published_by: "alice".into(),
-                            requires: "".into(),
-                            authors: vec![]
+                            files: vec![
+                                FileData {
+                                    filename: "eia.vmod".into(),
+                                    url: "https://example.com/eia.vmod".into(),
+                                    size: 0,
+                                    checksum: "deadbeef".into(),
+                                    published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                                    published_by: "alice".into(),
+                                    requires: "".into(),
+                                    authors: vec![]
+                                }
+                            ]
                         }
                     ],
-                    files: vec![]
                 }
             ],
             gallery: vec![]

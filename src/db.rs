@@ -4,7 +4,7 @@ use sqlx::FromRow;
 
 use crate::{
     core::CoreError,
-    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, User, Users},
+    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -59,14 +59,21 @@ pub struct PackageRow {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct FileRow {
-    pub id: i64,
+pub struct ReleaseRow {
+    pub release_id: i64,
     pub version: String,
     pub version_major: i64,
     pub version_minor: i64,
     pub version_patch: i64,
     pub version_pre: String,
     pub version_build: String,
+    pub published_at: i64,
+    pub published_by: String
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct FileRow {
+    pub id: i64,
     pub filename: String,
     pub url: String,
     pub size: i64,
@@ -221,22 +228,22 @@ pub trait DatabaseClient {
     async fn get_releases(
         &self,
         _pkg: Package
-    ) -> Result<Vec<FileRow>, CoreError>;
+    ) -> Result<Vec<ReleaseRow>, CoreError>;
 
     async fn get_releases_at(
         &self,
         _pkg: Package,
         _date: i64
-    ) -> Result<Vec<FileRow>, CoreError>;
+    ) -> Result<Vec<ReleaseRow>, CoreError>;
 
     async fn get_files(
         &self,
-        _pkg: Package
+        _rel: Release
     ) -> Result<Vec<FileRow>, CoreError>;
 
     async fn get_files_at(
         &self,
-        _pkg: Package,
+        _rel: Release,
         _date: i64
     ) -> Result<Vec<FileRow>, CoreError>;
 
