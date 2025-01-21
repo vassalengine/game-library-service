@@ -210,6 +210,7 @@ ORDER BY
     )
 }
 
+/*
 pub async fn get_release_version_url<'e, E>(
     ex: E,
     pkg: Package,
@@ -438,9 +439,23 @@ mod test {
             published_at: 1702137389180282477,
             published_by: "bob".into()
         }
+*/
+
+    static RR_1_2_4: Lazy<ReleaseRow> = Lazy::new(||
+        ReleaseRow {
+            release_id: 2,
+            version: "1.2.4".into(),
+            version_major: 1,
+            version_minor: 2,
+            version_patch: 4,
+            version_pre: "".into(),
+            version_build: "".into(),
+            published_at: 1702223789180282477,
+            published_by: "alice".into()
+        }
     );
 
-    static RR_1_2_4: Lazy<FileRow> = Lazy::new(||
+/*
         FileRow {
             id: 2,
             version: "1.2.4".into(),
@@ -457,7 +472,7 @@ mod test {
             published_at: 1702223789180282477,
             published_by: "alice".into()
         }
-    );
+*/
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_ok(pool: Pool) {
@@ -515,6 +530,7 @@ mod test {
         );
     }
 
+/*
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_url_ok(pool: Pool) {
         assert_eq!(
@@ -726,4 +742,5 @@ mod test {
             )
         );
     }
+*/
 }

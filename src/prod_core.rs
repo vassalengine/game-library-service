@@ -202,6 +202,7 @@ where
         self.db.create_package(owner, proj, pkg, pkg_data, now).await
     }
 
+/*
     async fn get_release(
         &self,
         _proj: Project,
@@ -220,6 +221,7 @@ where
     {
         self.db.get_release_version_url(pkg, version).await
     }
+*/
 
     async fn get_players(
         &self,
@@ -1988,6 +1990,7 @@ mod test {
         );
     }
 
+/*
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_ok(pool: Pool) {
         let core = make_core(pool, fake_now, 0);
@@ -2020,6 +2023,7 @@ mod test {
             CoreError::NotAVersion
         );
     }
+*/
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {

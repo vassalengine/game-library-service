@@ -252,6 +252,7 @@ pub trait DatabaseClient {
         _pkg_ver_id: i64
     ) -> Result<Users, CoreError>;
 
+/*
     async fn get_release_url(
         &self,
         _pkg: Package
@@ -262,6 +263,7 @@ pub trait DatabaseClient {
         _pkg: Package,
         _version: &Version
     ) -> Result<String, CoreError>;
+*/
 
     async fn add_release_url(
         &self,
