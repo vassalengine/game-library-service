@@ -155,7 +155,7 @@ SELECT
     files.url,
     files.filename,
     files.size,
-    files.checksum,
+    files.sha256,
     files.requires,
     files.published_at,
     users.username AS published_by
@@ -190,7 +190,7 @@ SELECT
     files.url,
     files.filename,
     files.size,
-    files.checksum,
+    files.sha256,
     files.requires,
     files.published_at,
     users.username AS published_by
@@ -333,7 +333,7 @@ async fn create_file_row<'e, E>(
     rel: Release,
     filename: &str,
     size: i64,
-    checksum: &str,
+    sha256: &str,
     requires: &str,
     url: &str,
     now: i64
@@ -348,7 +348,7 @@ INSERT INTO files (
     url,
     filename,
     size,
-    checksum,
+    sha256,
     requires,
     published_at,
     published_by
@@ -359,7 +359,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         url,
         filename,
         size,
-        checksum,
+        sha256,
         requires,
         now,
         owner.0
@@ -378,7 +378,7 @@ pub async fn add_release_url<'a, A>(
     version: &Version,
     filename: &str,
     size: i64,
-    checksum: &str,
+    sha256: &str,
     requires: &str,
     url: &str,
     now: i64
@@ -433,7 +433,7 @@ mod test {
             url: "https://example.com/a_package-1.2.3".into(),
             filename: "a_package-1.2.3".into(),
             size: 1234,
-            checksum: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
+            sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
             requires: ">= 3.2.17".into(),
             published_at: 1702137389180282477,
             published_by: "bob".into()
@@ -452,7 +452,7 @@ mod test {
             url: "https://example.com/a_package-1.2.4".into(),
             filename: "a_package-1.2.4".into(),
             size: 5678,
-            checksum: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
+            sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
             requires: ">= 3.7.12".into(),
             published_at: 1702223789180282477,
             published_by: "alice".into()

@@ -340,7 +340,7 @@ mod test {
                                     filename: "eia.vmod".into(),
                                     url: "https://example.com/eia.vmod".into(),
                                     size: 0,
-                                    checksum: "deadbeef".into(),
+                                    sha256: "deadbeef".into(),
                                     published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
                                     published_by: "alice".into(),
                                     requires: "".into(),

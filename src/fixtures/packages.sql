@@ -67,7 +67,7 @@ INSERT INTO files (
   url,
   filename,
   size,
-  checksum,
+  sha256,
   requires,
   published_at,
   published_by

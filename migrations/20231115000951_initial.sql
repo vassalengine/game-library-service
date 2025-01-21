@@ -63,7 +63,7 @@ CREATE TABLE files (
   url TEXT NOT NULL,
   filename TEXT NOT NULL,
   size INTEGER NOT NULL,
-  checksum TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
   requires TEXT NOT NULL,
   published_at INTEGER NOT NULL,
   published_by INTEGER NOT NULL,

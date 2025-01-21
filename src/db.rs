@@ -77,7 +77,7 @@ pub struct FileRow {
     pub filename: String,
     pub url: String,
     pub size: i64,
-    pub checksum: String,
+    pub sha256: String,
     pub requires: String,
     pub published_at: i64,
     pub published_by: String
@@ -271,7 +271,7 @@ pub trait DatabaseClient {
         _version: &Version,
         _filename: &str,
         _size: i64,
-        _checksum: &str,
+        _sha256: &str,
         _requires: &str,
         _url: &str,
         _now: i64

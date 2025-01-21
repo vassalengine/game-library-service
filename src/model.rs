@@ -46,7 +46,7 @@ pub struct FileData {
     pub filename: String,
     pub url: String,
     pub size: i64,
-    pub checksum: String,
+    pub sha256: String,
     pub published_at: String,
     pub published_by: String,
     pub requires: String,

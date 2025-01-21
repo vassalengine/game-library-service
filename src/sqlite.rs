@@ -349,7 +349,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         version: &Version,
         filename: &str,
         size: i64,
-        checksum: &str,
+        sha256: &str,
         requires: &str,
         url: &str,
         now: i64
@@ -363,7 +363,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             version,
             filename,
             size,
-            checksum,
+            sha256,
             requires,
             url,
             now
