@@ -1718,7 +1718,7 @@ mod test {
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                         published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                         published_by: "alice".into(),
-                                        requires: ">= 3.7.12".into(),
+                                        requires: Some(">= 3.7.12".into()),
                                         authors: vec!["alice".into(), "bob".into()]
                                     },
                                 ],
@@ -1733,7 +1733,7 @@ mod test {
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                         published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                         published_by: "bob".into(),
-                                        requires: ">= 3.2.17".into(),
+                                        requires: Some(">= 3.2.17".into()),
                                         authors: vec!["alice".into()]
                                     }
                                 ]
@@ -1759,7 +1759,7 @@ mod test {
                                         sha256: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
                                         published_at: "2023-12-15T15:56:29.180282477+00:00".into(),
                                         published_by: "chuck".into(),
-                                        requires: "".into(),
+                                        requires: None,
                                         authors: vec![]
                                     }
                                 ]
@@ -1810,7 +1810,7 @@ mod test {
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                         published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
                                         published_by: "alice".into(),
-                                        requires: ">= 3.7.12".into(),
+                                        requires: Some(">= 3.7.12".into()),
                                         authors: vec!["alice".into(), "bob".into()]
                                     },
                                 ]
@@ -1825,7 +1825,7 @@ mod test {
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                         published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
                                         published_by: "bob".into(),
-                                        requires: ">= 3.2.17".into(),
+                                        requires: Some(">= 3.2.17".into()),
                                         authors: vec!["alice".into()]
                                     }
                                 ]

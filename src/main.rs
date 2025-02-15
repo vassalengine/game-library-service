@@ -343,7 +343,7 @@ mod test {
                                     sha256: "deadbeef".into(),
                                     published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
                                     published_by: "alice".into(),
-                                    requires: "".into(),
+                                    requires: None,
                                     authors: vec![]
                                 }
                             ]

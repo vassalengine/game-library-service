@@ -49,7 +49,7 @@ pub struct FileData {
     pub sha256: String,
     pub published_at: String,
     pub published_by: String,
-    pub requires: String,
+    pub requires: Option<String>,
     pub authors: Vec<String>
 }
 

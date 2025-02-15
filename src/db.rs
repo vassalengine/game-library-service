@@ -78,7 +78,7 @@ pub struct FileRow {
     pub url: String,
     pub size: i64,
     pub sha256: String,
-    pub requires: String,
+    pub requires: Option<String>,
     pub published_at: i64,
     pub published_by: String
 }

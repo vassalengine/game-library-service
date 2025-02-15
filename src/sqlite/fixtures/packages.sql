@@ -102,7 +102,7 @@ VALUES
     "c_package-0.1.0",
      123456,
     "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd",
-    "",
+    NULL,
     1702655789180282477,
     3
   );

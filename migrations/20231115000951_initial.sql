@@ -64,7 +64,7 @@ CREATE TABLE files (
   filename TEXT NOT NULL,
   size INTEGER NOT NULL,
   sha256 TEXT NOT NULL,
-  requires TEXT NOT NULL,
+  requires TEXT,
   published_at INTEGER NOT NULL,
   published_by INTEGER NOT NULL,
   UNIQUE(release_id, filename),
