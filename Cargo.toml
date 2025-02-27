@@ -18,7 +18,7 @@ futures = "^0.3"
 futures-util = "^0.3"
 http-body-util = "^0.1"
 infer = "^0.15"
-itertools = "^0.12"
+itertools = "^0.14"
 jsonwebtoken = "^9"
 mime = "^0.3"
 object_store = { version = "^0.9", features = ["aws"] }
