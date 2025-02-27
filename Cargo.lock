@@ -930,7 +930,7 @@ dependencies = [
  "sqlx",
  "sxd-document",
  "sxd-xpath",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-util",
  "toml",
