@@ -165,7 +165,9 @@ enum StartupError {
     #[error("{0}")]
     DatabaseError(#[from] sqlx::Error),
     #[error("{0}")]
-    IOError(#[from] io::Error)
+    IOError(#[from] io::Error),
+    #[error("{0}")]
+    BucketUploaderError(#[from] upload::BucketUploaderError)
 }
 
 async fn shutdown_signal() {

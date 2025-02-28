@@ -38,8 +38,6 @@ pub enum UploadError {
     InvalidFilename,
     #[error("Bucket error: {0}")]
     S3Error(#[from] S3Error),
-    #[error("Credentials error: {0}")]
-    CredentialsError(#[from] CredentialsError)
 }
 
 pub fn require_filename(path: &str) -> Result<&str, UploadError> {
@@ -111,6 +109,14 @@ impl Uploader for LocalUploader {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum BucketUploaderError {
+    #[error("Bucket error: {0}")]
+    S3Error(#[from] S3Error),
+    #[error("Credentials error: {0}")]
+    CredentialsError(#[from] CredentialsError)
+}
+
 pub struct BucketUploader {
     bucket: Bucket,
     base_url: String,
@@ -126,7 +132,7 @@ impl BucketUploader {
         secret_key: &str,
         base_url: &str,
         base_dir: &str
-    ) -> Result<BucketUploader, UploadError> {
+    ) -> Result<BucketUploader, BucketUploaderError> {
         let mut bucket = *Bucket::new(
             name,
             Region::Custom {
