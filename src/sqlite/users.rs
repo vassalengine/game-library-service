@@ -66,10 +66,11 @@ pub async fn user_is_owner<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+// FIXME: go back to "SELECT 1 AS present" once sqlx 0.8 is fixed
     Ok(
         sqlx::query!(
             "
-SELECT 1 AS present
+SELECT user_id
 FROM owners
 WHERE user_id = ? AND project_id = ?
 LIMIT 1
