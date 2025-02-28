@@ -1,6 +1,7 @@
 use std::{
     io::{self, Read},
-    fs::File
+    fs::File,
+    path::Path
 };
 use zip::{
     ZipArchive,
@@ -16,19 +17,25 @@ pub enum Error {
     #[error("{0}")]
     Xml(#[from] sxd_document::parser::Error),
     #[error("{0}")]
-    Xpath(#[from] sxd_xpath::Error)
+    Xpath(#[from] sxd_xpath::Error),
+    #[error("{0}")]
+    Version(#[from] semver::Error)
 }
 
-fn dump_file(zippath: &str, filepath: &str) -> Result<String, Error> {
+fn dump_file<P: AsRef<Path>>(
+    zippath: P,
+    filepath: &str
+) -> Result<String, Error>
+{
     // open module as zip archive
     let zipfile = File::open(zippath)?;
     let mut archive = ZipArchive::new(zipfile)?;
 
-    // read moduledata file
+    // read file
     let mut file = archive.by_name(filepath)?;
-    let mut md = String::new();
-    file.read_to_string(&mut md)?;
-    Ok(md)
+    let mut data = String::new();
+    file.read_to_string(&mut data)?;
+    Ok(data)
 }
 
 fn version_in_moduledata(md: &str) -> Result<String, Error> {
@@ -39,9 +46,11 @@ fn version_in_moduledata(md: &str) -> Result<String, Error> {
     Ok(value.string())
 }
 
-pub fn extract_version(path: &str) -> Result<String, Error> {
+pub fn check_version<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let md = dump_file(path, "moduledata")?;
-    version_in_moduledata(&md)
+    version_in_moduledata(&md)?
+        .parse::<semver::Version>()?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -102,14 +111,6 @@ mod test {
         assert_eq!(
             version_in_moduledata(md).unwrap(),
             ""
-        );
-    }
-
-    #[test]
-    fn extract_version_ok() {
-        assert_eq!(
-            extract_version("test/test.vmod").unwrap(),
-            "0.0"
         );
     }
 }
