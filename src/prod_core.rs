@@ -995,7 +995,6 @@ mod test {
 
     struct FakeUploader {}
 
-    #[async_trait]
     impl Uploader for FakeUploader {
         async fn upload<R>(
             &self,

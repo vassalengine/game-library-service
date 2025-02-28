@@ -1,7 +1,4 @@
-use axum::{
-    async_trait,
-    body::Bytes
-};
+use axum::body::Bytes;
 use futures::Stream;
 use s3::{
     bucket::Bucket,
@@ -17,6 +14,7 @@ use sha2::{
     Sha256
 };
 use std::{
+    future::Future,
     io,
     path::Path
 };
@@ -75,13 +73,12 @@ where
     Ok((sha256, size))
 }
 
-#[async_trait]
 pub trait Uploader {
-    async fn upload<R>(
+    fn upload<R>(
         &self,
         _filename: &str,
-        mut _reader: R
-    ) -> Result<String, UploadError>
+        _reader: R
+    ) -> impl Future<Output = Result<String, UploadError>> + Send
     where
         R: AsyncRead + Unpin + Send;
 }
@@ -90,7 +87,6 @@ pub struct LocalUploader {
     pub uploads_directory: String
 }
 
-#[async_trait]
 impl Uploader for LocalUploader {
     async fn upload<R>(
         &self,
@@ -159,7 +155,6 @@ impl BucketUploader {
     }
 }
 
-#[async_trait]
 impl Uploader for BucketUploader {
     async fn upload<R>(
         &self,
