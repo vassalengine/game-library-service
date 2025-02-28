@@ -25,10 +25,11 @@ use crate::{
     core::{Core, CoreError},
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
+    module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
-    upload::{LocalUploader, Uploader},
+    upload::{LocalUploader, Uploader, UploadError, require_filename, stream_to_writer},
     version::Version
 };
 
@@ -257,6 +258,87 @@ where
     {
         let now = self.now_nanos()?;
         self.db.create_release(owner, proj, pkg, version, now).await
+    }
+
+    async fn add_file(
+        &self,
+        owner: Owner,
+        proj: Project,
+        release: Release,
+        requires: &str,
+        filename: &str,
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+    ) -> Result<(), CoreError>
+    {
+        let now = self.now_nanos()?;
+
+// TODO: more useful errors
+// TODO: delete temp file when done
+// TODO: limit file size using middleware?
+// TODO: set uploads directory as part of config
+
+        // write the stream to a file
+        let uploads_directory = "uploads";
+        let filename = require_filename(filename)?;
+
+        let path = Path::new(uploads_directory).join(filename);
+
+        // open temp file read-write
+        let mut file = File::options()
+            .create(true)
+            .write(true)
+            .read(true)
+            .open(&path)
+            .await
+            .map_err(UploadError::IOError)?;
+
+        let (sha256, size) = stream_to_writer(
+            Box::into_pin(stream),
+            &mut file
+        ).await?;
+
+// TODO: check that file types match magic
+
+        // check that vmod, vext files have semver-compliant versions
+        let ext = path.extension().unwrap_or_default();
+
+        if ext == "vmod" || ext == "vext" {
+            check_version(&path)?;
+        }
+
+// TODO: should uploaded files be named for hashes?
+
+        // add hash prefix to file upload path
+        let bucket_path = format!(
+            "{0}/{1}/{filename}",
+            &sha256[0..1],
+            &sha256[1..2]
+        );
+
+        file.rewind().await
+            .map_err(UploadError::IOError)?;
+
+// TODO: do we need to set content-type?
+        let url = self.uploader.upload(
+            &bucket_path,
+            &mut file
+        )
+        .await?;
+
+        // update record
+        self.db.add_file_url(
+            owner,
+            proj,
+            release,
+            filename,
+            size as i64,
+            &sha256,
+            requires,
+            &url,
+            now
+        ).await?;
+
+        Ok(())
     }
 
     async fn get_players(
