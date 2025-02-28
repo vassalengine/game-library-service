@@ -177,27 +177,17 @@ fn into_stream(
     )
 }
 
-pub async fn release_put(
+pub async fn file_post(
     Owned(owner, proj): Owned,
-    Path((_, pkg, version)): Path<(String, String, String)>,
+    ProjectPackageRelease(_, pkg, release): ProjectPackageRelease,
+    Path((_, _, _, filename)): Path<(String, String, String, String)>,
+    TypedHeader(content_type): TypedHeader<ContentType>,
     State(core): State<CoreArc>,
     request: Request
 ) -> Result<(), AppError>
 {
-    let version = version.parse::<Version>()
-        .or(Err(AppError::NotFound))?;
-
-/*
-    let stream = request.into_body()
-        .into_data_stream()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
-
-    core.add_image(&owner, proj, &img_name, Box::new(stream))
-        .await
-        .or(Err(AppError::InternalError))?;
-*/
-
-    Ok(())
+    let stream = into_stream(request);
+    Ok(core.add_file(owner, proj, release, "", &filename, stream).await?)
 }
 
 pub async fn image_get(
