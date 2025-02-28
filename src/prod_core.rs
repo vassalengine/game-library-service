@@ -885,6 +885,8 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
 mod test {
     use super::*;
 
+    use tokio::io::AsyncRead;
+
     use crate::{
         model::GameDataPatch,
         pagination::Direction,
@@ -908,13 +910,13 @@ mod test {
 
     #[async_trait]
     impl Uploader for FakeUploader {
-        async fn upload<S>(
+        async fn upload<R>(
             &self,
             _filename: &str,
-            _stream: S
+            _reader: R
         ) -> Result<String, UploadError>
         where
-            S: Stream<Item = Result<Bytes, io::Error>> + Send
+            R: AsyncRead + Unpin + Send
         {
             unreachable!();
         }
