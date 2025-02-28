@@ -374,12 +374,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     }
 */
 
-    async fn add_release_url(
+    async fn add_file_url(
         &self,
         owner: Owner,
         proj: Project,
-        pkg: Package,
-        version: &Version,
+        release: Release,
         filename: &str,
         size: i64,
         sha256: &str,
@@ -388,12 +387,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), CoreError>
     {
-        releases::add_release_url(
+        releases::add_file_url(
             &self.0,
             owner,
             proj,
-            pkg,
-            version,
+            release,
             filename,
             size,
             sha256,
