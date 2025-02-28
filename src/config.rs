@@ -8,5 +8,13 @@ pub struct Config {
     pub listen_ip: String,
     pub listen_port: u16,
     pub max_release_size: u32,
-    pub max_image_size: u32
+    pub max_image_size: u32,
+    pub read_only: bool,
+    pub bucket_name: String,
+    pub bucket_region: String,
+    pub bucket_endpoint: String,
+    pub bucket_access_key: String,
+    pub bucket_secret_key: String,
+    pub bucket_base_url: String,
+    pub bucket_base_dir: String
 }

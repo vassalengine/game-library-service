@@ -50,7 +50,7 @@ use crate::{
     errors::AppError,
     jwt::DecodingKey,
     sqlite::SqlxDatabaseClient,
-    upload::LocalUploader,
+    upload::{BucketUploader, LocalUploader},
 };
 
 impl From<&AppError> for StatusCode {
@@ -199,7 +199,16 @@ async fn main() -> Result<(), StartupError> {
 
     let core = ProdCore {
         db: SqlxDatabaseClient(db_pool),
-        uploader: LocalUploader { uploads_directory: "uploads".into() },
+//        uploader: LocalUploader { uploads_directory: "uploads".into() },
+        uploader: BucketUploader::new(
+            &config.bucket_name,
+            &config.bucket_region,
+            &config.bucket_endpoint,
+            &config.bucket_access_key,
+            &config.bucket_secret_key,
+            &config.bucket_base_url,
+            &config.bucket_base_dir
+        )?,
         now: Utc::now,
         max_image_size: (config.max_image_size as u64) << 20 // MB to bytes
     };
