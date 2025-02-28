@@ -139,9 +139,64 @@ ORDER BY
     Ok(releases)
 }
 
+pub async fn get_release_id<'e, E>(
+    ex: E,
+    proj: Project,
+    pkg: Package,
+    release: &str
+) -> Result<Release, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT release_id
+FROM releases
+WHERE package_id = ?
+    AND version = ?
+        ",
+        pkg.0,
+        release
+    )
+    .fetch_optional(ex)
+    .await?
+    .map(Release)
+    .ok_or(CoreError::NotARelease)
+}
+
+pub async fn create_release<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    pkg: Package,
+    version: &Version,
+    now: i64
+) -> Result<(), CoreError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // insert release row
+    create_release_row(
+        &mut *tx,
+        owner,
+        pkg,
+        version,
+        now
+    ).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 pub async fn get_files<'e, E>(
     ex: E,
-    rel: Release
+    release: Release
 ) -> Result<Vec<FileRow>, CoreError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -166,7 +221,7 @@ WHERE files.release_id = ?
 ORDER BY
     files.filename ASC
             ",
-            rel.0
+            release.0
         )
         .fetch_all(ex)
         .await?
@@ -175,7 +230,7 @@ ORDER BY
 
 pub async fn get_files_at<'e, E>(
     ex: E,
-    rel: Release,
+    release: Release,
     date: i64
 ) -> Result<Vec<FileRow>, CoreError>
 where
@@ -202,7 +257,7 @@ WHERE files.release_id = ?
 ORDER BY
     files.filename ASC
             ",
-            rel.0,
+            release.0,
             date
         )
         .fetch_all(ex)
@@ -331,7 +386,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 async fn create_file_row<'e, E>(
     ex: E,
     owner: Owner,
-    rel: Release,
+    release: Release,
     filename: &str,
     size: i64,
     sha256: &str,
@@ -356,7 +411,7 @@ INSERT INTO files (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ",
-        rel.0,
+        release.0,
         url,
         filename,
         size,
@@ -371,12 +426,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     Ok(())
 }
 
-pub async fn add_release_url<'a, A>(
+pub async fn add_file_url<'a, A>(
     conn: A,
     owner: Owner,
     proj: Project,
-    pkg: Package,
-    version: &Version,
+    release: Release,
     filename: &str,
     size: i64,
     sha256: &str,
@@ -389,12 +443,16 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // insert release row
-    create_release_row(
+    // insert file row
+    create_file_row(
         &mut *tx,
         owner,
-        pkg,
-        version,
+        release,
+        filename,
+        size,
+        sha256,
+        requires,
+        url,
         now
     ).await?;
 

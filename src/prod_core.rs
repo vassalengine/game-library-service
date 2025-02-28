@@ -190,6 +190,15 @@ where
         ).await
     }
 
+    async fn get_package_id(
+         &self,
+        proj: Project,
+        pkg: &str
+    ) -> Result<Package, CoreError>
+    {
+        self.db.get_package_id(proj, pkg).await
+    }
+
     async fn create_package(
         &self,
         owner: Owner,
@@ -222,6 +231,28 @@ where
         self.db.get_release_version_url(pkg, version).await
     }
 */
+
+    async fn get_release_id(
+        &self,
+        proj: Project,
+        pkg: Package,
+        release: &str
+    ) -> Result<Release, CoreError>
+    {
+        self.db.get_release_id(proj, pkg, release).await
+    }
+
+    async fn create_release(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        version: &Version,
+    ) -> Result<(), CoreError>
+    {
+        let now = self.now_nanos()?;
+        self.db.create_release(owner, proj, pkg, version, now).await
+    }
 
     async fn get_players(
         &self,

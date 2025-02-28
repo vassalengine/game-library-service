@@ -13,7 +13,7 @@ use std::io;
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::{ProjectPackage, ProjectPackageVersion, Wrapper},
+    extractors::{ProjectPackage, ProjectPackageRelease, ProjectPackageVersion, Wrapper},
     model::{Owned, Package, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
     version::Version
@@ -155,6 +155,15 @@ pub async fn release_version_get(
             &core.get_release_version(proj, pkg, &version).await?
         )
     )
+}
+
+pub async fn release_post(
+    Owned(owner, proj): Owned,
+    ProjectPackageVersion(_, pkg, version): ProjectPackageVersion,
+    State(core): State<CoreArc>
+) -> Result<(), AppError>
+{
+    Ok(core.create_release(owner, proj, pkg, &version).await?)
 }
 
 fn into_stream(

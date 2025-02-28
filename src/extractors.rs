@@ -21,7 +21,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, Owner, Package, Project, User},
+    model::{Owned, Owner, Package, Project, Release, User},
     version::Version
 };
 
@@ -216,6 +216,42 @@ where
             .or(Err(AppError::NotFound))?;
 
         Ok(ProjectPackageVersion(proj, pkg, ver))
+    }
+}
+
+pub struct ProjectPackageRelease(pub Project, pub Package, pub Release);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ProjectPackageRelease
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
+        let (proj, pkg, release) = get_path_iter(parts, state)
+            .await?
+            .next_tuple()
+            .ok_or(AppError::InternalError)?;
+
+        let core = get_state(parts, state).await;
+
+// TODO: could combine project-package lookup?
+        // look up the project id
+        let proj = core.get_project_id(&proj).await?;
+
+        // look up the package id
+        let pkg = core.get_package_id(proj, &pkg).await?;
+
+        // look up the release id
+        let release = core.get_release_id(proj, pkg, &release).await?;
+
+        Ok(ProjectPackageRelease(proj, pkg, release))
     }
 }
 

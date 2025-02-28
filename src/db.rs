@@ -216,6 +216,12 @@ pub trait DatabaseClient {
         _date: i64,
     ) -> Result<Vec<PackageRow>, CoreError>;
 
+    async fn get_package_id(
+        &self,
+        _proj: Project,
+        _pkg: &str
+    ) -> Result<Package, CoreError>;
+
     async fn create_package(
         &self,
         _owner: Owner,
@@ -236,14 +242,30 @@ pub trait DatabaseClient {
         _date: i64
     ) -> Result<Vec<ReleaseRow>, CoreError>;
 
+    async fn get_release_id(
+        &self,
+        _proj: Project,
+        _pkg: Package,
+        _release: &str
+    ) -> Result<Release, CoreError>;
+
+    async fn create_release(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _version: &Version,
+        _now: i64
+    ) -> Result<(), CoreError>;
+
     async fn get_files(
         &self,
-        _rel: Release
+        _release: Release
     ) -> Result<Vec<FileRow>, CoreError>;
 
     async fn get_files_at(
         &self,
-        _rel: Release,
+        _release: Release,
         _date: i64
     ) -> Result<Vec<FileRow>, CoreError>;
 
@@ -265,12 +287,11 @@ pub trait DatabaseClient {
     ) -> Result<String, CoreError>;
 */
 
-    async fn add_release_url(
+    async fn add_file_url(
         &self,
         _owner: Owner,
         _proj: Project,
-        _pkg: Package,
-        _version: &Version,
+        _release: Release,
         _filename: &str,
         _size: i64,
         _sha256: &str,

@@ -6,7 +6,7 @@ use sqlx::{
 use crate::{
     core::CoreError,
     db::PackageRow,
-    model::{Owner, PackageDataPost, Project},
+    model::{Owner, Package, PackageDataPost, Project},
     sqlite::project::update_project_non_project_data
 };
 
@@ -63,6 +63,30 @@ ORDER BY name COLLATE NOCASE ASC
        .fetch_all(ex)
        .await?
     )
+}
+
+pub async fn get_package_id<'e, E>(
+    ex: E,
+    proj: Project,
+    pkgname: &str
+) -> Result<Package, CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT package_id
+FROM packages
+WHERE project_id = ?
+    AND name = ?
+        ",
+        proj.0,
+        pkgname
+    )
+    .fetch_optional(ex)
+    .await?
+    .map(Package)
+    .ok_or(CoreError::NotAPackage)
 }
 
 pub async fn create_package<'a, A>(

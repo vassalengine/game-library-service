@@ -12,7 +12,8 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    model::{Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, User, Users},
+    model::{Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
+    module,
     params::ProjectsParams,
     pagination,
     time,
@@ -39,6 +40,8 @@ pub enum CoreError {
     NotAPackage,
     #[error("Not a project")]
     NotAProject,
+    #[error("Not a release")]
+    NotARelease,
     #[error("Not a revision")]
     NotARevision,
     #[error("Not a user")]
@@ -78,6 +81,16 @@ pub trait Core {
         _proj: Project,
         _pkg: &str
     ) -> Result<Package, CoreError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_release_id(
+         &self,
+        _proj: Project,
+        _pkg: Package,
+        _release: &str
+    ) -> Result<Release, CoreError>
     {
         unimplemented!();
     }
@@ -200,12 +213,22 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn add_release(
+    async fn create_release(
         &self,
         _owner: Owner,
         _proj: Project,
         _pkg: Package,
-        _version: &Version,
+        _version: &Version
+    ) -> Result<(), CoreError>
+    {
+        unimplemented!();
+    }
+
+    async fn add_file(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _release: Release,
         _requires: &str,
         _filename: &str,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>

@@ -270,6 +270,15 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         packages::get_packages_at(&self.0, proj, date).await
     }
 
+    async fn get_package_id(
+        &self,
+        proj: Project,
+        pkg: &str
+    ) -> Result<Package, CoreError>
+    {
+        packages::get_package_id(&self.0, proj, pkg).await
+    }
+
     async fn create_package(
         &self,
         owner: Owner,
@@ -297,6 +306,28 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<ReleaseRow>, CoreError>
     {
         releases::get_releases_at(&self.0, pkg, date).await
+    }
+
+    async fn get_release_id(
+        &self,
+        proj: Project,
+        pkg: Package,
+        release: &str
+    ) -> Result<Release, CoreError>
+    {
+        releases::get_release_id(&self.0, proj, pkg, release).await
+    }
+
+    async fn create_release(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        version: &Version,
+        now: i64
+    ) -> Result<(), CoreError>
+    {
+        releases::create_release(&self.0, owner, proj, pkg, version, now).await
     }
 
     async fn get_files(
