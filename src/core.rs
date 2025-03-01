@@ -1,7 +1,5 @@
-use axum::{
-    async_trait,
-    body::Bytes
-};
+use async_trait::async_trait;
+use axum::body::Bytes;
 use futures::Stream;
 use mime::Mime;
 use std::{

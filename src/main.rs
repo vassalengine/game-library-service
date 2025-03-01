@@ -239,6 +239,7 @@ async fn main() -> Result<(), StartupError> {
 mod test {
     use super::*;
 
+    use async_trait::async_trait;
     use axum::{
         body::{self, Body, Bytes},
         http::{
@@ -369,7 +370,7 @@ mod test {
     #[derive(Clone)]
     struct TestCore { }
 
-    #[axum::async_trait]
+    #[async_trait]
     impl Core for TestCore {
         async fn get_project_id(
             &self,

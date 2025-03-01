@@ -1,5 +1,6 @@
+use async_trait::async_trait;
 use axum::{
-    async_trait, RequestPartsExt,
+    RequestPartsExt,
     extract::{
         FromRequest, FromRequestParts, FromRef, Path, Request, State,
         rejection::{JsonRejection, QueryRejection}
@@ -589,7 +590,7 @@ mod test {
     #[derive(Clone)]
     struct ProjectTestCore {}
 
-    #[axum::async_trait]
+    #[async_trait]
     impl Core for ProjectTestCore {
         async fn get_project_id(
             &self,
@@ -665,7 +666,7 @@ mod test {
     #[derive(Clone)]
     struct OwnersTestCore {}
 
-    #[axum::async_trait]
+    #[async_trait]
     impl Core for OwnersTestCore {
         async fn get_project_id(
             &self,
