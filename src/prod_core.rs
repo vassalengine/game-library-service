@@ -608,7 +608,7 @@ where
                     sort_by,
                     dir,
                     limit_extra
-                ),
+                ).await,
             Anchor::After(field, id) =>
                 self.db.get_projects_mid_window(
                     sort_by,
@@ -616,7 +616,7 @@ where
                     field,
                     *id,
                     limit_extra
-                ),
+                ).await,
             Anchor::Before(field, id) =>
                 self.db.get_projects_mid_window(
                     sort_by,
@@ -624,14 +624,14 @@ where
                     field,
                     *id,
                     limit_extra
-                ),
+                ).await,
             Anchor::StartQuery(query) =>
                 self.db.get_projects_query_end_window(
                     query,
                     sort_by,
                     dir,
                     limit_extra
-                ),
+                ).await,
             Anchor::AfterQuery(query, field, id) =>
                 self.db.get_projects_query_mid_window(
                     query,
@@ -640,7 +640,7 @@ where
                     field,
                     *id,
                     limit_extra
-                ),
+                ).await,
             Anchor::BeforeQuery(query, field, id) =>
                 self.db.get_projects_query_mid_window(
                     query,
@@ -649,8 +649,8 @@ where
                     field,
                     *id,
                     limit_extra
-                )
-        }.await
+                ).await
+        }
     }
 
     async fn get_projects_from(
@@ -687,9 +687,9 @@ where
             Anchor::StartQuery(ref q) |
             Anchor::AfterQuery(ref q, ..) |
             Anchor::BeforeQuery(ref q, ..) =>
-                self.db.get_projects_query_count(q),
-            _ => self.db.get_projects_count()
-        }.await?;
+                self.db.get_projects_query_count(q).await,
+            _ => self.db.get_projects_count().await
+        }?;
 
         // convert the rows to summaries
         let pi = projects.into_iter().map(ProjectSummary::try_from);

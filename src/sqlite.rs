@@ -1,4 +1,3 @@
-use axum::async_trait;
 use sqlx::{
     Database, Executor,
     sqlite::Sqlite
@@ -27,7 +26,6 @@ pub type Pool = sqlx::Pool<Sqlite>;
 #[derive(Clone)]
 pub struct SqlxDatabaseClient<DB: Database>(pub sqlx::Pool<DB>);
 
-#[async_trait]
 impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,

@@ -1,5 +1,5 @@
-use axum::async_trait;
 use serde::Deserialize;
+use std::future::Future;
 use sqlx::FromRow;
 
 use crate::{
@@ -83,92 +83,91 @@ pub struct FileRow {
     pub published_by: String
 }
 
-#[async_trait]
 pub trait DatabaseClient {
-    async fn get_project_id(
+    fn get_project_id(
         &self,
         _projname: &str
-    ) -> Result<Project, CoreError>;
+    ) -> impl Future<Output = Result<Project, CoreError>> + Send;
 
-    async fn get_projects_count(
+    fn get_projects_count(
         &self,
-    ) -> Result<i64, CoreError>;
+    ) -> impl Future<Output = Result<i64, CoreError>> + Send;
 
-    async fn get_projects_query_count(
+    fn get_projects_query_count(
         &self,
         _query: &str
-    ) -> Result<i64, CoreError>;
+    ) -> impl Future<Output = Result<i64, CoreError>> + Send;
 
-    async fn get_user_id(
+    fn get_user_id(
         &self,
         _username: &str
-    ) -> Result<User, CoreError>;
+    ) -> impl Future<Output = Result<User, CoreError>> + Send;
 
-    async fn get_owners(
+    fn get_owners(
         &self,
         _proj: Project
-    ) -> Result<Users, CoreError>;
+    ) -> impl Future<Output = Result<Users, CoreError>> + Send;
 
-    async fn user_is_owner(
-        &self,
-        _user: User,
-        _proj: Project
-    ) -> Result<bool, CoreError>;
-
-    async fn add_owner(
+    fn user_is_owner(
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
 
-    async fn add_owners(
+    fn add_owner(
+        &self,
+        _user: User,
+        _proj: Project
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn add_owners(
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn remove_owner(
+    fn remove_owner(
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn remove_owners(
+    fn remove_owners(
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn has_owner(
+    fn has_owner(
         &self,
         _proj: Project
-    ) -> Result<bool, CoreError>;
+    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
 
-    async fn get_projects_end_window(
+    fn get_projects_end_window(
         &self,
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
 
-    async fn get_projects_query_end_window(
+    fn get_projects_query_end_window(
         &self,
         _query: &str,
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
 
-    async fn get_projects_mid_window(
+    fn get_projects_mid_window(
         &self,
         _sort_by: SortBy,
         _dir: Direction,
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
 
-    async fn get_projects_query_mid_window(
+    fn get_projects_query_mid_window(
         &self,
         _query: &str,
         _sort_by: SortBy,
@@ -176,118 +175,118 @@ pub trait DatabaseClient {
         _field: &str,
         _id: u32,
         _limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
 
-    async fn create_project(
+    fn create_project(
         &self,
         _user: User,
         _proj: &str,
         _proj_data: &ProjectDataPost,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn update_project(
+    fn update_project(
         &self,
         _owner: Owner,
         _proj: Project,
         _proj_data: &ProjectDataPatch,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_project_row(
+    fn get_project_row(
         &self,
         proj: Project
-    ) -> Result<ProjectRow, CoreError>;
+    ) -> impl Future<Output = Result<ProjectRow, CoreError>> + Send;
 
-    async fn get_project_row_revision(
+    fn get_project_row_revision(
         &self,
         _proj: Project,
         _revision: i64
-    ) -> Result<ProjectRow, CoreError>;
+    ) -> impl Future<Output = Result<ProjectRow, CoreError>> + Send;
 
-    async fn get_packages(
+    fn get_packages(
         &self,
         _proj: Project
-    ) -> Result<Vec<PackageRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<PackageRow>, CoreError>> + Send;
 
-    async fn get_packages_at(
+    fn get_packages_at(
         &self,
         _proj: Project,
         _date: i64,
-    ) -> Result<Vec<PackageRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<PackageRow>, CoreError>> + Send;
 
-    async fn get_package_id(
+    fn get_package_id(
         &self,
         _proj: Project,
         _pkg: &str
-    ) -> Result<Package, CoreError>;
+    ) -> impl Future<Output = Result<Package, CoreError>> + Send;
 
-    async fn create_package(
+    fn create_package(
         &self,
         _owner: Owner,
         _proj: Project,
         _pkg: &str,
         _pkg_data: &PackageDataPost,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_releases(
+    fn get_releases(
         &self,
         _pkg: Package
-    ) -> Result<Vec<ReleaseRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ReleaseRow>, CoreError>> + Send;
 
-    async fn get_releases_at(
+    fn get_releases_at(
         &self,
         _pkg: Package,
         _date: i64
-    ) -> Result<Vec<ReleaseRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<ReleaseRow>, CoreError>> + Send;
 
-    async fn get_release_id(
+    fn get_release_id(
         &self,
         _proj: Project,
         _pkg: Package,
         _release: &str
-    ) -> Result<Release, CoreError>;
+    ) -> impl Future<Output = Result<Release, CoreError>> + Send;
 
-    async fn create_release(
+    fn create_release(
         &self,
         _owner: Owner,
         _proj: Project,
         _pkg: Package,
         _version: &Version,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_files(
+    fn get_files(
         &self,
         _release: Release
-    ) -> Result<Vec<FileRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<FileRow>, CoreError>> + Send;
 
-    async fn get_files_at(
+    fn get_files_at(
         &self,
         _release: Release,
         _date: i64
-    ) -> Result<Vec<FileRow>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<FileRow>, CoreError>> + Send;
 
-    async fn get_authors(
+    fn get_authors(
         &self,
         _pkg_ver_id: i64
-    ) -> Result<Users, CoreError>;
+    ) -> impl Future<Output = Result<Users, CoreError>> + Send;
 
 /*
-    async fn get_release_url(
+    fn get_release_url(
         &self,
         _pkg: Package
-    ) -> Result<String, CoreError>;
+    ) -> impl Future<Output = Result<String, CoreError>> + Send;
 
-    async fn get_release_version_url(
+    fn get_release_version_url(
         &self,
         _pkg: Package,
         _version: &Version
-    ) -> Result<String, CoreError>;
+    ) -> impl Future<Output = Result<String, CoreError>> + Send;
 */
 
-    async fn add_file_url(
+    fn add_file_url(
         &self,
         _owner: Owner,
         _proj: Project,
@@ -298,66 +297,66 @@ pub trait DatabaseClient {
         _requires: &str,
         _url: &str,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_players(
+    fn get_players(
         &self,
         _proj: Project
-    ) -> Result<Users, CoreError>;
+    ) -> impl Future<Output = Result<Users, CoreError>> + Send;
 
-    async fn add_player(
-        &self,
-        _player: User,
-        _proj: Project
-    ) -> Result<(), CoreError>;
-
-    async fn remove_player(
+    fn add_player(
         &self,
         _player: User,
         _proj: Project
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_image_url(
+    fn remove_player(
+        &self,
+        _player: User,
+        _proj: Project
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+
+    fn get_image_url(
         &self,
         _proj: Project,
         _img_name: &str
-    ) -> Result<String, CoreError>;
+    ) -> impl Future<Output = Result<String, CoreError>> + Send;
 
-    async fn get_image_url_at(
+    fn get_image_url_at(
         &self,
         _proj: Project,
         _img_name: &str,
         _date: i64
-    ) -> Result<String, CoreError>;
+    ) -> impl Future<Output = Result<String, CoreError>> + Send;
 
-    async fn add_image_url(
+    fn add_image_url(
         &self,
         _owner: Owner,
         _proj: Project,
         _img_name: &str,
         _url: &str,
         _now: i64
-    ) -> Result<(), CoreError>;
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 
-    async fn get_tags(
+    fn get_tags(
         &self,
         _proj: Project
-    ) -> Result<Vec<String>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<String>, CoreError>> + Send;
 
-    async fn get_tags_at(
+    fn get_tags_at(
         &self,
         _proj: Project,
         _date: i64
-    ) -> Result<Vec<String>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<String>, CoreError>> + Send;
 
-    async fn get_gallery(
+    fn get_gallery(
         &self,
         _proj: Project
-    ) -> Result<Vec<GalleryImage>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<GalleryImage>, CoreError>> + Send;
 
-    async fn get_gallery_at(
+    fn get_gallery_at(
         &self,
         _proj: Project,
         _date: i64
-    ) -> Result<Vec<GalleryImage>, CoreError>;
+    ) -> impl Future<Output = Result<Vec<GalleryImage>, CoreError>> + Send;
 }
