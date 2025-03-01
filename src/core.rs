@@ -32,7 +32,7 @@ pub enum CoreError {
     ProjectNameInUse,
     #[error("Malformed query")]
     MalformedQuery,
-    #[error("Not a found")]
+    #[error("Not found")]
     NotFound,
     #[error("Not a package")]
     NotAPackage,
