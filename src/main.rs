@@ -102,48 +102,48 @@ fn routes(api: &str) -> Router<AppState> {
             get(handlers::projects_get)
         )
         .route(
-            &format!("{api}/projects/:proj"),
+            &format!("{api}/projects/{{proj}}"),
             get(handlers::project_get)
             .post(handlers::project_post)
             .patch(handlers::project_patch)
         )
         .route(
-            &format!("{api}/projects/:proj/:revision"),
+            &format!("{api}/projects/{{proj}}/{{revision}}"),
             get(handlers::project_revision_get)
         )
         .route(
-            &format!("{api}/projects/:proj/owners"),
+            &format!("{api}/projects/{{proj}}/owners"),
             get(handlers::owners_get)
             .put(handlers::owners_add)
             .delete(handlers::owners_remove)
         )
         .route(
-            &format!("{api}/projects/:proj/players"),
+            &format!("{api}/projects/{{proj}}/players"),
             get(handlers::players_get)
             .put(handlers::players_add)
             .delete(handlers::players_remove)
         )
         .route(
-            &format!("{api}/projects/:proj/packages/:pkg_name"),
+            &format!("{api}/projects/{{proj}}/packages/{{pkg_name}}"),
             get(handlers::release_get)
             .post(handlers::packages_post)
         )
         .route(
-            &format!("{api}/projects/:proj/packages/:pkg_name/:version"),
+            &format!("{api}/projects/{{proj}}/packages/{{pkg_name}}/{{version}}"),
             get(handlers::release_version_get)
             .put(handlers::release_put)
         )
         .route(
-            &format!("{api}/projects/:proj/images/:img_name"),
+            &format!("{api}/projects/{{proj}}/images/{{img_name}}"),
             get(handlers::image_get)
             .post(handlers::image_post)
         )
         .route(
-            &format!("{api}/projects/:proj/images/:img_name/:revision"),
+            &format!("{api}/projects/{{proj}}/images/{{img_name}}/{{revision}}"),
             get(handlers::image_revision_get)
         )
         .route(
-            &format!("{api}/projects/:proj/flag"),
+            &format!("{api}/projects/{{proj}}/flag"),
             post(handlers::flag_post)
         )
         .fallback(handlers::not_found)

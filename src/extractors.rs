@@ -26,7 +26,6 @@ use crate::{
     version::Version
 };
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Claims
 where
     S: Send + Sync,
@@ -54,7 +53,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for User
 where
     S: Send + Sync,
@@ -108,7 +106,6 @@ where
     )
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Project
 where
     S: Send + Sync,
@@ -133,7 +130,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Package
 where
     S: Send + Sync,
@@ -152,7 +148,6 @@ where
 
 pub struct ProjectPackage(pub Project, pub Package);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ProjectPackage
 where
     S: Send + Sync,
@@ -185,7 +180,6 @@ where
 
 pub struct ProjectPackageVersion(pub Project, pub Package, pub Version);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ProjectPackageVersion
 where
     S: Send + Sync,
@@ -222,7 +216,6 @@ where
 
 pub struct ProjectPackageRelease(pub Project, pub Package, pub Release);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ProjectPackageRelease
 where
     S: Send + Sync,
@@ -256,7 +249,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Owned
 where
     S: Send + Sync,
@@ -303,7 +295,6 @@ impl From<QueryRejection> for AppError {
 
 pub struct Wrapper<E>(pub E);
 
-#[async_trait]
 impl<S, T> FromRequestParts<S> for Wrapper<T>
 where
     S: Send + Sync,
@@ -321,7 +312,6 @@ where
     }
 }
 
-#[async_trait]
 impl<S, T> FromRequest<S> for Wrapper<T>
 where
     S: Send + Sync,
@@ -623,7 +613,7 @@ mod test {
     #[tokio::test]
     async fn project_id_from_request_parts_ok() {
         let app = Router::new()
-            .route("/:proj", get(project_ok))
+            .route("/{proj}", get(project_ok))
             .with_state(make_state(ProjectTestCore {}));
 
         let response = app
@@ -643,7 +633,7 @@ mod test {
     #[tokio::test]
     async fn project_id_from_request_parts_not_a_project() {
         let app = Router::new()
-            .route("/:proj", get(project_fail))
+            .route("/{proj}", get(project_fail))
             .with_state(make_state(ProjectTestCore {}));
 
         let response = app
@@ -718,7 +708,7 @@ mod test {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj", get(owned_ok))
+            .route("/{proj}", get(owned_ok))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -745,7 +735,7 @@ mod test {
         };
 
         let app = Router::new()
-            .route("/:proj", get(owned_fail))
+            .route("/{proj}", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -768,7 +758,7 @@ mod test {
         let exp = bob_expired();
 
         let app = Router::new()
-            .route("/:proj", get(owned_fail))
+            .route("/{proj}", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -791,7 +781,7 @@ mod test {
         let exp = bob_ok();
 
         let app = Router::new()
-            .route("/:proj", get(owned_fail))
+            .route("/{proj}", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -812,7 +802,7 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_token() {
         let app = Router::new()
-            .route("/:proj", get(owned_fail))
+            .route("/{proj}", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
@@ -833,7 +823,7 @@ mod test {
     #[tokio::test]
     async fn owners_from_request_parts_no_auth_header() {
         let app = Router::new()
-            .route("/:proj", get(owned_fail))
+            .route("/{proj}", get(owned_fail))
             .with_state(make_state(OwnersTestCore {}));
 
         let response = app
