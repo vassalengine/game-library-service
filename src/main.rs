@@ -92,60 +92,63 @@ impl IntoResponse for AppError {
 }
 
 fn routes(api: &str) -> Router<AppState> {
-    Router::new()
+    let api_router = Router::new()
         .route(
-            &format!("{api}/"),
-            get(handlers::root_get)
-        )
-        .route(
-            &format!("{api}/projects"),
+            "/projects",
             get(handlers::projects_get)
         )
         .route(
-            &format!("{api}/projects/{{proj}}"),
+            "/projects/{proj}",
             get(handlers::project_get)
             .post(handlers::project_post)
             .patch(handlers::project_patch)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/{{revision}}"),
+            "/projects/{proj}/{revision}",
             get(handlers::project_revision_get)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/owners"),
+            "/projects/{proj}/owners",
             get(handlers::owners_get)
             .put(handlers::owners_add)
             .delete(handlers::owners_remove)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/players"),
+            "/projects/{proj}/players",
             get(handlers::players_get)
             .put(handlers::players_add)
             .delete(handlers::players_remove)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/packages/{{pkg_name}}"),
+            "/projects/{proj}/packages/{pkg_name}",
             get(handlers::release_get)
             .post(handlers::packages_post)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/packages/{{pkg_name}}/{{version}}"),
+            "/projects/{proj}/packages/{pkg_name}/{version}",
             get(handlers::release_version_get)
             .put(handlers::release_put)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/images/{{img_name}}"),
+            "/projects/{proj}/images/{img_name}",
             get(handlers::image_get)
             .post(handlers::image_post)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/images/{{img_name}}/{{revision}}"),
+            "/projects/{proj}/images/{img_name}/{revision}",
             get(handlers::image_revision_get)
         )
         .route(
-            &format!("{api}/projects/{{proj}}/flag"),
+            "/projects/{proj}/flag",
             post(handlers::flag_post)
+        );
+
+    Router::new()
+        .route(
+            &format!("{api}/"),
+            get(handlers::root_get)
         )
+        .nest(api, api_router)
         .fallback(handlers::not_found)
         .layer(
             ServiceBuilder::new()
