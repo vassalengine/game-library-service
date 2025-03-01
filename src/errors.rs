@@ -45,6 +45,7 @@ impl From<CoreError> for AppError {
             CoreError::NotFound => AppError::NotFound,
             CoreError::NotAPackage => AppError::NotFound,
             CoreError::NotAProject => AppError::NotFound,
+            CoreError::NotARelease => AppError::NotFound,
             CoreError::NotARevision => AppError::NotFound,
             CoreError::NotAUser => AppError::NotAUser,
             CoreError::NotAVersion => AppError::NotFound,
