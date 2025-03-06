@@ -36,7 +36,8 @@ pub struct ProdCore<C: DatabaseClient, U: Uploader> {
     pub db: C,
     pub uploader: U,
     pub now: fn() -> DateTime<Utc>,
-    pub max_image_size: u64
+    pub max_file_size: usize,
+    pub max_image_size: usize
 }
 
 #[async_trait]
@@ -45,6 +46,14 @@ where
     C: DatabaseClient + Send + Sync,
     U: Uploader + Send + Sync
 {
+    fn max_file_size(&self) -> usize {
+        self.max_file_size
+    }
+
+    fn max_image_size(&self) -> usize {
+        self.max_image_size
+    }
+
     async fn get_user_id(
          &self,
         username: &str
@@ -265,7 +274,7 @@ where
         release: Release,
         requires: &str,
         filename: &str,
-        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
         let now = self.now_nanos()?;
@@ -393,8 +402,7 @@ where
         proj: Project,
         img_name: &str,
         content_type: &Mime,
-        content_length: Option<u64>,
-        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
         // santiy checks
@@ -1008,15 +1016,15 @@ mod test {
 
     fn make_core(
         pool: Pool,
-        now: fn() -> DateTime<Utc>,
-        max_image_size: u64
+        now: fn() -> DateTime<Utc>
     ) -> ProdCore<SqlxDatabaseClient<sqlx::sqlite::Sqlite>, FakeUploader>
     {
         ProdCore {
             db: SqlxDatabaseClient(pool),
             uploader: FakeUploader {},
             now,
-            max_image_size
+            max_file_size: 256,
+            max_image_size: 256
         }
     }
 
@@ -1081,7 +1089,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_start_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1119,7 +1127,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_end_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1157,7 +1165,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_after_asc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1204,7 +1212,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_after_desc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1251,7 +1259,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_before_asc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1298,7 +1306,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_before_desc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
                 sort_by: SortBy::ProjectName,
@@ -1344,7 +1352,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_before_asc_no_prev_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1382,7 +1390,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_after_desc_no_prev_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1420,7 +1428,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_after_asc_no_next_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1458,7 +1466,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_pname_after_desc_no_next_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1496,7 +1504,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_start_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1537,7 +1545,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_end_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1575,7 +1583,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_after_asc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1631,7 +1639,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_after_desc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1687,7 +1695,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_before_asc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1743,7 +1751,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "ten_projects"))]
     async fn get_projects_mtime_before_desc_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let (prev, next, summaries, total) = core.get_projects_from(
             Seek {
@@ -1799,7 +1807,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "two_owners", "packages", "authors"))]
     async fn get_project_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_project(Project(42)).await.unwrap(),
             ProjectData {
@@ -1891,7 +1899,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "two_owners", "packages", "authors"))]
     async fn get_project_revision_ok_current(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_project_revision(Project(42), 3).await.unwrap(),
             ProjectData {
@@ -1967,7 +1975,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "two_owners", "packages"))]
     async fn get_project_revision_ok_old(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_project_revision(Project(42), 1).await.unwrap(),
             ProjectData {
@@ -2007,7 +2015,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn create_project_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let user = User(1);
         let name = "newproj";
@@ -2055,7 +2063,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn update_project_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
 
         let name = "test_game";
         let new_data = ProjectData {
@@ -2110,7 +2118,7 @@ mod test {
 /*
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_release(Project(42), Package(1)).await.unwrap(),
             "https://example.com/a_package-1.2.4"
@@ -2119,7 +2127,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_version_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let version = "1.2.3".parse::<Version>().unwrap();
         assert_eq!(
             core.get_release_version(Project(42), Package(1), &version)
@@ -2131,7 +2139,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_release_version_not_a_version(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let version = "1.0.0".parse::<Version>().unwrap();
         assert_eq!(
             core.get_release_version(Project(42), Package(1), &version)
@@ -2144,7 +2152,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_owners(Project(42)).await.unwrap(),
             Users { users: vec!["bob".into()] }
@@ -2153,19 +2161,19 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_true(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert!(core.user_is_owner(User(1), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn user_is_owner_false(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert!(!core.user_is_owner(User(2), Project(42)).await.unwrap());
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owners_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let users = Users { users: vec!["alice".into()] };
         core.add_owners(&users, Project(42)).await.unwrap();
         assert_eq!(
@@ -2181,7 +2189,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "two_owners"))]
     async fn remove_owners_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let users = Users { users: vec!["bob".into()] };
         core.remove_owners(&users, Project(42)).await.unwrap();
         assert_eq!(
@@ -2192,7 +2200,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn remove_owners_fail_if_last(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         let users = Users { users: vec!["bob".into()] };
         assert_eq!(
             core.remove_owners(&users, Project(1)).await.unwrap_err(),
@@ -2202,7 +2210,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn get_players_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_players(Project(42)).await.unwrap(),
             Users {
@@ -2216,7 +2224,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         core.add_player(User(3), Project(42)).await.unwrap();
         assert_eq!(
             core.get_players(Project(42)).await.unwrap(),
@@ -2232,7 +2240,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn remove_player_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         core.remove_player(User(1), Project(42)).await.unwrap();
         assert_eq!(
             core.get_players(Project(42)).await.unwrap(),
@@ -2242,7 +2250,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_ok(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(42), "img.png").await.unwrap(),
             "https://example.com/images/img.png"
@@ -2251,7 +2259,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_not_a_project(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(1), "img.png").await.unwrap_err(),
             CoreError::NotFound
@@ -2260,7 +2268,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_not_an_image(pool: Pool) {
-        let core = make_core(pool, fake_now, 0);
+        let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(42), "bogus").await.unwrap_err(),
             CoreError::NotFound

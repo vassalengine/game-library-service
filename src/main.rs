@@ -215,7 +215,8 @@ async fn main() -> Result<(), StartupError> {
             &config.bucket_base_dir
         )?,
         now: Utc::now,
-        max_image_size: (config.max_image_size as u64) << 20 // MB to bytes
+        max_image_size: config.max_image_size << 20, // MB to bytes
+        max_file_size: config.max_file_size << 20    // MB to bytes
     };
 
     let state = AppState {
@@ -223,10 +224,7 @@ async fn main() -> Result<(), StartupError> {
         core: Arc::new(core) as CoreArc
     };
 
-    let api = &config.api_base_path;
-
-    let app: Router = routes(api)
-        .with_state(state);
+    let app: Router = routes(&config.api_base_path).with_state(state);
 
     let ip: IpAddr = config.listen_ip.parse()?;
     let addr = SocketAddr::from((ip, config.listen_port));
@@ -251,6 +249,7 @@ mod test {
         }
     };
     use futures::Stream;
+    use futures_util::TryFutureExt;
     use mime::{APPLICATION_JSON, IMAGE_PNG, TEXT_PLAIN, Mime};
     use once_cell::sync::Lazy;
     use nix::{
@@ -258,12 +257,13 @@ mod test {
         unistd::Pid
     };
     use std::future::IntoFuture;
+    use tokio_util::io::StreamReader;
     use tower::ServiceExt; // for oneshot
 
     use crate::{
         core::{Core, CoreError},
         jwt::{self, EncodingKey},
-        model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, ReleaseData, User, Users},
+        model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams,
         version::Version
@@ -370,11 +370,32 @@ mod test {
         }
     );
 
+    const MAX_FILE_SIZE: usize = 256;
+
+    const MAX_IMAGE_SIZE: usize = 256;
+
+    async fn exhaust_stream(
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
+    ) -> Result<(), CoreError>
+    {
+        let mut reader = StreamReader::new(stream);
+        let mut writer = tokio::io::empty();
+
+        tokio::io::copy(&mut reader, &mut writer)
+            .map_err(|_| CoreError::TooLarge)
+            .await
+            .map(|_| ())
+    }
+
     #[derive(Clone)]
     struct TestCore { }
 
     #[async_trait]
     impl Core for TestCore {
+        fn max_file_size(&self) -> usize { MAX_FILE_SIZE }
+
+        fn max_image_size(&self) -> usize { MAX_IMAGE_SIZE }
+
         async fn get_project_id(
             &self,
             proj: &str,
@@ -395,6 +416,19 @@ mod test {
             match pkg {
                 "a_package" => Ok(Package(1)),
                 _ => Err(CoreError::NotAPackage)
+            }
+        }
+
+        async fn get_release_id(
+             &self,
+            _proj: Project,
+            _pkg: Package,
+            release: &str
+        ) -> Result<Release, CoreError>
+        {
+            match release {
+                "1.2.3" => Ok(Release(1)),
+                _ => Err(CoreError::NotARelease)
             }
         }
 
@@ -595,19 +629,28 @@ mod test {
             _proj: Project,
             _img_name: &str,
             content_type: &Mime,
-            content_length: Option<u64>,
-            _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+            stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
         ) -> Result<(), CoreError>
         {
-            if content_length > Some(1 << 20) {
-                Err(CoreError::TooLarge)
-            }
-            else if content_type == &TEXT_PLAIN {
+            if content_type == &TEXT_PLAIN {
                 Err(CoreError::BadMimeType)
             }
             else {
-                Ok(())
+                exhaust_stream(stream).await
             }
+        }
+
+        async fn add_file(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            _release: Release,
+            _requires: &str,
+            _filename: &str,
+            stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
+        ) -> Result<(), CoreError>
+        {
+            exhaust_stream(stream).await
         }
     }
 
@@ -2377,7 +2420,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
                 .unwrap()
@@ -2398,7 +2441,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
                 .unwrap()
@@ -2415,7 +2458,7 @@ mod test {
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
                 .unwrap()
@@ -2436,7 +2479,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(0))
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
                 .unwrap()
@@ -2457,7 +2500,7 @@ mod test {
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
                 .unwrap()
         )
@@ -2478,7 +2521,7 @@ mod test {
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
-                .header(CONTENT_LENGTH, 1234)
+                .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
                 .unwrap()
         )
@@ -2493,6 +2536,72 @@ mod test {
 
     #[tokio::test]
     async fn post_image_too_large() {
+        let long = "x".repeat(MAX_IMAGE_SIZE + 1);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, long.len())
+                .body(Body::from(long))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_too_large_no_content_length() {
+        let long = "x".repeat(MAX_IMAGE_SIZE + 1);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::from(long))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_content_length_too_large() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, MAX_IMAGE_SIZE + 1)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_image_content_length_way_too_large() {
         let response = try_request(
             Request::builder()
                 .method(Method::POST)
@@ -2512,5 +2621,113 @@ mod test {
         );
     }
 
-// TODO: post release tests
+    #[tokio::test]
+    async fn post_file_too_large() {
+        let long = "x".repeat(MAX_FILE_SIZE + 1);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, long.len())
+                .body(Body::from(long))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_too_large_no_content_length() {
+        let long = "x".repeat(MAX_FILE_SIZE + 1);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .body(Body::from(long))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_content_length_too_large() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, MAX_FILE_SIZE + 1)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_content_length_way_too_large() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, u64::MAX)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_payload_exceeds_content_length() {
+        let long = "x".repeat(MAX_FILE_SIZE);
+
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, long.len() - 1)
+                .body(Body::from(long))
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
 }

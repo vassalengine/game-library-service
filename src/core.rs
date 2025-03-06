@@ -66,6 +66,14 @@ impl PartialEq for CoreError {
 
 #[async_trait]
 pub trait Core {
+    fn max_file_size(&self) -> usize {
+        unimplemented!();
+    }
+
+    fn max_image_size(&self) -> usize {
+        unimplemented!();
+    }
+
     async fn get_project_id(
          &self,
         _proj: &str
@@ -229,7 +237,7 @@ pub trait Core {
         _release: Release,
         _requires: &str,
         _filename: &str,
-        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
         unimplemented!();
@@ -286,8 +294,7 @@ pub trait Core {
         _proj: Project,
         _img_name: &str,
         _content_type: &Mime,
-        _content_length: Option<u64>,
-        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
         unimplemented!();

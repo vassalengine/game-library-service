@@ -8,7 +8,11 @@ use axum_extra::{
     headers::{ContentLength, ContentType}
 };
 use futures::{Stream, TryStreamExt};
-use std::io;
+use http_body_util::{BodyExt, Limited, LengthLimitError};
+use std::{
+    error::Error,
+    io
+};
 
 use crate::{
     core::CoreArc,
@@ -166,15 +170,38 @@ pub async fn release_post(
     Ok(core.create_release(owner, proj, pkg, &version).await?)
 }
 
+fn unpack_limited_error(e: Box<dyn Error + Sync + Send>) -> io::Error {
+    // turn boxed error back into io::Error
+    match e.downcast::<io::Error>() {
+        Ok(e) => *e,
+        Err(e) => match e.downcast::<LengthLimitError>() {
+            Ok(e) => io::Error::new(io::ErrorKind::FileTooLarge, e),
+            Err(e) => io::Error::new(io::ErrorKind::Other, e)
+        }
+    }
+}
+
 fn into_stream(
-    request: Request
-) -> Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>
+    request: Request,
+    limit: usize
+) -> Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
 {
-    Box::new(
-        request.into_body()
+     Box::new(
+        Limited::new(request.into_body(), limit)
             .into_data_stream()
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+            .map_err(unpack_limited_error)
     )
+}
+
+fn check_content_length(
+    content_length: Option<TypedHeader<ContentLength>>,
+    max_size: usize
+) -> Result<usize, AppError>
+{
+    content_length
+        .map_or(Some(max_size), |cl| cl.0.0.try_into().ok())
+        .filter(|cl| *cl <= max_size)
+        .ok_or(AppError::TooLarge)
 }
 
 pub async fn file_post(
@@ -182,12 +209,23 @@ pub async fn file_post(
     ProjectPackageRelease(_, pkg, release): ProjectPackageRelease,
     Path((_, _, _, filename)): Path<(String, String, String, String)>,
     TypedHeader(content_type): TypedHeader<ContentType>,
+    content_length: Option<TypedHeader<ContentLength>>,
     State(core): State<CoreArc>,
     request: Request
 ) -> Result<(), AppError>
 {
-    let stream = into_stream(request);
-    Ok(core.add_file(owner, proj, release, "", &filename, stream).await?)
+    let limit = check_content_length(content_length, core.max_file_size())?;
+
+    Ok(
+        core.add_file(
+            owner,
+            proj,
+            release,
+            "",
+            &filename,
+            into_stream(request, limit)
+        ).await?
+    )
 }
 
 pub async fn image_get(
@@ -221,6 +259,8 @@ pub async fn image_post(
     request: Request
 ) -> Result<(), AppError>
 {
+    let limit = check_content_length(content_length, core.max_image_size())?;
+
     // NB: No ContentType header will result in BAD_REQUEST by default, so
     // have to make it optional and check manually
     Ok(
@@ -229,8 +269,7 @@ pub async fn image_post(
             proj,
             &img_name,
             &content_type.ok_or(AppError::BadMimeType)?.0.into(),
-            content_length.map(|h| h.0.0),
-            into_stream(request)
+            into_stream(request, limit)
         ).await?
     )
 }
