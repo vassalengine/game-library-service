@@ -216,7 +216,8 @@ async fn main() -> Result<(), StartupError> {
         )?,
         now: Utc::now,
         max_image_size: config.max_image_size << 20, // MB to bytes
-        max_file_size: config.max_file_size << 20    // MB to bytes
+        max_file_size: config.max_file_size << 20,   // MB to bytes
+        uploads_dir: config.uploads_dir.into()
     };
 
     let state = AppState {

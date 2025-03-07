@@ -16,5 +16,6 @@ pub struct Config {
     pub bucket_access_key: String,
     pub bucket_secret_key: String,
     pub bucket_base_url: String,
-    pub bucket_base_dir: String
+    pub bucket_base_dir: String,
+    pub uploads_dir: String
 }

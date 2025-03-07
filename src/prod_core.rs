@@ -9,7 +9,7 @@ use regex::Regex;
 use std::{
     future::Future,
     io,
-    path::Path
+    path::PathBuf
 };
 use tokio::{
     fs::{
@@ -37,7 +37,8 @@ pub struct ProdCore<C: DatabaseClient, U: Uploader> {
     pub uploader: U,
     pub now: fn() -> DateTime<Utc>,
     pub max_file_size: usize,
-    pub max_image_size: usize
+    pub max_image_size: usize,
+    pub uploads_dir: PathBuf
 }
 
 #[async_trait]
@@ -281,14 +282,10 @@ where
 
 // TODO: more useful errors
 // TODO: delete temp file when done
-// TODO: limit file size using middleware?
-// TODO: set uploads directory as part of config
 
         // write the stream to a file
-        let uploads_directory = "uploads";
         let filename = require_filename(filename)?;
-
-        let path = Path::new(uploads_directory).join(filename);
+        let path = self.uploads_dir.join(filename);
 
         // open temp file read-write
         let mut file = File::options()
@@ -1024,7 +1021,8 @@ mod test {
             uploader: FakeUploader {},
             now,
             max_file_size: 256,
-            max_image_size: 256
+            max_image_size: 256,
+            uploads_dir: "uploads".into()
         }
     }
 
