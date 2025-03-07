@@ -2622,6 +2622,129 @@ mod test {
     }
 
     #[tokio::test]
+    async fn post_file_ok() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, 1)
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[tokio::test]
+    async fn post_file_not_a_project() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_not_a_package() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+// FIXME: rename to not_a_release
+    #[tokio::test]
+    async fn post_file_not_a_version() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_unauth() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
+    async fn post_file_not_owner() {
+        let response = try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .header(AUTHORIZATION, token(0))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[tokio::test]
     async fn post_file_too_large() {
         let long = "x".repeat(MAX_FILE_SIZE + 1);
 
