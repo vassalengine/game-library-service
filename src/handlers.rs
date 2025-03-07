@@ -282,3 +282,68 @@ pub async fn flag_post(
 {
     todo!();
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn check_content_length_under_limit() {
+        let len = 20;
+        assert_eq!(
+            check_content_length(
+                Some(TypedHeader(ContentLength(len as u64))),
+                len + 1
+            ).unwrap(),
+            len
+        );
+    }
+
+    #[test]
+    fn check_content_length_at_limit() {
+        let len = 20;
+        assert_eq!(
+            check_content_length(
+                Some(TypedHeader(ContentLength(len as u64))),
+                len
+            ).unwrap(),
+            len
+        );
+    }
+
+    #[test]
+    fn check_content_length_too_long() {
+        let len = 20;
+        assert_eq!(
+            check_content_length(
+                Some(TypedHeader(ContentLength((len as u64) + 1))),
+                len
+            ).unwrap_err(),
+            AppError::TooLarge
+        );
+    }
+
+    #[test]
+    fn check_content_length_way_too_long() {
+        let len = 20;
+        assert_eq!(
+            check_content_length(
+                Some(TypedHeader(ContentLength(u64::MAX))),
+                len
+            ).unwrap_err(),
+            AppError::TooLarge
+        );
+    }
+
+    #[test]
+    fn check_content_length_no_content_length() {
+        let len = 20;
+        assert_eq!(
+            check_content_length(
+                None,
+                len
+            ).unwrap(),
+            len
+        );
+    }
+}
