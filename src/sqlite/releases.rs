@@ -390,7 +390,7 @@ async fn create_file_row<'e, E>(
     filename: &str,
     size: i64,
     sha256: &str,
-    requires: &str,
+    requires: Option<&str>,
     url: &str,
     now: i64
 ) -> Result<(), CoreError>
@@ -434,7 +434,7 @@ pub async fn add_file_url<'a, A>(
     filename: &str,
     size: i64,
     sha256: &str,
-    requires: &str,
+    requires: Option<&str>,
     url: &str,
     now: i64
 ) -> Result<(), CoreError>

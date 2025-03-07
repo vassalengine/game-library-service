@@ -272,7 +272,7 @@ where
         owner: Owner,
         proj: Project,
         release: Release,
-        requires: &str,
+        requires: Option<&str>,
         filename: &str,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>

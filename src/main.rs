@@ -645,7 +645,7 @@ mod test {
             _owner: Owner,
             _proj: Project,
             _release: Release,
-            _requires: &str,
+            _requires: Option<&str>,
             _filename: &str,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
         ) -> Result<(), CoreError>

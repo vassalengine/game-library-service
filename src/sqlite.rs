@@ -380,7 +380,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         filename: &str,
         size: i64,
         sha256: &str,
-        requires: &str,
+        requires: Option<&str>,
         url: &str,
         now: i64
     ) -> Result<(), CoreError>
