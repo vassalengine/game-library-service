@@ -9,6 +9,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-tempfile = "^0.7"
 async-trait = "^0.1"
 axum = { version = "^0.8", features = ["http1", "http2", "json", "macros", "multipart", "query", "tokio"] }
 axum-extra = { version = "^0.10", features = ["typed-header"] }
