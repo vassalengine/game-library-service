@@ -27,7 +27,7 @@ use crate::{
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::nanos_to_rfc3339,
-    upload::{LocalUploader, Uploader, UploadError, require_filename, stream_to_writer},
+    upload::{InvalidFilename, LocalUploader, Uploader, UploadError, safe_filename, stream_to_writer},
     version::Version
 };
 
@@ -282,7 +282,9 @@ where
 
 // TODO: more useful errors
 // TODO: delete temp file when done
-        let filename = sanitize_filename(filename)?;
+        // ensure the filename is valid
+        let filename = safe_filename(filename)
+            .or(Err(CoreError::InvalidFilename))?;
 
         // write the stream to a file
         let filename = require_filename(filename)?;
