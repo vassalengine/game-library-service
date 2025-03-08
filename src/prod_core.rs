@@ -282,6 +282,7 @@ where
 
 // TODO: more useful errors
 // TODO: delete temp file when done
+        let filename = sanitize_filename(filename)?;
 
         // write the stream to a file
         let filename = require_filename(filename)?;

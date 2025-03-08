@@ -38,7 +38,7 @@ pub enum UploadError {
     S3Error(#[from] S3Error),
 }
 
-pub fn require_filename(path: &str) -> Result<&str, UploadError> {
+pub fn sanitize_filename(path: &str) -> Result<&str, UploadError> {
     let p = Path::new(path);
 
     if p.file_name().is_some() && p.components().count() == 1 {
@@ -176,49 +176,49 @@ mod test {
     use super::*;
 
     #[test]
-    fn require_filename_empty() {
+    fn sanitize_filename_empty() {
         assert!(
             matches!(
-                require_filename("").unwrap_err(),
+                sanitize_filename("").unwrap_err(),
                 UploadError::InvalidFilename
             )
         );
     }
 
     #[test]
-    fn require_filename_dots() {
+    fn sanitize_filename_dots() {
         assert!(
             matches!(
-                require_filename("../bad").unwrap_err(),
+                sanitize_filename("../bad").unwrap_err(),
                 UploadError::InvalidFilename
             )
         );
     }
 
     #[test]
-    fn require_filename_multiple_components() {
+    fn sanitize_filename_multiple_components() {
         assert!(
             matches!(
-                require_filename("one/two/three").unwrap_err(),
+                sanitize_filename("one/two/three").unwrap_err(),
                 UploadError::InvalidFilename
             )
         );
     }
 
     #[test]
-    fn require_filename_root() {
+    fn sanitize_filename_root() {
         assert!(
             matches!(
-                require_filename("/").unwrap_err(),
+                sanitize_filename("/").unwrap_err(),
                 UploadError::InvalidFilename
             )
         );
     }
 
     #[test]
-    fn require_filename_ok() {
+    fn sanitize_filename_ok() {
         assert_eq!(
-            require_filename("filename").unwrap(),
+            sanitize_filename("filename").unwrap(),
             "filename"
         );
     }
