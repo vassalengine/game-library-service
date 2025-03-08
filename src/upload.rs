@@ -170,3 +170,56 @@ impl Uploader for BucketUploader {
         Ok(format!("{0}/{path}", self.base_url))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn require_filename_empty() {
+        assert!(
+            matches!(
+                require_filename("").unwrap_err(),
+                UploadError::InvalidFilename
+            )
+        );
+    }
+
+    #[test]
+    fn require_filename_dots() {
+        assert!(
+            matches!(
+                require_filename("../bad").unwrap_err(),
+                UploadError::InvalidFilename
+            )
+        );
+    }
+
+    #[test]
+    fn require_filename_multiple_components() {
+        assert!(
+            matches!(
+                require_filename("one/two/three").unwrap_err(),
+                UploadError::InvalidFilename
+            )
+        );
+    }
+
+    #[test]
+    fn require_filename_root() {
+        assert!(
+            matches!(
+                require_filename("/").unwrap_err(),
+                UploadError::InvalidFilename
+            )
+        );
+    }
+
+    #[test]
+    fn require_filename_ok() {
+        assert_eq!(
+            require_filename("filename").unwrap(),
+            "filename"
+        );
+    }
+}
