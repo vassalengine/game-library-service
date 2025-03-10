@@ -31,8 +31,6 @@ use tokio_util::io::{
 
 #[derive(Debug, Error)]
 pub enum UploadError {
-    #[error("I/O error: {0}")]
-    IOError(#[from] io::Error),
     #[error("Bucket error: {0}")]
     S3Error(#[from] S3Error),
 }
@@ -72,7 +70,7 @@ pub fn safe_filename(path: &str) -> Result<&str, InvalidFilename> {
 pub async fn stream_to_writer<S, W>(
     stream: S,
     writer: W
-) -> Result<(String, u64), UploadError>
+) -> Result<(String, u64), io::Error>
 where
     S: Stream<Item = Result<Bytes, io::Error>> + Send,
     W: AsyncWrite
