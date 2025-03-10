@@ -1,3 +1,4 @@
+use async_tempfile::TempFile;
 use async_trait::async_trait;
 use axum::body::Bytes;
 use chrono::{DateTime, Utc};
@@ -7,17 +8,12 @@ use mime::Mime;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
+    error::Error,
     future::Future,
     io,
-    path::PathBuf
+    path::{Path, PathBuf}
 };
-use tokio::{
-    fs::{
-        File,
-        remove_file
-    },
-    io::AsyncSeekExt
-};
+use tokio::io::AsyncSeekExt;
 
 use crate::{
     core::{Core, CoreError},
@@ -281,37 +277,36 @@ where
     {
         let now = self.now_nanos()?;
 
-// TODO: more useful errors
-// TODO: delete temp file when done
         // ensure the filename is valid
         let filename = safe_filename(filename)
             .or(Err(CoreError::InvalidFilename))?;
 
         // write the stream to a file
-        let filename = require_filename(filename)?;
-        let path = self.uploads_dir.join(filename);
-
-        // open temp file read-write
-        let mut file = File::options()
-            .create(true)
-            .write(true)
-            .read(true)
-            .open(&path)
+        let mut file = TempFile::new_in(&*self.uploads_dir)
             .await
-            .map_err(UploadError::IOError)?;
+            .map_err(io::Error::other)?;
 
-        let (sha256, size) = stream_to_writer(
-            Box::into_pin(stream),
-            &mut file
-        ).await?;
+        let stream = Box::into_pin(stream);
 
-// TODO: check that file types match magic
+        let (sha256, size) = stream_to_writer(stream, &mut file)
+            .await?;
+
+        // check that the content length, if given, matches what was read
+        if content_length.is_some_and(|cl| cl != size) {
+            // we know the stream is shorter because were it longer, it
+            // would already have failed from hitting the limit
+            return Err(
+                io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "stream shorter than Content-Length"
+                )
+            )?;
+        }
 
         // check that vmod, vext files have semver-compliant versions
-        let ext = path.extension().unwrap_or_default();
-
+        let ext = Path::new(filename).extension().unwrap_or_default();
         if ext == "vmod" || ext == "vext" {
-            check_version(&path)?;
+            check_version(file.file_path()).await?;
         }
 
 // TODO: should uploaded files be named for hashes?
@@ -323,8 +318,7 @@ where
             &sha256[1..2]
         );
 
-        file.rewind().await
-            .map_err(UploadError::IOError)?;
+        file.rewind().await?;
 
 // TODO: do we need to set content-type?
         let url = self.uploader.upload(
