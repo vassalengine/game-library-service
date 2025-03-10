@@ -1,7 +1,7 @@
 use std::{
     io::{self, Read},
     fs::File,
-    path::Path
+    path::{Path, PathBuf}
 };
 use zip::{
     ZipArchive,
@@ -46,11 +46,20 @@ fn version_in_moduledata(md: &str) -> Result<String, Error> {
     Ok(value.string())
 }
 
-pub fn check_version<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+fn check_version_impl<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let md = dump_file(path, "moduledata")?;
     version_in_moduledata(&md)?
         .parse::<semver::Version>()?;
     Ok(())
+}
+
+pub async fn check_version<P: Into<PathBuf>>(path: P) -> Result<(), Error> {
+    let path = path.into();
+    match tokio::task::spawn_blocking(move || check_version_impl(path)).await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => Err(e),
+        Err(e) => Err(Error::Io(io::Error::from(e)))
+    }
 }
 
 #[cfg(test)]
