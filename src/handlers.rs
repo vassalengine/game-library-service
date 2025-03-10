@@ -193,14 +193,17 @@ fn into_stream(
     )
 }
 
-fn check_content_length(
-    content_length: Option<TypedHeader<ContentLength>>,
+fn limit_content_length(
+    content_length: Option<u64>,
     max_size: usize
-) -> Result<usize, AppError>
+) -> Result<(Option<u64>, usize), AppError>
 {
     content_length
-        .map_or(Some(max_size), |cl| cl.0.0.try_into().ok())
-        .filter(|cl| *cl <= max_size)
+        .map_or(
+            Some((None, max_size)),
+            |cl| cl.try_into().map(|cl| (Some(cl as u64), cl)).ok()
+        )
+        .filter(|(_, lim)| *lim <= max_size)
         .ok_or(AppError::TooLarge)
 }
 
@@ -214,15 +217,20 @@ pub async fn file_post(
     request: Request
 ) -> Result<(), AppError>
 {
-    let limit = check_content_length(content_length, core.max_file_size())?;
+    let (content_length, limit) = limit_content_length(
+        content_length.map(|cl| cl.0.0),
+        core.max_file_size()
+    )?;
 
     Ok(
         core.add_file(
             owner,
             proj,
             release,
-            "",
+// TODO: where to get requires? read from vmod?
+            None,
             &filename,
+            content_length,
             into_stream(request, limit)
         ).await?
     )
@@ -259,7 +267,10 @@ pub async fn image_post(
     request: Request
 ) -> Result<(), AppError>
 {
-    let limit = check_content_length(content_length, core.max_image_size())?;
+    let (content_length, limit) = limit_content_length(
+        content_length.map(|cl| cl.0.0),
+        core.max_file_size()
+    )?;
 
     // NB: No ContentType header will result in BAD_REQUEST by default, so
     // have to make it optional and check manually
@@ -269,6 +280,7 @@ pub async fn image_post(
             proj,
             &img_name,
             &content_type.ok_or(AppError::BadMimeType)?.0.into(),
+            content_length,
             into_stream(request, limit)
         ).await?
     )
@@ -288,62 +300,47 @@ mod test {
     use super::*;
 
     #[test]
-    fn check_content_length_under_limit() {
+    fn limit_content_length_under_limit() {
         let len = 20;
         assert_eq!(
-            check_content_length(
-                Some(TypedHeader(ContentLength(len as u64))),
-                len + 1
-            ).unwrap(),
-            len
+            limit_content_length(Some(len as u64), len + 1).unwrap(),
+            (Some(len as u64), len)
         );
     }
 
     #[test]
-    fn check_content_length_at_limit() {
+    fn limit_content_length_at_limit() {
         let len = 20;
         assert_eq!(
-            check_content_length(
-                Some(TypedHeader(ContentLength(len as u64))),
-                len
-            ).unwrap(),
-            len
+            limit_content_length(Some(len as u64), len).unwrap(),
+            (Some(len as u64), len)
         );
     }
 
     #[test]
-    fn check_content_length_too_long() {
+    fn limit_content_length_too_long() {
         let len = 20;
         assert_eq!(
-            check_content_length(
-                Some(TypedHeader(ContentLength((len as u64) + 1))),
-                len
-            ).unwrap_err(),
+            limit_content_length(Some((len as u64) + 1), len).unwrap_err(),
             AppError::TooLarge
         );
     }
 
     #[test]
-    fn check_content_length_way_too_long() {
+    fn limit_content_length_way_too_long() {
         let len = 20;
         assert_eq!(
-            check_content_length(
-                Some(TypedHeader(ContentLength(u64::MAX))),
-                len
-            ).unwrap_err(),
+            limit_content_length(Some(u64::MAX), len).unwrap_err(),
             AppError::TooLarge
         );
     }
 
     #[test]
-    fn check_content_length_no_content_length() {
+    fn limit_content_length_no_content_length() {
         let len = 20;
         assert_eq!(
-            check_content_length(
-                None,
-                len
-            ).unwrap(),
-            len
+            limit_content_length(None, len).unwrap(),
+            (None, len)
         );
     }
 }

@@ -239,6 +239,7 @@ pub trait Core {
         _release: Release,
         _requires: Option<&str>,
         _filename: &str,
+        _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
@@ -296,6 +297,7 @@ pub trait Core {
         _proj: Project,
         _img_name: &str,
         _content_type: &Mime,
+        _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {

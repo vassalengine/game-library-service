@@ -275,6 +275,7 @@ where
         release: Release,
         requires: Option<&str>,
         filename: &str,
+        content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
@@ -402,6 +403,7 @@ where
         proj: Project,
         img_name: &str,
         content_type: &Mime,
+        content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {

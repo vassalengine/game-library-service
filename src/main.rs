@@ -630,6 +630,7 @@ mod test {
             _proj: Project,
             _img_name: &str,
             content_type: &Mime,
+            _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
         ) -> Result<(), CoreError>
         {
@@ -648,6 +649,7 @@ mod test {
             _release: Release,
             _requires: Option<&str>,
             _filename: &str,
+            _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
         ) -> Result<(), CoreError>
         {
