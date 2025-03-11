@@ -320,7 +320,7 @@ where
 
         file.rewind().await?;
 
-// TODO: do we need to set content-type?
+// TODO: do we need to set content-type on upload?
         let url = self.uploader.upload(
             &bucket_path,
             &mut file
@@ -395,30 +395,86 @@ where
         &self,
         owner: Owner,
         proj: Project,
-        img_name: &str,
+        filename: &str,
         content_type: &Mime,
         content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), CoreError>
     {
-        // santiy checks
-        if !image_mime_type_ok(content_type) {
-          return Err(CoreError::BadMimeType);
-        }
-
-        if content_length > Some(self.max_image_size) {
-          return Err(CoreError::TooLarge);
-        }
-
         let now = self.now_nanos()?;
 
-        // write file
-        let url = self.uploader.upload(img_name, Box::into_pin(stream))
+        // MIME type should be an images
+        if !image_mime_type_ok(content_type) {
+            return Err(CoreError::BadMimeType);
+        }
+
+        // ensure the filename is valid
+        let filename = safe_filename(filename)
+            .or(Err(CoreError::InvalidFilename))?;
+
+        // write the stream to a file
+        let mut file = TempFile::new_in(&*self.uploads_dir)
             .await
+            .map_err(io::Error::other)?;
+
+        let mut stream = Box::into_pin(stream);
+
+// TODO: check actual MIME type
+// TODO: check dimensions? resize?
+/*
+        let mut stream = std::pin::pin!(stream.peekable());
+        let chunk = stream.as_mut().peek()
+            .await
+            .ok_or(CoreError::InternalError)?
+            .as_ref()
             .or(Err(CoreError::InternalError))?;
 
+        let magic = infer::get(chunk.as_ref())
+            .ok_or(CoreError::BadMimeType)?
+            .mime_type()
+            .parse::<Mime>()
+            .or(Err(CoreError::BadMimeType))?;
+
+        if magic != *content_type {
+            return Err(CoreError::BadMimeType);
+        }
+*/
+
+        let (sha256, size) = stream_to_writer(stream, &mut file)
+            .await?;
+
+        // check that the content length, if given, matches what was read
+        if content_length.is_some_and(|cl| cl != size) {
+            // we know the stream is shorter because were it longer, it
+            // would already have failed from hitting the limit
+            return Err(
+                io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "stream shorter than Content-Length"
+                )
+            )?;
+        }
+
+// TODO: should uploaded files be named for hashes?
+
+        // add hash prefix to file upload path
+        let bucket_path = format!(
+            "{0}/{1}/{filename}",
+            &sha256[0..1],
+            &sha256[1..2]
+        );
+
+        file.rewind().await?;
+
+// TODO: do we need to set content-type on upload?
+        let url = self.uploader.upload(
+            &bucket_path,
+            &mut file
+        )
+        .await?;
+
         // update record
-        self.db.add_image_url(owner, proj, img_name, &url, now).await?;
+        self.db.add_image_url(owner, proj, filename, &url, now).await?;
 
         Ok(())
     }
