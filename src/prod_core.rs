@@ -8,7 +8,6 @@ use mime::Mime;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
-    error::Error,
     future::Future,
     io,
     path::{Path, PathBuf}
