@@ -52,7 +52,7 @@ pub fn safe_filename(path: &str) -> Result<&str, InvalidFilename> {
             .expect("bad regex")
     );
 
-    if path.len() == 0 ||           // empty
+    if path.is_empty() ||           // empty
         path.len() > 255 ||         // overlong
         path != path.trim() ||      // leading, trailing whitespace
         path.ends_with('.') ||      // trailing periods (Windows)
@@ -79,7 +79,7 @@ where
     let mut hasher = Sha256::new();
     let reader = InspectReader::new(
         StreamReader::new(stream),
-        |buf| hasher.update(&buf)
+        |buf| hasher.update(buf)
     );
 
     // read stream
