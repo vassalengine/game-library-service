@@ -150,7 +150,7 @@ where
 
         let core = get_state(parts, state).await;
 
-        // look up the project, pkg ids
+        // look up the project, package ids
         Ok(
             core.get_project_package_ids(&proj, &pkg)
                 .await
