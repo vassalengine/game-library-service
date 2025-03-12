@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use axum::{
     RequestPartsExt,
     extract::{
@@ -333,6 +332,7 @@ where
 mod test {
     use super::*;
 
+    use async_trait::async_trait;
     use axum::{
         Router,
         body::Body,
