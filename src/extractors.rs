@@ -839,4 +839,389 @@ mod test {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
+
+    // We have to test ProjectPackage::from_request_parts via a Router because
+    // Path uses a private extension to get parameters from the request
+
+    #[derive(Clone)]
+    struct ProjectPackageTestCore {}
+
+    #[async_trait]
+    impl Core for ProjectPackageTestCore {
+        async fn get_project_id(
+            &self,
+            proj: &str
+        ) -> Result<Project, CoreError>
+        {
+            match proj {
+                "a_project" => Ok(Project(42)),
+                _ => Err(CoreError::NotAProject)
+            }
+        }
+
+        async fn get_package_id(
+             &self,
+            _proj: Project,
+            pkg: &str
+        ) -> Result<Package, CoreError>
+        {
+            match pkg {
+                "a_package" => Ok(Package(42)),
+                _ => Err(CoreError::NotAPackage)
+            }
+        }
+    }
+
+    async fn project_package_ok(
+        ProjectPackage(proj, pkg): ProjectPackage,
+        State(_): State<AppState>
+    )
+    {
+        assert_eq!(proj, Project(42));
+        assert_eq!(pkg, Package(42));
+    }
+
+    async fn project_package_fail(
+        ProjectPackage(_proj, _pkg): ProjectPackage,
+        State(_): State<AppState>
+    )
+    {
+        unreachable!();
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_ok() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_ok))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/a_package")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_not_a_project() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_fail))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/not_a_project/a_package")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_not_a_package() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_fail))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/not_a_package")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    // We have to test ProjectPackageVersion::from_request_parts via a Router
+    // because Path uses a private extension to get parameters from the request
+
+    #[derive(Clone)]
+    struct ProjectPackageVersionTestCore {}
+
+    #[async_trait]
+    impl Core for ProjectPackageVersionTestCore {
+        async fn get_project_id(
+            &self,
+            proj: &str
+        ) -> Result<Project, CoreError>
+        {
+            match proj {
+                "a_project" => Ok(Project(42)),
+                _ => Err(CoreError::NotAProject)
+            }
+        }
+
+        async fn get_package_id(
+             &self,
+            _proj: Project,
+            pkg: &str
+        ) -> Result<Package, CoreError>
+        {
+            match pkg {
+                "a_package" => Ok(Package(42)),
+                _ => Err(CoreError::NotAPackage)
+            }
+        }
+    }
+
+    async fn project_package_version_ok(
+        ProjectPackageVersion(proj, pkg, version): ProjectPackageVersion,
+        State(_): State<AppState>
+    )
+    {
+        assert_eq!(proj, Project(42));
+        assert_eq!(pkg, Package(42));
+        assert_eq!(
+            version,
+            Version { major: 1, minor: 2, patch: 3, pre: None, build: None }
+        );
+    }
+
+    async fn project_package_version_fail(
+        ProjectPackageVersion(_proj, _pkg, _version): ProjectPackageVersion,
+        State(_): State<AppState>
+    )
+    {
+        unreachable!();
+    }
+
+    #[tokio::test]
+    async fn project_package_version_from_request_parts_ok() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{version}", get(project_package_version_ok))
+            .with_state(make_state(ProjectPackageVersionTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn project_package_version_from_request_parts_not_a_project() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{version}", get(project_package_version_fail))
+            .with_state(make_state(ProjectPackageVersionTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/not_a_project/a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_version_from_request_parts_not_a_package() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{version}", get(project_package_version_fail))
+            .with_state(make_state(ProjectPackageVersionTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/not_a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_version_from_request_parts_not_a_version() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{version}", get(project_package_version_fail))
+            .with_state(make_state(ProjectPackageVersionTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/a_package/not_a_version")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    // We have to test ProjectPackageRelease::from_request_parts via a Router
+    // because Path uses a private extension to get parameters from the request
+
+    #[derive(Clone)]
+    struct ProjectPackageReleaseTestCore {}
+
+    #[async_trait]
+    impl Core for ProjectPackageReleaseTestCore {
+        async fn get_project_id(
+            &self,
+            proj: &str
+        ) -> Result<Project, CoreError>
+        {
+            match proj {
+                "a_project" => Ok(Project(42)),
+                _ => Err(CoreError::NotAProject)
+            }
+        }
+
+        async fn get_package_id(
+             &self,
+            _proj: Project,
+            pkg: &str
+        ) -> Result<Package, CoreError>
+        {
+            match pkg {
+                "a_package" => Ok(Package(42)),
+                _ => Err(CoreError::NotAPackage)
+            }
+        }
+
+        async fn get_release_id(
+            &self,
+            _proj: Project,
+            _pkg: Package,
+            release: &str
+        ) -> Result<Release, CoreError>
+        {
+            match release {
+                "1.2.3" => Ok(Release(1)),
+                _ => Err(CoreError::NotARelease)
+            }
+        }
+    }
+
+    async fn project_package_release_ok(
+        ProjectPackageRelease(proj, pkg, release): ProjectPackageRelease,
+        State(_): State<AppState>
+    )
+    {
+        assert_eq!(proj, Project(42));
+        assert_eq!(pkg, Package(42));
+        assert_eq!(release, Release(1));
+    }
+
+    async fn project_package_release_fail(
+        ProjectPackageRelease(_proj, _pkg, _release): ProjectPackageRelease,
+        State(_): State<AppState>
+    )
+    {
+        unreachable!();
+    }
+
+    #[tokio::test]
+    async fn project_package_release_from_request_parts_ok() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{release}", get(project_package_release_ok))
+            .with_state(make_state(ProjectPackageReleaseTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn project_package_release_from_request_parts_not_a_project() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{release}", get(project_package_release_fail))
+            .with_state(make_state(ProjectPackageReleaseTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/not_a_project/a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_release_from_request_parts_not_a_package() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{release}", get(project_package_release_fail))
+            .with_state(make_state(ProjectPackageReleaseTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/not_a_package/1.2.3")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_release_from_request_parts_not_a_release() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}/{release}", get(project_package_release_fail))
+            .with_state(make_state(ProjectPackageReleaseTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/a_package/1.2.4")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
 }
