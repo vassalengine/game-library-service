@@ -277,6 +277,15 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         packages::get_package_id(&self.0, proj, pkg).await
     }
 
+    async fn get_project_package_ids(
+        &self,
+        proj: &str,
+        pkg: &str
+    ) -> Result<(Project, Package), CoreError>
+    {
+        packages::get_project_package_ids(&self.0, proj, pkg).await
+    }
+
     async fn create_package(
         &self,
         owner: Owner,

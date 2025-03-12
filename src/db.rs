@@ -221,6 +221,12 @@ pub trait DatabaseClient {
         _pkg: &str
     ) -> impl Future<Output = Result<Package, CoreError>> + Send;
 
+    fn get_project_package_ids(
+         &self,
+        _proj: &str,
+        _pkg: &str
+    ) -> impl Future<Output = Result<(Project, Package), CoreError>> + Send;
+
     fn create_package(
         &self,
         _owner: Owner,

@@ -150,14 +150,12 @@ where
 
         let core = get_state(parts, state).await;
 
-// TODO: could combine project-package lookup?
-        // look up the project id
-        let proj = core.get_project_id(&proj).await?;
-
-        // look up the package id
-        let pkg = core.get_package_id(proj, &pkg).await?;
-
-        Ok(ProjectPackage(proj, pkg))
+        // look up the project, pkg ids
+        Ok(
+            core.get_project_package_ids(&proj, &pkg)
+                .await
+                .map(|r| ProjectPackage(r.0, r.1))?
+        )
     }
 }
 
@@ -182,12 +180,8 @@ where
 
         let core = get_state(parts, state).await;
 
-// TODO: could combine project-package lookup?
-        // look up the project id
-        let proj = core.get_project_id(&proj).await?;
-
-        // look up the package id
-        let pkg = core.get_package_id(proj, &pkg).await?;
+        // look up the project, package ids
+        let (proj, pkg) = core.get_project_package_ids(&proj, &pkg).await?;
 
         // parse the version
         let ver = ver.parse::<Version>()
@@ -218,12 +212,8 @@ where
 
         let core = get_state(parts, state).await;
 
-// TODO: could combine project-package lookup?
-        // look up the project id
-        let proj = core.get_project_id(&proj).await?;
-
-        // look up the package id
-        let pkg = core.get_package_id(proj, &pkg).await?;
+        // look up the project, package ids
+        let (proj, pkg) = core.get_project_package_ids(&proj, &pkg).await?;
 
         // look up the release id
         let release = core.get_release_id(proj, pkg, &release).await?;
@@ -832,25 +822,14 @@ mod test {
 
     #[async_trait]
     impl Core for ProjectPackageTestCore {
-        async fn get_project_id(
+        async fn get_project_package_ids(
             &self,
-            proj: &str
-        ) -> Result<Project, CoreError>
-        {
-            match proj {
-                "a_project" => Ok(Project(42)),
-                _ => Err(CoreError::NotAProject)
-            }
-        }
-
-        async fn get_package_id(
-             &self,
-            _proj: Project,
+            proj: &str,
             pkg: &str
-        ) -> Result<Package, CoreError>
+        ) -> Result<(Project, Package), CoreError>
         {
-            match pkg {
-                "a_package" => Ok(Package(42)),
+            match (proj, pkg) {
+                ("a_project", "a_package") => Ok((Project(42), Package(42))),
                 _ => Err(CoreError::NotAPackage)
             }
         }
@@ -941,25 +920,14 @@ mod test {
 
     #[async_trait]
     impl Core for ProjectPackageVersionTestCore {
-        async fn get_project_id(
+        async fn get_project_package_ids(
             &self,
-            proj: &str
-        ) -> Result<Project, CoreError>
-        {
-            match proj {
-                "a_project" => Ok(Project(42)),
-                _ => Err(CoreError::NotAProject)
-            }
-        }
-
-        async fn get_package_id(
-             &self,
-            _proj: Project,
+            proj: &str,
             pkg: &str
-        ) -> Result<Package, CoreError>
+        ) -> Result<(Project, Package), CoreError>
         {
-            match pkg {
-                "a_package" => Ok(Package(42)),
+            match (proj, pkg) {
+                ("a_project", "a_package") => Ok((Project(42), Package(42))),
                 _ => Err(CoreError::NotAPackage)
             }
         }
@@ -1074,25 +1042,14 @@ mod test {
 
     #[async_trait]
     impl Core for ProjectPackageReleaseTestCore {
-        async fn get_project_id(
+        async fn get_project_package_ids(
             &self,
-            proj: &str
-        ) -> Result<Project, CoreError>
-        {
-            match proj {
-                "a_project" => Ok(Project(42)),
-                _ => Err(CoreError::NotAProject)
-            }
-        }
-
-        async fn get_package_id(
-             &self,
-            _proj: Project,
+            proj: &str,
             pkg: &str
-        ) -> Result<Package, CoreError>
+        ) -> Result<(Project, Package), CoreError>
         {
-            match pkg {
-                "a_package" => Ok(Package(42)),
+            match (proj, pkg) {
+                ("a_project", "a_package") => Ok((Project(42), Package(42))),
                 _ => Err(CoreError::NotAPackage)
             }
         }

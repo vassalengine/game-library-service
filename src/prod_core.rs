@@ -208,6 +208,15 @@ where
         self.db.get_package_id(proj, pkg).await
     }
 
+    async fn get_project_package_ids(
+         &self,
+        proj: &str,
+        pkg: &str
+    ) -> Result<(Project, Package), CoreError>
+    {
+        self.db.get_project_package_ids(proj, pkg).await
+    }
+
     async fn create_package(
         &self,
         owner: Owner,

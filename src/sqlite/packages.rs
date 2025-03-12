@@ -89,6 +89,34 @@ WHERE project_id = ?
     .ok_or(CoreError::NotAPackage)
 }
 
+pub async fn get_project_package_ids<'e, E>(
+    ex: E,
+    projname: &str,
+    pkgname: &str
+) -> Result<(Project, Package), CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    // NotAPackage on error: we can't tell if the project was found
+    sqlx::query!(
+        "
+SELECT packages.project_id,
+    packages.package_id
+FROM projects
+JOIN packages
+ON projects.project_id = packages.project_id
+WHERE projects.name = ?
+    AND packages.name = ?
+        ",
+        projname,
+        pkgname
+    )
+    .fetch_optional(ex)
+    .await?
+    .map(|r| (Project(r.project_id), Package(r.package_id)))
+    .ok_or(CoreError::NotAPackage)
+}
+
 pub async fn create_package<'a, A>(
     conn: A,
     owner: Owner,

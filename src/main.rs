@@ -420,6 +420,18 @@ mod test {
             }
         }
 
+        async fn get_project_package_ids(
+            &self,
+            proj: &str,
+            pkg: &str
+        ) -> Result<(Project, Package), CoreError>
+        {
+            match (proj, pkg) {
+                ("a_project", "a_package") => Ok((Project(1), Package(1))),
+                _ => Err(CoreError::NotAPackage)
+            }
+        }
+
         async fn get_release_id(
              &self,
             _proj: Project,

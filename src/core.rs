@@ -93,6 +93,15 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn get_project_package_ids(
+         &self,
+        _proj: &str,
+        _pkg: &str
+    ) -> Result<(Project, Package), CoreError>
+    {
+        unimplemented!();
+    }
+
     async fn get_release_id(
          &self,
         _proj: Project,
