@@ -112,6 +112,16 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn get_project_package_release_ids(
+        &self,
+        _proj: &str,
+        _pkg: &str,
+        _release: &str
+    ) -> Result<(Project, Package, Release), CoreError>
+    {
+        unimplemented!();
+    }
+
     async fn get_user_id(
          &self,
         _username: &str

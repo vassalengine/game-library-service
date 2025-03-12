@@ -254,6 +254,15 @@ pub trait DatabaseClient {
         _release: &str
     ) -> impl Future<Output = Result<Release, CoreError>> + Send;
 
+    fn get_project_package_release_ids(
+         &self,
+        _proj: &str,
+        _pkg: &str,
+        _release: &str
+    ) -> impl Future<
+        Output = Result<(Project, Package, Release), CoreError>
+    > + Send;
+
     fn create_release(
         &self,
         _owner: Owner,

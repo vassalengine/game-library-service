@@ -260,6 +260,16 @@ where
         self.db.get_release_id(proj, pkg, release).await
     }
 
+    async fn get_project_package_release_ids(
+        &self,
+        proj: &str,
+        pkg: &str,
+        release: &str
+    ) -> Result<(Project, Package, Release), CoreError>
+    {
+        self.db.get_project_package_release_ids(proj, pkg, release).await
+    }
+
     async fn create_release(
         &self,
         owner: Owner,

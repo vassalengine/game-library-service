@@ -212,13 +212,12 @@ where
 
         let core = get_state(parts, state).await;
 
-        // look up the project, package ids
-        let (proj, pkg) = core.get_project_package_ids(&proj, &pkg).await?;
-
-        // look up the release id
-        let release = core.get_release_id(proj, pkg, &release).await?;
-
-        Ok(ProjectPackageRelease(proj, pkg, release))
+        // look up the project, package, release ids
+        Ok(
+            core.get_project_package_release_ids(&proj, &pkg, &release)
+                .await
+                .map(|r| ProjectPackageRelease(r.0, r.1, r.2))?
+        )
     }
 }
 
@@ -1042,28 +1041,18 @@ mod test {
 
     #[async_trait]
     impl Core for ProjectPackageReleaseTestCore {
-        async fn get_project_package_ids(
+        async fn get_project_package_release_ids(
             &self,
             proj: &str,
-            pkg: &str
-        ) -> Result<(Project, Package), CoreError>
-        {
-            match (proj, pkg) {
-                ("a_project", "a_package") => Ok((Project(42), Package(42))),
-                _ => Err(CoreError::NotAPackage)
-            }
-        }
-
-        async fn get_release_id(
-            &self,
-            _proj: Project,
-            _pkg: Package,
+            pkg: &str,
             release: &str
-        ) -> Result<Release, CoreError>
+        ) -> Result<(Project, Package, Release), CoreError>
         {
-            match release {
-                "1.2.3" => Ok(Release(1)),
-                _ => Err(CoreError::NotARelease)
+            match (proj, pkg, release) {
+                ("a_project", "a_package", "1.2.3") => Ok(
+                    (Project(42), Package(42), Release(1))
+                ),
+                _ => Err(CoreError::NotAPackage)
             }
         }
     }

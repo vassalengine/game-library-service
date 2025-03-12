@@ -445,6 +445,21 @@ mod test {
             }
         }
 
+        async fn get_project_package_release_ids(
+            &self,
+            proj: &str,
+            pkg: &str,
+            release: &str
+        ) -> Result<(Project, Package, Release), CoreError>
+        {
+            match (proj, pkg, release) {
+                ("a_project", "a_package", "1.2.3") => Ok(
+                    (Project(1), Package(1), Release(1))
+                ),
+                _ => Err(CoreError::NotAPackage)
+            }
+        }
+
         async fn user_is_owner(
             &self,
             user: User,

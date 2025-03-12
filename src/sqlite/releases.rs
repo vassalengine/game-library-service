@@ -164,6 +164,44 @@ WHERE package_id = ?
     .ok_or(CoreError::NotARelease)
 }
 
+pub async fn get_project_package_release_ids<'e, E>(
+    ex: E,
+    projname: &str,
+    pkgname: &str,
+    release: &str
+) -> Result<(Project, Package, Release), CoreError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    // NotARelease on error: we can't tell if the project or package was found
+    sqlx::query!(
+        "
+SELECT packages.project_id,
+    packages.package_id,
+    releases.release_id
+FROM projects
+JOIN packages
+ON projects.project_id = packages.project_id
+JOIN releases
+ON packages.package_id = releases.package_id
+WHERE projects.name = ?
+    AND packages.name = ?
+    AND releases.version = ?
+        ",
+        projname,
+        pkgname,
+        release
+    )
+    .fetch_optional(ex)
+    .await?
+    .map(|r| (
+        Project(r.project_id),
+        Package(r.package_id),
+        Release(r.release_id)
+    ))
+    .ok_or(CoreError::NotARelease)
+}
+
 pub async fn create_release<'a, A>(
     conn: A,
     owner: Owner,

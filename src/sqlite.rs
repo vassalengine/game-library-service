@@ -325,6 +325,20 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         releases::get_release_id(&self.0, proj, pkg, release).await
     }
 
+    async fn get_project_package_release_ids(
+        &self,
+        projname: &str,
+        pkgname: &str,
+        release: &str
+    ) -> Result<(Project, Package, Release), CoreError> {
+        releases::get_project_package_release_ids(
+            &self.0,
+            projname,
+            pkgname,
+            release
+        ).await
+    }
+
     async fn create_release(
         &self,
         owner: Owner,
