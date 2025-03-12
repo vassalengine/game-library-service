@@ -24,7 +24,6 @@ FROM projects
         )
         .fetch_one(ex)
         .await?
-        .into()
     )
 }
 
