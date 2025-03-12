@@ -2684,9 +2684,8 @@ mod test {
         );
     }
 
-// FIXME: rename to not_a_release
     #[tokio::test]
-    async fn post_file_not_a_version() {
+    async fn post_file_not_a_release() {
         let response = try_request(
             Request::builder()
                 .method(Method::POST)
