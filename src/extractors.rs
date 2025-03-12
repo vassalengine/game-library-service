@@ -595,7 +595,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn project_id_from_request_parts_ok() {
+    async fn project_from_request_parts_ok() {
         let app = Router::new()
             .route("/{proj}", get(project_ok))
             .with_state(make_state(ProjectTestCore {}));
@@ -615,7 +615,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn project_id_from_request_parts_not_a_project() {
+    async fn project_from_request_parts_not_a_project() {
         let app = Router::new()
             .route("/{proj}", get(project_fail))
             .with_state(make_state(ProjectTestCore {}));
