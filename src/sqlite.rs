@@ -13,7 +13,7 @@ mod tags;
 mod users;
 
 use crate::{
-    core::CoreError,
+    core::{CoreError, GetIdError},
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
@@ -30,7 +30,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
         projname: &str
-    ) -> Result<Project, CoreError>
+    ) -> Result<Project, GetIdError>
     {
         project::get_project_id(&self.0, projname).await
     }
@@ -272,7 +272,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         pkg: &str
-    ) -> Result<Package, CoreError>
+    ) -> Result<Package, GetIdError>
     {
         packages::get_package_id(&self.0, proj, pkg).await
     }
@@ -281,7 +281,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: &str,
         pkg: &str
-    ) -> Result<(Project, Package), CoreError>
+    ) -> Result<(Project, Package), GetIdError>
     {
         packages::get_project_package_ids(&self.0, proj, pkg).await
     }
@@ -320,7 +320,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         pkg: Package,
         release: &str
-    ) -> Result<Release, CoreError>
+    ) -> Result<Release, GetIdError>
     {
         releases::get_release_id(&self.0, proj, pkg, release).await
     }
@@ -330,7 +330,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projname: &str,
         pkgname: &str,
         release: &str
-    ) -> Result<(Project, Package, Release), CoreError> {
+    ) -> Result<(Project, Package, Release), GetIdError> {
         releases::get_project_package_release_ids(
             &self.0,
             projname,

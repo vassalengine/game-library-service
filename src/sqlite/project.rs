@@ -4,7 +4,7 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
+    core::{CoreError, GetIdError},
     db::ProjectRow,
     model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
     sqlite::users::add_owner
@@ -13,7 +13,7 @@ use crate::{
 pub async fn get_project_id<'e, E>(
     ex: E,
     projname: &str
-) -> Result<Project, CoreError>
+) -> Result<Project, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -28,7 +28,7 @@ WHERE name = ?
     .fetch_optional(ex)
     .await?
     .map(Project)
-    .ok_or(CoreError::NotAProject)
+    .ok_or(GetIdError::NotFound)
 }
 
 fn normalize_project_name(proj: &str) -> String {
@@ -516,7 +516,7 @@ mod test {
     async fn get_project_id_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "bogus").await.unwrap_err(),
-            CoreError::NotAProject
+            GetIdError::NotFound
         );
     }
 
@@ -581,7 +581,7 @@ mod test {
     async fn create_project_ok(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            CoreError::NotAProject
+            GetIdError::NotFound
         );
 
         create_project(
@@ -604,7 +604,7 @@ mod test {
     async fn create_project_not_a_user(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            CoreError::NotAProject
+            GetIdError::NotFound
         );
 
         assert!(
@@ -622,7 +622,7 @@ mod test {
 
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            CoreError::NotAProject
+            GetIdError::NotFound
         );
     }
 

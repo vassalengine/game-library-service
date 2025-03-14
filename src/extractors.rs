@@ -320,7 +320,7 @@ mod test {
 
     use crate::{
         app::AppState,
-        core::{Core, CoreError},
+        core::{Core, CoreError, GetIdError},
         jwt::EncodingKey,
         model::Users
     };
@@ -558,11 +558,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str
-        ) -> Result<Project, CoreError>
+        ) -> Result<Project, GetIdError>
         {
             match proj {
                 "a_project" => Ok(Project(42)),
-                _ => Err(CoreError::NotAProject)
+                _ => Err(GetIdError::NotFound)
             }
         }
     }
@@ -634,11 +634,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str
-        ) -> Result<Project, CoreError>
+        ) -> Result<Project, GetIdError>
         {
             match proj {
                 "a_project" => Ok(Project(42)),
-                _ => Err(CoreError::NotAProject)
+                _ => Err(GetIdError::NotFound)
             }
         }
 
@@ -825,11 +825,11 @@ mod test {
             &self,
             proj: &str,
             pkg: &str
-        ) -> Result<(Project, Package), CoreError>
+        ) -> Result<(Project, Package), GetIdError>
         {
             match (proj, pkg) {
                 ("a_project", "a_package") => Ok((Project(42), Package(42))),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
     }
@@ -923,11 +923,11 @@ mod test {
             &self,
             proj: &str,
             pkg: &str
-        ) -> Result<(Project, Package), CoreError>
+        ) -> Result<(Project, Package), GetIdError>
         {
             match (proj, pkg) {
                 ("a_project", "a_package") => Ok((Project(42), Package(42))),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
     }
@@ -1046,13 +1046,13 @@ mod test {
             proj: &str,
             pkg: &str,
             release: &str
-        ) -> Result<(Project, Package, Release), CoreError>
+        ) -> Result<(Project, Package, Release), GetIdError>
         {
             match (proj, pkg, release) {
                 ("a_project", "a_package", "1.2.3") => Ok(
                     (Project(42), Package(42), Release(1))
                 ),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
     }

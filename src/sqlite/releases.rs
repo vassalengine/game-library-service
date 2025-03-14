@@ -6,7 +6,7 @@ use sqlx::{
 use std::cmp::Ordering;
 
 use crate::{
-    core::CoreError,
+    core::{CoreError, GetIdError},
     db::{FileRow, ReleaseRow},
     model::{Owner, Package, Project, Release},
     sqlite::project::update_project_non_project_data,
@@ -144,7 +144,7 @@ pub async fn get_release_id<'e, E>(
     proj: Project,
     pkg: Package,
     release: &str
-) -> Result<Release, CoreError>
+) -> Result<Release, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -161,7 +161,7 @@ WHERE package_id = ?
     .fetch_optional(ex)
     .await?
     .map(Release)
-    .ok_or(CoreError::NotARelease)
+    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn get_project_package_release_ids<'e, E>(
@@ -169,11 +169,10 @@ pub async fn get_project_package_release_ids<'e, E>(
     projname: &str,
     pkgname: &str,
     release: &str
-) -> Result<(Project, Package, Release), CoreError>
+) -> Result<(Project, Package, Release), GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    // NotARelease on error: we can't tell if the project or package was found
     sqlx::query!(
         "
 SELECT packages.project_id,
@@ -199,7 +198,7 @@ WHERE projects.name = ?
         Package(r.package_id),
         Release(r.release_id)
     ))
-    .ok_or(CoreError::NotARelease)
+    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn create_release<'a, A>(

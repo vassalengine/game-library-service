@@ -262,7 +262,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{Core, CoreError},
+        core::{Core, CoreError, GetIdError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -400,11 +400,11 @@ mod test {
         async fn get_project_id(
             &self,
             proj: &str,
-        ) -> Result<Project, CoreError>
+        ) -> Result<Project, GetIdError>
         {
             match proj {
                 "a_project" => Ok(Project(1)),
-                _ => Err(CoreError::NotAProject)
+                _ => Err(GetIdError::NotFound)
             }
         }
 
@@ -412,11 +412,11 @@ mod test {
             &self,
             _proj: Project,
             pkg: &str
-        ) -> Result<Package, CoreError>
+        ) -> Result<Package, GetIdError>
         {
             match pkg {
                 "a_package" => Ok(Package(1)),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
 
@@ -424,11 +424,11 @@ mod test {
             &self,
             proj: &str,
             pkg: &str
-        ) -> Result<(Project, Package), CoreError>
+        ) -> Result<(Project, Package), GetIdError>
         {
             match (proj, pkg) {
                 ("a_project", "a_package") => Ok((Project(1), Package(1))),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
 
@@ -437,11 +437,11 @@ mod test {
             _proj: Project,
             _pkg: Package,
             release: &str
-        ) -> Result<Release, CoreError>
+        ) -> Result<Release, GetIdError>
         {
             match release {
                 "1.2.3" => Ok(Release(1)),
-                _ => Err(CoreError::NotARelease)
+                _ => Err(GetIdError::NotFound)
             }
         }
 
@@ -450,13 +450,13 @@ mod test {
             proj: &str,
             pkg: &str,
             release: &str
-        ) -> Result<(Project, Package, Release), CoreError>
+        ) -> Result<(Project, Package, Release), GetIdError>
         {
             match (proj, pkg, release) {
                 ("a_project", "a_package", "1.2.3") => Ok(
                     (Project(1), Package(1), Release(1))
                 ),
-                _ => Err(CoreError::NotAPackage)
+                _ => Err(GetIdError::NotFound)
             }
         }
 

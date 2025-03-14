@@ -66,6 +66,22 @@ impl PartialEq for CoreError {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum GetIdError {
+    #[error("Not found")]
+    NotFound,
+    #[error("{0}")]
+    DatabaseError(#[from] sqlx::Error)
+}
+
+impl PartialEq for GetIdError {
+    fn eq(&self, other: &Self) -> bool {
+        // sqlx::Error is not PartialEq, so we must exclude it
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(self, Self::DatabaseError(_))
+    }
+}
+
 #[async_trait]
 pub trait Core {
     fn max_file_size(&self) -> usize {
@@ -79,7 +95,7 @@ pub trait Core {
     async fn get_project_id(
          &self,
         _proj: &str
-    ) -> Result<Project, CoreError>
+    ) -> Result<Project, GetIdError>
     {
         unimplemented!();
     }
@@ -88,7 +104,7 @@ pub trait Core {
          &self,
         _proj: Project,
         _pkg: &str
-    ) -> Result<Package, CoreError>
+    ) -> Result<Package, GetIdError>
     {
         unimplemented!();
     }
@@ -97,7 +113,7 @@ pub trait Core {
          &self,
         _proj: &str,
         _pkg: &str
-    ) -> Result<(Project, Package), CoreError>
+    ) -> Result<(Project, Package), GetIdError>
     {
         unimplemented!();
     }
@@ -107,7 +123,7 @@ pub trait Core {
         _proj: Project,
         _pkg: Package,
         _release: &str
-    ) -> Result<Release, CoreError>
+    ) -> Result<Release, GetIdError>
     {
         unimplemented!();
     }
@@ -117,7 +133,7 @@ pub trait Core {
         _proj: &str,
         _pkg: &str,
         _release: &str
-    ) -> Result<(Project, Package, Release), CoreError>
+    ) -> Result<(Project, Package, Release), GetIdError>
     {
         unimplemented!();
     }

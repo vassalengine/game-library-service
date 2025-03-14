@@ -3,7 +3,7 @@ use std::future::Future;
 use sqlx::FromRow;
 
 use crate::{
-    core::CoreError,
+    core::{CoreError, GetIdError},
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
@@ -87,7 +87,7 @@ pub trait DatabaseClient {
     fn get_project_id(
         &self,
         _projname: &str
-    ) -> impl Future<Output = Result<Project, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Project, GetIdError>> + Send;
 
     fn get_projects_count(
         &self,
@@ -219,13 +219,13 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _pkg: &str
-    ) -> impl Future<Output = Result<Package, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Package, GetIdError>> + Send;
 
     fn get_project_package_ids(
          &self,
         _proj: &str,
         _pkg: &str
-    ) -> impl Future<Output = Result<(Project, Package), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(Project, Package), GetIdError>> + Send;
 
     fn create_package(
         &self,
@@ -252,7 +252,7 @@ pub trait DatabaseClient {
         _proj: Project,
         _pkg: Package,
         _release: &str
-    ) -> impl Future<Output = Result<Release, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Release, GetIdError>> + Send;
 
     fn get_project_package_release_ids(
          &self,
@@ -260,7 +260,7 @@ pub trait DatabaseClient {
         _pkg: &str,
         _release: &str
     ) -> impl Future<
-        Output = Result<(Project, Package, Release), CoreError>
+        Output = Result<(Project, Package, Release), GetIdError>
     > + Send;
 
     fn create_release(

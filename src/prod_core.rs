@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError},
+    core::{Core, CoreError, GetIdError},
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -61,7 +61,7 @@ where
     async fn get_project_id(
          &self,
         proj: &str
-    ) -> Result<Project, CoreError>
+    ) -> Result<Project, GetIdError>
     {
         self.db.get_project_id(proj).await
     }
@@ -203,7 +203,7 @@ where
          &self,
         proj: Project,
         pkg: &str
-    ) -> Result<Package, CoreError>
+    ) -> Result<Package, GetIdError>
     {
         self.db.get_package_id(proj, pkg).await
     }
@@ -212,7 +212,7 @@ where
          &self,
         proj: &str,
         pkg: &str
-    ) -> Result<(Project, Package), CoreError>
+    ) -> Result<(Project, Package), GetIdError>
     {
         self.db.get_project_package_ids(proj, pkg).await
     }
@@ -255,7 +255,7 @@ where
         proj: Project,
         pkg: Package,
         release: &str
-    ) -> Result<Release, CoreError>
+    ) -> Result<Release, GetIdError>
     {
         self.db.get_release_id(proj, pkg, release).await
     }
@@ -265,7 +265,7 @@ where
         proj: &str,
         pkg: &str,
         release: &str
-    ) -> Result<(Project, Package, Release), CoreError>
+    ) -> Result<(Project, Package, Release), GetIdError>
     {
         self.db.get_project_package_release_ids(proj, pkg, release).await
     }
