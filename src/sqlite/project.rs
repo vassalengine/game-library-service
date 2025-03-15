@@ -42,7 +42,7 @@ async fn create_project_row<'e, E>(
     proj: &str,
     proj_data: &ProjectDataPost,
     now: i64
-) -> Result<Project, CoreError>
+) -> Result<Project, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -105,7 +105,7 @@ struct ProjectDataRow<'a> {
 async fn create_project_data_row<'e, E>(
     ex: E,
     row: &ProjectDataRow<'_>
-) -> Result<i64, CoreError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -620,7 +620,7 @@ mod test {
                     &CREATE_DATA,
                     CREATE_ROW.created_at
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
 
@@ -651,7 +651,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
     }
@@ -678,7 +678,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
     }
@@ -705,7 +705,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
     }
