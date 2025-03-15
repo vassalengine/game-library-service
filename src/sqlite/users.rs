@@ -4,6 +4,7 @@ use sqlx::{
 };
 
 use crate::{
+    db::DatabaseError,
     core::CoreError,
     model::{Project, User, Users}
 };
@@ -88,7 +89,7 @@ pub async fn add_owner<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -282,7 +283,7 @@ mod test {
         assert!(
             matches!(
                 add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError(_)
             )
         );
     }
@@ -293,7 +294,7 @@ mod test {
         assert!(
             matches!(
                 add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError(_)
             )
         )
     }

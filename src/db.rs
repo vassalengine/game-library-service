@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug, Error)]
 #[error("{0}")]
-pub struct DatabaseError(#[from] sqlx::Error);
+pub struct DatabaseError(#[from] pub sqlx::Error);
 
 #[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
@@ -123,7 +123,7 @@ pub trait DatabaseClient {
         &self,
         _user: User,
         _proj: Project
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn add_owners(
         &self,

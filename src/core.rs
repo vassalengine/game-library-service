@@ -4,6 +4,7 @@ use futures::Stream;
 use mime::Mime;
 use std::{
     io,
+    error::Error,
     mem,
     sync::Arc
 };
@@ -53,6 +54,8 @@ pub enum CoreError {
     InternalError,
     #[error("{0}")]
     DatabaseError(#[from] sqlx::Error),
+    #[error("{0}")]
+    XDatabaseError(#[from] db::DatabaseError),
     #[error("{0}")]
     TimeError(#[from] time::Error),
     #[error("{0}")]
