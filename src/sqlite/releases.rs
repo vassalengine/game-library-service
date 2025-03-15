@@ -6,8 +6,8 @@ use sqlx::{
 use std::cmp::Ordering;
 
 use crate::{
-    core::{CoreError, GetIdError},
-    db::{FileRow, ReleaseRow},
+    core::CoreError,
+    db::{DatabaseError, FileRow, ReleaseRow},
     model::{Owner, Package, Project, Release},
     sqlite::project::update_project_non_project_data,
     version::Version
@@ -144,7 +144,7 @@ pub async fn get_release_id<'e, E>(
     proj: Project,
     pkg: Package,
     release: &str
-) -> Result<Option<Release>, GetIdError>
+) -> Result<Option<Release>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -170,7 +170,7 @@ pub async fn get_project_package_release_ids<'e, E>(
     projname: &str,
     pkgname: &str,
     release: &str
-) -> Result<Option<(Project, Package, Release)>, GetIdError>
+) -> Result<Option<(Project, Package, Release)>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

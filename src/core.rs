@@ -10,6 +10,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
+    db,
     model::{Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
     module,
     params::ProjectsParams,
@@ -71,7 +72,7 @@ pub enum GetIdError {
     #[error("Not found")]
     NotFound,
     #[error("{0}")]
-    DatabaseError(#[from] sqlx::Error)
+    DatabaseError(#[from] db::DatabaseError)
 }
 
 impl PartialEq for GetIdError {

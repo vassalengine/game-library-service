@@ -1,13 +1,18 @@
 use serde::Deserialize;
 use std::future::Future;
 use sqlx::FromRow;
+use thiserror::Error;
 
 use crate::{
-    core::{CoreError, GetIdError},
+    core::CoreError,
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct DatabaseError(#[from] sqlx::Error);
 
 #[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
@@ -87,7 +92,7 @@ pub trait DatabaseClient {
     fn get_project_id(
         &self,
         _projname: &str
-    ) -> impl Future<Output = Result<Option<Project>, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Project>, DatabaseError>> + Send;
 
     fn get_projects_count(
         &self,
@@ -219,13 +224,13 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _pkg: &str
-    ) -> impl Future<Output = Result<Option<Package>, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Package>, DatabaseError>> + Send;
 
     fn get_project_package_ids(
          &self,
         _proj: &str,
         _pkg: &str
-    ) -> impl Future<Output = Result<Option<(Project, Package)>, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<(Project, Package)>, DatabaseError>> + Send;
 
     fn create_package(
         &self,
@@ -252,7 +257,7 @@ pub trait DatabaseClient {
         _proj: Project,
         _pkg: Package,
         _release: &str
-    ) -> impl Future<Output = Result<Option<Release>, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Release>, DatabaseError>> + Send;
 
     fn get_project_package_release_ids(
          &self,
@@ -260,7 +265,7 @@ pub trait DatabaseClient {
         _pkg: &str,
         _release: &str
     ) -> impl Future<
-        Output = Result<Option<(Project, Package, Release)>, GetIdError>
+        Output = Result<Option<(Project, Package, Release)>, DatabaseError>
     > + Send;
 
     fn create_release(

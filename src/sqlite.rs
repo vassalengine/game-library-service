@@ -13,8 +13,8 @@ mod tags;
 mod users;
 
 use crate::{
-    core::{CoreError, GetIdError},
-    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    core::CoreError,
+    db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
@@ -30,7 +30,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
         projname: &str
-    ) -> Result<Option<Project>, GetIdError>
+    ) -> Result<Option<Project>, DatabaseError>
     {
         project::get_project_id(&self.0, projname).await
     }
@@ -272,7 +272,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         pkg: &str
-    ) -> Result<Option<Package>, GetIdError>
+    ) -> Result<Option<Package>, DatabaseError>
     {
         packages::get_package_id(&self.0, proj, pkg).await
     }
@@ -281,7 +281,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: &str,
         pkg: &str
-    ) -> Result<Option<(Project, Package)>, GetIdError>
+    ) -> Result<Option<(Project, Package)>, DatabaseError>
     {
         packages::get_project_package_ids(&self.0, proj, pkg).await
     }
@@ -320,7 +320,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         pkg: Package,
         release: &str
-    ) -> Result<Option<Release>, GetIdError>
+    ) -> Result<Option<Release>, DatabaseError>
     {
         releases::get_release_id(&self.0, proj, pkg, release).await
     }
@@ -330,7 +330,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projname: &str,
         pkgname: &str,
         release: &str
-    ) -> Result<Option<(Project, Package, Release)>, GetIdError> {
+    ) -> Result<Option<(Project, Package, Release)>, DatabaseError> {
         releases::get_project_package_release_ids(
             &self.0,
             projname,

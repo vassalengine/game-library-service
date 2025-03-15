@@ -4,8 +4,8 @@ use sqlx::{
 };
 
 use crate::{
-    core::{CoreError, GetIdError},
-    db::ProjectRow,
+    core::CoreError,
+    db::{DatabaseError, ProjectRow},
     model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
     sqlite::users::add_owner
 };
@@ -13,7 +13,7 @@ use crate::{
 pub async fn get_project_id<'e, E>(
     ex: E,
     projname: &str
-) -> Result<Option<Project>, GetIdError>
+) -> Result<Option<Project>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

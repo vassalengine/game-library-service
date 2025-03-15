@@ -4,8 +4,8 @@ use sqlx::{
 };
 
 use crate::{
-    core::{CoreError, GetIdError},
-    db::PackageRow,
+    core::CoreError,
+    db::{DatabaseError, PackageRow},
     model::{Owner, Package, PackageDataPost, Project},
     sqlite::project::update_project_non_project_data
 };
@@ -69,7 +69,7 @@ pub async fn get_package_id<'e, E>(
     ex: E,
     proj: Project,
     pkgname: &str
-) -> Result<Option<Package>, GetIdError>
+) -> Result<Option<Package>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -94,7 +94,7 @@ pub async fn get_project_package_ids<'e, E>(
     ex: E,
     projname: &str,
     pkgname: &str
-) -> Result<Option<(Project, Package)>, GetIdError>
+) -> Result<Option<(Project, Package)>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
