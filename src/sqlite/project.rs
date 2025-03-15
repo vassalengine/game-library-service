@@ -153,7 +153,7 @@ struct ProjectRevisionRow<'a> {
 async fn create_project_revision_row<'e, E>(
     ex: E,
     row: &ProjectRevisionRow<'_>
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -827,7 +827,7 @@ mod test {
                     Project(42),
                     0
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
     }
