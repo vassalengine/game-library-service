@@ -87,7 +87,7 @@ pub trait DatabaseClient {
     fn get_project_id(
         &self,
         _projname: &str
-    ) -> impl Future<Output = Result<Project, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Project>, GetIdError>> + Send;
 
     fn get_projects_count(
         &self,
@@ -219,13 +219,13 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _pkg: &str
-    ) -> impl Future<Output = Result<Package, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Package>, GetIdError>> + Send;
 
     fn get_project_package_ids(
          &self,
         _proj: &str,
         _pkg: &str
-    ) -> impl Future<Output = Result<(Project, Package), GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<(Project, Package)>, GetIdError>> + Send;
 
     fn create_package(
         &self,
@@ -252,7 +252,7 @@ pub trait DatabaseClient {
         _proj: Project,
         _pkg: Package,
         _release: &str
-    ) -> impl Future<Output = Result<Release, GetIdError>> + Send;
+    ) -> impl Future<Output = Result<Option<Release>, GetIdError>> + Send;
 
     fn get_project_package_release_ids(
          &self,
@@ -260,7 +260,7 @@ pub trait DatabaseClient {
         _pkg: &str,
         _release: &str
     ) -> impl Future<
-        Output = Result<(Project, Package, Release), GetIdError>
+        Output = Result<Option<(Project, Package, Release)>, GetIdError>
     > + Send;
 
     fn create_release(

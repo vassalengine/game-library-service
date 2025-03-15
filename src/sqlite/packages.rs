@@ -69,36 +69,38 @@ pub async fn get_package_id<'e, E>(
     ex: E,
     proj: Project,
     pkgname: &str
-) -> Result<Package, GetIdError>
+) -> Result<Option<Package>, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT package_id
 FROM packages
 WHERE project_id = ?
     AND name = ?
-        ",
-        proj.0,
-        pkgname
+            ",
+            proj.0,
+            pkgname
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(Package)
     )
-    .fetch_optional(ex)
-    .await?
-    .map(Package)
-    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn get_project_package_ids<'e, E>(
     ex: E,
     projname: &str,
     pkgname: &str
-) -> Result<(Project, Package), GetIdError>
+) -> Result<Option<(Project, Package)>, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query!(
-        "
+    Ok(
+        sqlx::query!(
+            "
 SELECT packages.project_id,
     packages.package_id
 FROM projects
@@ -106,14 +108,14 @@ JOIN packages
 ON projects.project_id = packages.project_id
 WHERE projects.name = ?
     AND packages.name = ?
-        ",
-        projname,
-        pkgname
+            ",
+            projname,
+            pkgname
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(|r| (Project(r.project_id), Package(r.package_id)))
     )
-    .fetch_optional(ex)
-    .await?
-    .map(|r| (Project(r.project_id), Package(r.package_id)))
-    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn create_package<'a, A>(

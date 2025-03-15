@@ -63,7 +63,9 @@ where
         proj: &str
     ) -> Result<Project, GetIdError>
     {
-        self.db.get_project_id(proj).await
+        self.db.get_project_id(proj)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn get_owners(
@@ -205,7 +207,9 @@ where
         pkg: &str
     ) -> Result<Package, GetIdError>
     {
-        self.db.get_package_id(proj, pkg).await
+        self.db.get_package_id(proj, pkg)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn get_project_package_ids(
@@ -214,7 +218,9 @@ where
         pkg: &str
     ) -> Result<(Project, Package), GetIdError>
     {
-        self.db.get_project_package_ids(proj, pkg).await
+        self.db.get_project_package_ids(proj, pkg)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn create_package(
@@ -257,7 +263,9 @@ where
         release: &str
     ) -> Result<Release, GetIdError>
     {
-        self.db.get_release_id(proj, pkg, release).await
+        self.db.get_release_id(proj, pkg, release)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn get_project_package_release_ids(
@@ -267,7 +275,9 @@ where
         release: &str
     ) -> Result<(Project, Package, Release), GetIdError>
     {
-        self.db.get_project_package_release_ids(proj, pkg, release).await
+        self.db.get_project_package_release_ids(proj, pkg, release)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn create_release(

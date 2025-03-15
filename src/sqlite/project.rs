@@ -13,22 +13,23 @@ use crate::{
 pub async fn get_project_id<'e, E>(
     ex: E,
     projname: &str
-) -> Result<Project, GetIdError>
+) -> Result<Option<Project>, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT project_id
 FROM projects
 WHERE name = ?
-        ",
-        projname
+            ",
+            projname
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(Project)
     )
-    .fetch_optional(ex)
-    .await?
-    .map(Project)
-    .ok_or(GetIdError::NotFound)
 }
 
 fn normalize_project_name(proj: &str) -> String {
@@ -508,15 +509,15 @@ mod test {
     async fn get_project_id_ok(pool: Pool) {
         assert_eq!(
             get_project_id(&pool, "test_game").await.unwrap(),
-            Project(42)
+            Some(Project(42))
         );
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_project_id_not_a_project(pool: Pool) {
         assert_eq!(
-            get_project_id(&pool, "bogus").await.unwrap_err(),
-            GetIdError::NotFound
+            get_project_id(&pool, "bogus").await.unwrap(),
+            None
         );
     }
 
@@ -580,8 +581,8 @@ mod test {
     #[sqlx::test(fixtures("users"))]
     async fn create_project_ok(pool: Pool) {
         assert_eq!(
-            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            GetIdError::NotFound
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
+            None
         );
 
         create_project(
@@ -592,7 +593,10 @@ mod test {
             CREATE_ROW.created_at
         ).await.unwrap();
 
-        let proj = get_project_id(&pool, &CREATE_ROW.name).await.unwrap();
+        let proj = get_project_id(&pool, &CREATE_ROW.name)
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             get_project_row(&pool, proj).await.unwrap(),
@@ -603,8 +607,8 @@ mod test {
     #[sqlx::test(fixtures("users"))]
     async fn create_project_not_a_user(pool: Pool) {
         assert_eq!(
-            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            GetIdError::NotFound
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
+            None
         );
 
         assert!(
@@ -621,8 +625,8 @@ mod test {
         );
 
         assert_eq!(
-            get_project_id(&pool, &CREATE_ROW.name).await.unwrap_err(),
-            GetIdError::NotFound
+            get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
+            None
         );
     }
 
@@ -635,7 +639,7 @@ mod test {
 
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
-            Project(row.project_id)
+            Some(Project(row.project_id))
         );
 
         assert!(
@@ -662,7 +666,7 @@ mod test {
 
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
-            Project(row.project_id)
+            Some(Project(row.project_id))
         );
 
         assert!(
@@ -689,7 +693,7 @@ mod test {
 
         assert_eq!(
             get_project_id(&pool, &CREATE_ROW.name).await.unwrap(),
-            Project(row.project_id)
+            Some(Project(row.project_id))
         );
 
         assert!(

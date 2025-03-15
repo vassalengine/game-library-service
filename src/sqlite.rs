@@ -30,7 +30,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_id(
         &self,
         projname: &str
-    ) -> Result<Project, GetIdError>
+    ) -> Result<Option<Project>, GetIdError>
     {
         project::get_project_id(&self.0, projname).await
     }
@@ -272,7 +272,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         pkg: &str
-    ) -> Result<Package, GetIdError>
+    ) -> Result<Option<Package>, GetIdError>
     {
         packages::get_package_id(&self.0, proj, pkg).await
     }
@@ -281,7 +281,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: &str,
         pkg: &str
-    ) -> Result<(Project, Package), GetIdError>
+    ) -> Result<Option<(Project, Package)>, GetIdError>
     {
         packages::get_project_package_ids(&self.0, proj, pkg).await
     }
@@ -320,7 +320,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         pkg: Package,
         release: &str
-    ) -> Result<Release, GetIdError>
+    ) -> Result<Option<Release>, GetIdError>
     {
         releases::get_release_id(&self.0, proj, pkg, release).await
     }
@@ -330,7 +330,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projname: &str,
         pkgname: &str,
         release: &str
-    ) -> Result<(Project, Package, Release), GetIdError> {
+    ) -> Result<Option<(Project, Package, Release)>, GetIdError> {
         releases::get_project_package_release_ids(
             &self.0,
             projname,

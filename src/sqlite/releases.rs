@@ -144,24 +144,25 @@ pub async fn get_release_id<'e, E>(
     proj: Project,
     pkg: Package,
     release: &str
-) -> Result<Release, GetIdError>
+) -> Result<Option<Release>, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT release_id
 FROM releases
 WHERE package_id = ?
     AND version = ?
-        ",
-        pkg.0,
-        release
+            ",
+            pkg.0,
+            release
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(Release)
     )
-    .fetch_optional(ex)
-    .await?
-    .map(Release)
-    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn get_project_package_release_ids<'e, E>(
@@ -169,12 +170,13 @@ pub async fn get_project_package_release_ids<'e, E>(
     projname: &str,
     pkgname: &str,
     release: &str
-) -> Result<(Project, Package, Release), GetIdError>
+) -> Result<Option<(Project, Package, Release)>, GetIdError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query!(
-        "
+    Ok(
+        sqlx::query!(
+            "
 SELECT packages.project_id,
     packages.package_id,
     releases.release_id
@@ -186,19 +188,19 @@ ON packages.package_id = releases.package_id
 WHERE projects.name = ?
     AND packages.name = ?
     AND releases.version = ?
-        ",
-        projname,
-        pkgname,
-        release
+            ",
+            projname,
+            pkgname,
+            release
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(|r| (
+            Project(r.project_id),
+            Package(r.package_id),
+            Release(r.release_id)
+        ))
     )
-    .fetch_optional(ex)
-    .await?
-    .map(|r| (
-        Project(r.project_id),
-        Package(r.package_id),
-        Release(r.release_id)
-    ))
-    .ok_or(GetIdError::NotFound)
 }
 
 pub async fn create_release<'a, A>(
