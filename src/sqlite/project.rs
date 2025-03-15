@@ -240,7 +240,7 @@ async fn update_project_row<'e, E>(
     revision: i64,
     pd: &ProjectDataPatch,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -771,7 +771,7 @@ mod test {
                     &pd,
                     0
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                CoreError::XDatabaseError(_)
             )
         );
     }
