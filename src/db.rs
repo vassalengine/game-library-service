@@ -332,7 +332,7 @@ pub trait DatabaseClient {
         _requires: Option<&str>,
         _url: &str,
         _now: i64
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn get_players(
         &self,

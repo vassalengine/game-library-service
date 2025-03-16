@@ -432,7 +432,7 @@ async fn create_file_row<'e, E>(
     requires: Option<&str>,
     url: &str,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -476,7 +476,7 @@ pub async fn add_file_url<'a, A>(
     requires: Option<&str>,
     url: &str,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {

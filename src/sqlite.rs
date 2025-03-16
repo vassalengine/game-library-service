@@ -406,7 +406,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         requires: Option<&str>,
         url: &str,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         releases::add_file_url(
             &self.0,
