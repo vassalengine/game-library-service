@@ -206,7 +206,7 @@ pub trait Core {
         _user: User,
         _proj: &str,
         _proj_data: &ProjectDataPost
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreateProjectError>
     {
         unimplemented!();
     }

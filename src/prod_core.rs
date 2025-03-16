@@ -15,13 +15,13 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError, GetIdError},
+    core::{Core, CoreError, CreateProjectError, GetIdError},
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
-    time::nanos_to_rfc3339,
+    time::{self, nanos_to_rfc3339},
     upload::{InvalidFilename, LocalUploader, Uploader, UploadError, safe_filename, stream_to_writer},
     version::Version
 };
@@ -159,10 +159,10 @@ where
         user: User,
         proj: &str,
         proj_data: &ProjectDataPost
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreateProjectError>
     {
         let now = self.now_nanos()?;
-        self.db.create_project(user, proj, proj_data, now).await
+        Ok(self.db.create_project(user, proj, proj_data, now).await?)
     }
 
     async fn update_project(
@@ -535,10 +535,10 @@ where
     C: DatabaseClient + Send + Sync,
     U: Uploader + Send + Sync
 {
-    fn now_nanos(&self) -> Result<i64, CoreError> {
-        (self.now)()
-            .timestamp_nanos_opt()
-            .ok_or(CoreError::InternalError)
+    fn now_nanos(&self) -> Result<i64, time::Error> {
+        let dt = (self.now)();
+        dt.timestamp_nanos_opt()
+            .ok_or(time::Error::OutOfRangeDateTime(dt))
     }
 
     async fn make_file_data(

@@ -190,7 +190,7 @@ pub async fn create_project<'a, A>(
     name: &str,
     pd: &ProjectDataPost,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -620,7 +620,7 @@ mod test {
                     &CREATE_DATA,
                     CREATE_ROW.created_at
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError(_)
             )
         );
 
@@ -651,7 +651,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError(_)
             )
         );
     }
@@ -678,7 +678,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError(_)
             )
         );
     }
@@ -705,7 +705,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError(_)
             )
         );
     }

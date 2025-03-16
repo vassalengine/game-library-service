@@ -188,7 +188,7 @@ pub trait DatabaseClient {
         _proj: &str,
         _proj_data: &ProjectDataPost,
         _now: i64
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn update_project(
         &self,

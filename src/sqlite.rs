@@ -218,7 +218,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: &str,
         proj_data: &ProjectDataPost,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         project::create_project(&self.0, user, proj, proj_data, now).await
     }
