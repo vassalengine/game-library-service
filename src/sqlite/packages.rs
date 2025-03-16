@@ -13,7 +13,7 @@ use crate::{
 pub async fn get_packages<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Vec<PackageRow>, CoreError>
+) -> Result<Vec<PackageRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

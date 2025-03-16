@@ -254,7 +254,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_packages(
         &self,
         proj: Project
-    ) -> Result<Vec<PackageRow>, CoreError>
+    ) -> Result<Vec<PackageRow>, DatabaseError>
     {
         packages::get_packages(&self.0, proj).await
     }

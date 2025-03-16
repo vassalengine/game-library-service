@@ -227,7 +227,7 @@ pub trait DatabaseClient {
     fn get_packages(
         &self,
         _proj: Project
-    ) -> impl Future<Output = Result<Vec<PackageRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<PackageRow>, DatabaseError>> + Send;
 
     fn get_packages_at(
         &self,
