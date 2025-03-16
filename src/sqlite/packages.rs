@@ -40,7 +40,7 @@ pub async fn get_packages_at<'e, E>(
     ex: E,
     proj: Project,
     date: i64
-) -> Result<Vec<PackageRow>, CoreError>
+) -> Result<Vec<PackageRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

@@ -233,7 +233,7 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _date: i64,
-    ) -> impl Future<Output = Result<Vec<PackageRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<PackageRow>, DatabaseError>> + Send;
 
     fn get_package_id(
         &self,

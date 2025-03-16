@@ -263,7 +263,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         date: i64,
-    ) -> Result<Vec<PackageRow>, CoreError>
+    ) -> Result<Vec<PackageRow>, DatabaseError>
     {
         packages::get_packages_at(&self.0, proj, date).await
     }
