@@ -229,7 +229,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         proj_data: &ProjectDataPatch,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         project::update_project(&self.0, owner, proj, proj_data, now).await
     }

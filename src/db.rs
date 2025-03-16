@@ -211,7 +211,7 @@ pub trait DatabaseClient {
         _proj: Project,
         _proj_data: &ProjectDataPatch,
         _now: i64
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn get_project_row(
         &self,

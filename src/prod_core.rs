@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError, CreateProjectError, GetIdError},
+    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, UpdateProjectError},
     db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -170,10 +170,10 @@ where
         owner: Owner,
         proj: Project,
         proj_data: &ProjectDataPatch
-    ) -> Result<(), CoreError>
+    ) -> Result<(), UpdateProjectError>
     {
         let now = self.now_nanos()?;
-        self.db.update_project(owner, proj, proj_data, now).await
+        Ok(self.db.update_project(owner, proj, proj_data, now).await?)
     }
 
     async fn get_project_revision(

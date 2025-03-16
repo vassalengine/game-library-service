@@ -4,7 +4,6 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
     db::{DatabaseError, ProjectRow},
     model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
     sqlite::users::add_owner
@@ -302,7 +301,7 @@ pub async fn update_project<'a, A>(
     proj: Project,
     pd: &ProjectDataPatch,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -433,7 +432,7 @@ async fn get_project_data_id<'e, E>(
     ex: E,
     proj: Project,
     revision: i64
-) -> Result<i64, CoreError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -451,7 +450,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(CoreError::NotARevision)
+    .ok_or(DatabaseError::NotFound)
 }
 
 pub async fn update_project_non_project_data(
@@ -459,7 +458,7 @@ pub async fn update_project_non_project_data(
     owner: Owner,
     proj: Project,
     now: i64,
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 {
     // get the project row, project_data_id
     let row = get_project_row(&mut **tx, proj).await?;
@@ -750,7 +749,7 @@ mod test {
                 &pd,
                 0
             ).await.unwrap_err(),
-            CoreError::XDatabaseError(DatabaseError::NotFound)
+            DatabaseError::NotFound
         );
     }
 
@@ -771,7 +770,7 @@ mod test {
                     &pd,
                     0
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -810,7 +809,7 @@ mod test {
                 Project(0),
                 0
             ).await.unwrap_err(),
-            CoreError::XDatabaseError(DatabaseError::NotFound)
+            DatabaseError::NotFound
         );
     }
 
@@ -827,7 +826,7 @@ mod test {
                     Project(42),
                     0
                 ).await.unwrap_err(),
-                CoreError::XDatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }

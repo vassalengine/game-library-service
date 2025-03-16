@@ -86,6 +86,30 @@ impl PartialEq for GetIdError {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum CreateProjectError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error)]
+pub enum UpdateProjectError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error)]
+pub enum CreatePackageError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
 #[async_trait]
 pub trait Core {
     fn max_file_size(&self) -> usize {
@@ -216,7 +240,7 @@ pub trait Core {
         _owner: Owner,
         _proj: Project,
         _proj_data: &ProjectDataPatch
-    ) -> Result<(), CoreError>
+    ) -> Result<(), UpdateProjectError>
     {
         unimplemented!();
     }
