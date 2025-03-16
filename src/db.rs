@@ -150,7 +150,7 @@ pub trait DatabaseClient {
         &self,
         _user: User,
         _proj: Project
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn remove_owners(
         &self,

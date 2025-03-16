@@ -97,7 +97,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: User,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         users::remove_owner(&self.0, user, proj).await
     }
