@@ -246,7 +246,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         revision: i64
-    ) -> Result<ProjectRow, CoreError>
+    ) -> Result<ProjectRow, DatabaseError>
     {
         project::get_project_row_revision(&self.0, proj, revision).await
     }

@@ -222,7 +222,7 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _revision: i64
-    ) -> impl Future<Output = Result<ProjectRow, CoreError>> + Send;
+    ) -> impl Future<Output = Result<ProjectRow, DatabaseError>> + Send;
 
     fn get_packages(
         &self,

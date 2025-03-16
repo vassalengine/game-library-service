@@ -389,7 +389,7 @@ pub async fn get_project_row_revision<'e, E>(
     ex: E,
     proj: Project,
     revision: i64
-) -> Result<ProjectRow, CoreError>
+) -> Result<ProjectRow, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -426,7 +426,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(CoreError::NotARevision)
+    .ok_or(DatabaseError::NotFound)
 }
 
 async fn get_project_data_id<'e, E>(
@@ -913,7 +913,7 @@ mod test {
         // This should not happen; the Project passed in should be good.
         assert_eq!(
             get_project_row_revision(&pool, Project(0), 2).await.unwrap_err(),
-            CoreError::NotARevision
+            DatabaseError::NotFound
         );
     }
 
@@ -921,7 +921,7 @@ mod test {
     async fn get_project_revision_not_a_revision(pool: Pool) {
         assert_eq!(
             get_project_row_revision(&pool, Project(42), 0).await.unwrap_err(),
-            CoreError::NotARevision
+            DatabaseError::NotFound
         );
     }
 }
