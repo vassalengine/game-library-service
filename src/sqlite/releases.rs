@@ -236,7 +236,7 @@ where
 pub async fn get_files<'e, E>(
     ex: E,
     release: Release
-) -> Result<Vec<FileRow>, CoreError>
+) -> Result<Vec<FileRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -271,7 +271,7 @@ pub async fn get_files_at<'e, E>(
     ex: E,
     release: Release,
     date: i64
-) -> Result<Vec<FileRow>, CoreError>
+) -> Result<Vec<FileRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

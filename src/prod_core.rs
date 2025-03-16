@@ -571,7 +571,7 @@ where
     ) -> Result<ReleaseData, CoreError>
     where
         FF: Fn(&'s Self, Release) -> FR,
-        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
+        FR: Future<Output = Result<Vec<FileRow>, DatabaseError>>
     {
         let files = try_join_all(
             get_files_rows(self, Release(rr.release_id))
@@ -598,7 +598,7 @@ where
         RF: Fn(&'s Self, Package) -> RR,
         RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
         FF: Fn(&'s Self, Release) -> FR,
-        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
+        FR: Future<Output = Result<Vec<FileRow>, DatabaseError>>
     {
         let releases = try_join_all(
             get_release_rows(self, Package(pr.package_id))
@@ -633,7 +633,7 @@ where
         RF: Fn(&'s Self, Package) -> RR,
         RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
         FF: Fn(&'s Self, Release) -> FR,
-        FR: Future<Output = Result<Vec<FileRow>, CoreError>>
+        FR: Future<Output = Result<Vec<FileRow>, DatabaseError>>
     {
         let owners = self.get_owners(proj)
             .await?

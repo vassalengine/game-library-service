@@ -295,13 +295,13 @@ pub trait DatabaseClient {
     fn get_files(
         &self,
         _release: Release
-    ) -> impl Future<Output = Result<Vec<FileRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<FileRow>, DatabaseError>> + Send;
 
     fn get_files_at(
         &self,
         _release: Release,
         _date: i64
-    ) -> impl Future<Output = Result<Vec<FileRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<FileRow>, DatabaseError>> + Send;
 
     fn get_authors(
         &self,

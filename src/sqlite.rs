@@ -354,7 +354,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_files(
         &self,
         rel: Release
-    ) -> Result<Vec<FileRow>, CoreError>
+    ) -> Result<Vec<FileRow>, DatabaseError>
     {
         releases::get_files(&self.0, rel).await
     }
@@ -363,7 +363,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         rel: Release,
         date: i64
-    ) -> Result<Vec<FileRow>, CoreError>
+    ) -> Result<Vec<FileRow>, DatabaseError>
     {
         releases::get_files_at(&self.0, rel, date).await
     }
