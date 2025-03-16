@@ -111,12 +111,12 @@ pub trait DatabaseClient {
 
     fn get_projects_count(
         &self,
-    ) -> impl Future<Output = Result<i64, CoreError>> + Send;
+    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
     fn get_projects_query_count(
         &self,
         _query: &str
-    ) -> impl Future<Output = Result<i64, CoreError>> + Send;
+    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
     fn get_user_id(
         &self,

@@ -5,13 +5,13 @@ use sqlx::{
 
 use crate::{
     core::CoreError,
-    db::ProjectSummaryRow,
+    db::{DatabaseError, ProjectSummaryRow},
     pagination::{Direction, SortBy}
 };
 
 pub async fn get_projects_count<'e, E>(
     ex: E
-) -> Result<i64, CoreError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -30,7 +30,7 @@ FROM projects
 pub async fn get_projects_query_count<'e, E>(
     ex: E,
     query: &str
-) -> Result<i64, CoreError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

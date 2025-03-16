@@ -37,7 +37,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_count(
         &self,
-    ) -> Result<i64, CoreError>
+    ) -> Result<i64, DatabaseError>
     {
         projects::get_projects_count(&self.0).await
     }
@@ -45,7 +45,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_projects_query_count(
         &self,
         query: &str
-    ) -> Result<i64, CoreError>
+    ) -> Result<i64, DatabaseError>
     {
         projects::get_projects_query_count(&self.0, query).await
     }
