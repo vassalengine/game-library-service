@@ -6,7 +6,6 @@ use sqlx::{
 use std::cmp::Ordering;
 
 use crate::{
-    core::CoreError,
     db::{DatabaseError, FileRow, ReleaseRow},
     model::{Owner, Package, Project, Release},
     sqlite::project::update_project_non_project_data,
