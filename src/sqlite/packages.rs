@@ -4,7 +4,6 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
     db::{DatabaseError, PackageRow},
     model::{Owner, Package, PackageDataPost, Project},
     sqlite::project::update_project_non_project_data
@@ -125,7 +124,7 @@ pub async fn create_package<'a, A>(
     pkg: &str,
     pkg_data: &PackageDataPost,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -290,7 +289,7 @@ mod test {
                     },
                     1699804206419538067
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -309,7 +308,7 @@ mod test {
                     },
                     1699804206419538067
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }

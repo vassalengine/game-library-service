@@ -293,7 +293,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         pkg: &str,
         pkg_data: &PackageDataPost,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         packages::create_package(&self.0, owner, proj, pkg, pkg_data, now).await
     }

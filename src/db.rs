@@ -254,7 +254,7 @@ pub trait DatabaseClient {
         _pkg: &str,
         _pkg_data: &PackageDataPost,
         _now: i64
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn get_releases(
         &self,

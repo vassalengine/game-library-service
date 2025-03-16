@@ -232,7 +232,7 @@ where
     ) -> Result<(), CoreError>
     {
         let now = self.now_nanos()?;
-        self.db.create_package(owner, proj, pkg, pkg_data, now).await
+        Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
 /*
