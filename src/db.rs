@@ -259,13 +259,13 @@ pub trait DatabaseClient {
     fn get_releases(
         &self,
         _pkg: Package
-    ) -> impl Future<Output = Result<Vec<ReleaseRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ReleaseRow>, DatabaseError>> + Send;
 
     fn get_releases_at(
         &self,
         _pkg: Package,
         _date: i64
-    ) -> impl Future<Output = Result<Vec<ReleaseRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ReleaseRow>, DatabaseError>> + Send;
 
     fn get_release_id(
         &self,

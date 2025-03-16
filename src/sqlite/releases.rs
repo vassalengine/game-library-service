@@ -59,7 +59,7 @@ where
 pub async fn get_releases<'e, E>(
     ex: E,
     pkg: Package
-) -> Result<Vec<ReleaseRow>, CoreError>
+) -> Result<Vec<ReleaseRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -100,7 +100,7 @@ pub async fn get_releases_at<'e, E>(
     ex: E,
     pkg: Package,
     date: i64
-) -> Result<Vec<ReleaseRow>, CoreError>
+) -> Result<Vec<ReleaseRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

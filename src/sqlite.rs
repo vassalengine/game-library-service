@@ -301,7 +301,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_releases(
         &self,
         pkg: Package
-    ) -> Result<Vec<ReleaseRow>, CoreError>
+    ) -> Result<Vec<ReleaseRow>, DatabaseError>
     {
         releases::get_releases(&self.0, pkg).await
     }
@@ -310,7 +310,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         pkg: Package,
         date: i64
-    ) -> Result<Vec<ReleaseRow>, CoreError>
+    ) -> Result<Vec<ReleaseRow>, DatabaseError>
     {
         releases::get_releases_at(&self.0, pkg, date).await
     }

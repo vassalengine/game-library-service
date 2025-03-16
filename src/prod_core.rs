@@ -16,7 +16,7 @@ use tokio::io::AsyncSeekExt;
 
 use crate::{
     core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, UpdateProjectError},
-    db::{DatabaseClient, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -596,7 +596,7 @@ where
     ) -> Result<PackageData, CoreError>
     where
         RF: Fn(&'s Self, Package) -> RR,
-        RR: Future<Output = Result<Vec<ReleaseRow>, CoreError>>,
+        RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
         FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
@@ -631,7 +631,7 @@ where
     ) -> Result<ProjectData, CoreError>
     where
         RF: Fn(&'s Self, Package) -> RR,
-        RR: Future<Output = Result<Vec<ReleaseRow>, CoreError>>,
+        RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
         FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, CoreError>>
     {
