@@ -1,5 +1,8 @@
 use serde::Deserialize;
-use std::future::Future;
+use std::{
+    future::Future,
+    mem
+};
 use sqlx::FromRow;
 use thiserror::Error;
 
@@ -11,8 +14,20 @@ use crate::{
 };
 
 #[derive(Debug, Error)]
-#[error("{0}")]
-pub struct DatabaseError(#[from] pub sqlx::Error);
+pub enum DatabaseError {
+    #[error("{0}")]
+    SqlxError(#[from] sqlx::Error),
+    #[error("Not found")]
+    NotFound
+}
+
+impl PartialEq for DatabaseError {
+    fn eq(&self, other: &Self) -> bool {
+        // sqlx::Error is not PartialEq, so we must exclude it
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(self, Self::SqlxError(_))
+    }
+}
 
 #[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
@@ -201,7 +216,7 @@ pub trait DatabaseClient {
     fn get_project_row(
         &self,
         proj: Project
-    ) -> impl Future<Output = Result<ProjectRow, CoreError>> + Send;
+    ) -> impl Future<Output = Result<ProjectRow, DatabaseError>> + Send;
 
     fn get_project_row_revision(
         &self,

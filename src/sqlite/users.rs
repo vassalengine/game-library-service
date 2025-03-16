@@ -283,7 +283,7 @@ mod test {
         assert!(
             matches!(
                 add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -294,7 +294,7 @@ mod test {
         assert!(
             matches!(
                 add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         )
     }

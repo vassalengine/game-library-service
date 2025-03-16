@@ -349,7 +349,7 @@ where
 pub async fn get_project_row<'e, E>(
     ex: E,
     proj: Project
-) -> Result<ProjectRow, CoreError>
+) -> Result<ProjectRow, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -382,7 +382,7 @@ LIMIT 1
     )
     .fetch_optional(ex)
     .await?
-    .ok_or(CoreError::NotAProject)
+    .ok_or(DatabaseError::NotFound)
 }
 
 pub async fn get_project_row_revision<'e, E>(
@@ -620,7 +620,7 @@ mod test {
                     &CREATE_DATA,
                     CREATE_ROW.created_at
                 ).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
 
@@ -651,7 +651,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -678,7 +678,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -705,7 +705,7 @@ mod test {
                     &CREATE_DATA,
                     row.created_at
                 ).await.unwrap_err(),
-                DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -750,7 +750,7 @@ mod test {
                 &pd,
                 0
             ).await.unwrap_err(),
-            CoreError::NotAProject
+            CoreError::XDatabaseError(DatabaseError::NotFound)
         );
     }
 
@@ -810,7 +810,7 @@ mod test {
                 Project(0),
                 0
             ).await.unwrap_err(),
-            CoreError::NotAProject
+            CoreError::XDatabaseError(DatabaseError::NotFound)
         );
     }
 
@@ -888,7 +888,7 @@ mod test {
     async fn get_project_row_not_a_project(pool: Pool) {
         assert_eq!(
             get_project_row(&pool, Project(0)).await.unwrap_err(),
-            CoreError::NotAProject
+            DatabaseError::NotFound
         );
     }
 

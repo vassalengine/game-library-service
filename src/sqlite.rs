@@ -237,7 +237,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_project_row(
         &self,
         proj: Project
-    ) -> Result<ProjectRow, CoreError>
+    ) -> Result<ProjectRow, DatabaseError>
     {
         project::get_project_row(&self.0, proj).await
     }
