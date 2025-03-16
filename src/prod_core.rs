@@ -289,7 +289,7 @@ where
     ) -> Result<(), CoreError>
     {
         let now = self.now_nanos()?;
-        self.db.create_release(owner, proj, pkg, version, now).await
+        Ok(self.db.create_release(owner, proj, pkg, version, now).await?)
     }
 
     async fn add_file(

@@ -210,7 +210,7 @@ pub async fn create_release<'a, A>(
     pkg: Package,
     version: &Version,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -383,7 +383,7 @@ async fn create_release_row<'e, E>(
     pkg: Package,
     version: &Version,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

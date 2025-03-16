@@ -346,7 +346,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         pkg: Package,
         version: &Version,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         releases::create_release(&self.0, owner, proj, pkg, version, now).await
     }
