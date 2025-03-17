@@ -387,11 +387,11 @@ pub trait DatabaseClient {
     fn get_gallery(
         &self,
         _proj: Project
-    ) -> impl Future<Output = Result<Vec<GalleryImage>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
 
     fn get_gallery_at(
         &self,
         _proj: Project,
         _date: i64
-    ) -> impl Future<Output = Result<Vec<GalleryImage>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
 }

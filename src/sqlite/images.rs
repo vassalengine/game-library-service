@@ -5,6 +5,7 @@ use sqlx::{
 
 use crate::{
     core::CoreError,
+    db::DatabaseError,
     model::{GalleryImage, Owner, Project},
     sqlite::project::update_project_non_project_data
 };
@@ -178,7 +179,7 @@ where
 pub async fn get_gallery<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Vec<GalleryImage>, CoreError>
+) -> Result<Vec<GalleryImage>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -203,7 +204,7 @@ pub async fn get_gallery_at<'e, E>(
     ex: E,
     proj: Project,
     date: i64
-) -> Result<Vec<GalleryImage>, CoreError>
+) -> Result<Vec<GalleryImage>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

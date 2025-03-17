@@ -499,7 +499,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_gallery(
         &self,
         proj: Project
-    ) -> Result<Vec<GalleryImage>, CoreError> {
+    ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery(&self.0, proj).await
     }
 
@@ -507,7 +507,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         date: i64
-    ) -> Result<Vec<GalleryImage>, CoreError> {
+    ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery_at(&self.0, proj, date).await
     }
 }
