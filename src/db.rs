@@ -376,13 +376,13 @@ pub trait DatabaseClient {
     fn get_tags(
         &self,
         _proj: Project
-    ) -> impl Future<Output = Result<Vec<String>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<String>, DatabaseError>> + Send;
 
     fn get_tags_at(
         &self,
         _proj: Project,
         _date: i64
-    ) -> impl Future<Output = Result<Vec<String>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<String>, DatabaseError>> + Send;
 
     fn get_gallery(
         &self,

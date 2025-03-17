@@ -4,14 +4,14 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
+    db::DatabaseError,
     model::Project
 };
 
 pub async fn get_tags<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Vec<String>, CoreError>
+) -> Result<Vec<String>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -34,7 +34,7 @@ pub async fn get_tags_at<'e, E>(
     ex: E,
     proj: Project,
    date: i64
-) -> Result<Vec<String>, CoreError>
+) -> Result<Vec<String>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

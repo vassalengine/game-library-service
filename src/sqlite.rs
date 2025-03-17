@@ -482,7 +482,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_tags(
         &self,
         proj: Project
-    ) -> Result<Vec<String>, CoreError>
+    ) -> Result<Vec<String>, DatabaseError>
     {
         tags::get_tags(&self.0, proj).await
     }
@@ -491,7 +491,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         date: i64
-    ) -> Result<Vec<String>, CoreError>
+    ) -> Result<Vec<String>, DatabaseError>
     {
         tags::get_tags_at(&self.0, proj, date).await
     }
