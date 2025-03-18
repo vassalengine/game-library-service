@@ -306,7 +306,7 @@ pub trait DatabaseClient {
     fn get_authors(
         &self,
         _pkg_ver_id: i64
-    ) -> impl Future<Output = Result<Users, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Users, DatabaseError>> + Send;
 
 /*
     fn get_release_url(

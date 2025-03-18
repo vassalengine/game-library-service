@@ -371,7 +371,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_authors(
         &self,
         pkg_ver_id: i64
-    ) -> Result<Users, CoreError>
+    ) -> Result<Users, DatabaseError>
     {
         get_authors(&self.0, pkg_ver_id).await
     }
@@ -516,7 +516,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 async fn get_authors<'e, E>(
     ex: E,
     pkg_ver_id: i64
-) -> Result<Users, CoreError>
+) -> Result<Users, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
