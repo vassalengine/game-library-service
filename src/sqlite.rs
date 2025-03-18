@@ -70,7 +70,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         user: User,
         proj: Project
-    ) -> Result<bool, CoreError>
+    ) -> Result<bool, DatabaseError>
     {
         users::user_is_owner(&self.0, user, proj).await
     }

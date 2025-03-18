@@ -262,7 +262,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError},
+        core::{Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -464,7 +464,7 @@ mod test {
             &self,
             user: User,
             _proj: Project
-        ) -> Result<bool, CoreError>
+        ) -> Result<bool, UserIsOwnerError>
         {
             Ok(user == User(1) || user == User(2))
         }

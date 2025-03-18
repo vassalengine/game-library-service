@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError},
+    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -98,9 +98,9 @@ where
         &self,
         user: User,
         proj: Project
-    ) -> Result<bool, CoreError>
+    ) -> Result<bool, UserIsOwnerError>
     {
-        self.db.user_is_owner(user, proj).await
+        Ok(self.db.user_is_owner(user, proj).await?)
     }
 
     async fn get_projects(

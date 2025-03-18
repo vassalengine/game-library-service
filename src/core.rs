@@ -87,6 +87,12 @@ impl PartialEq for GetIdError {
 }
 
 #[derive(Debug, Error)]
+pub enum UserIsOwnerError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
 pub enum CreateProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -220,7 +226,7 @@ pub trait Core {
         &self,
         _user: User,
         _proj: Project
-    ) -> Result<bool, CoreError>
+    ) -> Result<bool, UserIsOwnerError>
     {
         unimplemented!();
     }

@@ -320,7 +320,7 @@ mod test {
 
     use crate::{
         app::AppState,
-        core::{Core, CoreError, GetIdError},
+        core::{Core, CoreError, GetIdError, UserIsOwnerError},
         jwt::EncodingKey,
         model::Users
     };
@@ -646,7 +646,7 @@ mod test {
             &self,
             user: User,
             proj: Project
-        ) -> Result<bool, CoreError>
+        ) -> Result<bool, UserIsOwnerError>
         {
             Ok(user == User(1) && proj == Project(42))
         }

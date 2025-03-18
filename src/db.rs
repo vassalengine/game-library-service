@@ -132,7 +132,7 @@ pub trait DatabaseClient {
         &self,
         _user: User,
         _proj: Project
-    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
+    ) -> impl Future<Output = Result<bool, DatabaseError>> + Send;
 
     fn add_owner(
         &self,

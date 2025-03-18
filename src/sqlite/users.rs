@@ -63,7 +63,7 @@ pub async fn user_is_owner<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<bool, CoreError>
+) -> Result<bool, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
