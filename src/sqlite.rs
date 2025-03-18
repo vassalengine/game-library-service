@@ -114,7 +114,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn has_owner(
         &self,
         proj: Project
-    ) -> Result<bool, CoreError>
+    ) -> Result<bool, DatabaseError>
     {
         users::has_owner(&self.0, proj).await
     }

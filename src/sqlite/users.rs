@@ -185,7 +185,7 @@ where
 pub async fn has_owner<'e, E>(
     ex: E,
     proj: Project
-) -> Result<bool, CoreError>
+) -> Result<bool, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

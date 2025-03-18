@@ -161,7 +161,7 @@ pub trait DatabaseClient {
     fn has_owner(
         &self,
         _proj: Project
-    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
+    ) -> impl Future<Output = Result<bool, DatabaseError>> + Send;
 
     fn get_projects_end_window(
         &self,
