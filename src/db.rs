@@ -349,7 +349,7 @@ pub trait DatabaseClient {
         &self,
         _player: User,
         _proj: Project
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn get_image_url(
         &self,

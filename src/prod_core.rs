@@ -394,7 +394,7 @@ where
         proj: Project
     ) -> Result<(), CoreError>
     {
-        self.db.remove_player(player, proj).await
+        Ok(self.db.remove_player(player, proj).await?)
     }
 
     async fn get_image(

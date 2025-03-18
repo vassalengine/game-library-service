@@ -66,7 +66,7 @@ pub async fn remove_player<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
