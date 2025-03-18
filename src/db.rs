@@ -355,14 +355,14 @@ pub trait DatabaseClient {
         &self,
         _proj: Project,
         _img_name: &str
-    ) -> impl Future<Output = Result<String, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Option<String>, DatabaseError>> + Send;
 
     fn get_image_url_at(
         &self,
         _proj: Project,
         _img_name: &str,
         _date: i64
-    ) -> impl Future<Output = Result<String, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Option<String>, DatabaseError>> + Send;
 
     fn add_image_url(
         &self,

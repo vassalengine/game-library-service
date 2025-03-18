@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{CoreError, CreateProjectError, GetIdError, UpdateProjectError};
+use crate::core::{CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -81,6 +81,15 @@ impl From<UpdateProjectError> for AppError {
         match err {
             UpdateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             UpdateProjectError::TimeError(_) => AppError::InternalError,
+        }
+    }
+}
+
+impl From<GetImageError> for AppError {
+    fn from(err: GetImageError) -> Self {
+        match err {
+            GetImageError::NotFound => AppError::NotFound,
+            GetImageError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
         }
     }
 }

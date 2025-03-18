@@ -110,6 +110,22 @@ pub enum CreatePackageError {
     TimeError(#[from] time::Error)
 }
 
+#[derive(Debug, Error)]
+pub enum GetImageError {
+    #[error("Not found")]
+    NotFound,
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+impl PartialEq for GetImageError {
+    fn eq(&self, other: &Self) -> bool {
+        // sqlx::Error is not PartialEq, so we must exclude it
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(self, Self::DatabaseError(_))
+    }
+}
+
 #[async_trait]
 pub trait Core {
     fn max_file_size(&self) -> usize {
@@ -339,7 +355,7 @@ pub trait Core {
         &self,
         _proj: Project,
         _img_name: &str
-    ) -> Result<String, CoreError>
+    ) -> Result<String, GetImageError>
     {
         unimplemented!();
     }
@@ -349,7 +365,7 @@ pub trait Core {
         _proj: Project,
         _revision: i64,
         _img_name: &str
-    ) -> Result<String, CoreError>
+    ) -> Result<String, GetImageError>
     {
         unimplemented!();
     }

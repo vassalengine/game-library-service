@@ -14,24 +14,25 @@ pub async fn get_image_url<'e, E>(
     ex: E,
     proj: Project,
     img_name: &str
-) -> Result<String, CoreError>
+) -> Result<Option<String>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT url
 FROM images
 WHERE project_id = ?
     AND filename = ?
 LIMIT 1
-        ",
-        proj.0,
-        img_name
+            ",
+            proj.0,
+            img_name
+        )
+        .fetch_optional(ex)
+        .await?
     )
-    .fetch_optional(ex)
-    .await?
-    .ok_or(CoreError::NotFound)
 }
 
 pub async fn get_image_url_at<'e, E>(
@@ -39,12 +40,13 @@ pub async fn get_image_url_at<'e, E>(
     proj: Project,
     img_name: &str,
     date: i64
-) -> Result<String, CoreError>
+) -> Result<Option<String>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT url
 FROM image_revisions
 WHERE project_id = ?
@@ -52,14 +54,14 @@ WHERE project_id = ?
     AND published_at <= ?
 ORDER BY published_at DESC
 LIMIT 1
-        ",
-        proj.0,
-        img_name,
-        date
+            ",
+            proj.0,
+            img_name,
+            date
+        )
+        .fetch_optional(ex)
+        .await?
     )
-    .fetch_optional(ex)
-    .await?
-    .ok_or(CoreError::NotFound)
 }
 
 async fn update_image_row<'e, E>(
@@ -238,23 +240,23 @@ mod test {
     async fn get_image_url_ok(pool: Pool) {
         assert_eq!(
             get_image_url(&pool, Project(42), "img.png").await.unwrap(),
-            "https://example.com/images/img.png"
+            Some("https://example.com/images/img.png".into())
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_not_a_project(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, Project(1), "img.png").await.unwrap_err(),
-            CoreError::NotFound
+            get_image_url(&pool, Project(1), "img.png").await.unwrap(),
+            None
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_not_an_image(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, Project(42), "bogus").await.unwrap_err(),
-            CoreError::NotFound
+            get_image_url(&pool, Project(42), "bogus").await.unwrap(),
+            None
         );
     }
 
@@ -267,31 +269,31 @@ mod test {
                 "img.png",
                 1712012874000000000
             ).await.unwrap(),
-            "https://example.com/images/img.png"
+            Some("https://example.com/images/img.png".into())
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_at_not_a_project(pool: Pool) {
         assert_eq!(
-            get_image_url_at(&pool, Project(1), "img.png", 0).await.unwrap_err(),
-            CoreError::NotFound
+            get_image_url_at(&pool, Project(1), "img.png", 0).await.unwrap(),
+            None
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn get_image_url_at_not_an_image(pool: Pool) {
         assert_eq!(
-            get_image_url_at(&pool, Project(42), "bogus", 0).await.unwrap_err(),
-            CoreError::NotFound
+            get_image_url_at(&pool, Project(42), "bogus", 0).await.unwrap(),
+            None
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn add_image_url_ok(pool: Pool) {
         assert_eq!(
-            get_image_url(&pool, Project(42), "image.png").await.unwrap_err(),
-            CoreError::NotFound
+            get_image_url(&pool, Project(42), "image.png").await.unwrap(),
+            None
         );
 
         add_image_url(
@@ -305,7 +307,7 @@ mod test {
 
         assert_eq!(
             get_image_url(&pool, Project(42), "image.png").await.unwrap(),
-            "https://example.com/image.png"
+            Some("https://example.com/image.png".into())
         );
     }
 

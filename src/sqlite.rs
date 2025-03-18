@@ -452,7 +452,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         proj: Project,
         img_name: &str
-    ) -> Result<String, CoreError>
+    ) -> Result<Option<String>, DatabaseError>
     {
         images::get_image_url(&self.0, proj, img_name).await
     }
@@ -462,7 +462,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         img_name: &str,
         date: i64
-    ) -> Result<String, CoreError>
+    ) -> Result<Option<String>, DatabaseError>
     {
         images::get_image_url_at(&self.0, proj, img_name, date).await
     }

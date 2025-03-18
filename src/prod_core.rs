@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, UpdateProjectError},
+    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError},
     db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -401,9 +401,11 @@ where
         &self,
         proj: Project,
         img_name: &str
-    ) -> Result<String, CoreError>
+    ) -> Result<String, GetImageError>
     {
-        self.db.get_image_url(proj, img_name).await
+        self.db.get_image_url(proj, img_name)
+            .await?
+            .ok_or(GetImageError::NotFound)
     }
 
     async fn get_image_revision(
@@ -411,11 +413,13 @@ where
         proj: Project,
         revision: i64,
         img_name: &str
-    ) -> Result<String, CoreError>
+    ) -> Result<String, GetImageError>
     {
         let proj_row = self.db.get_project_row_revision(proj, revision).await?;
         let mtime = proj_row.modified_at;
-        self.db.get_image_url_at(proj, img_name, mtime).await
+        self.db.get_image_url_at(proj, img_name, mtime)
+            .await?
+            .ok_or(GetImageError::NotFound)
     }
 
 // TODO: tests
@@ -2343,7 +2347,7 @@ mod test {
         let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(1), "img.png").await.unwrap_err(),
-            CoreError::NotFound
+            GetImageError::NotFound
         );
     }
 
@@ -2352,7 +2356,7 @@ mod test {
         let core = make_core(pool, fake_now);
         assert_eq!(
             core.get_image(Project(42), "bogus").await.unwrap_err(),
-            CoreError::NotFound
+            GetImageError::NotFound
         );
     }
 }

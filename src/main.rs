@@ -262,7 +262,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{Core, CoreError, CreateProjectError, GetIdError, UpdateProjectError},
+        core::{Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -641,13 +641,13 @@ mod test {
             &self,
             proj: Project,
             img_name: &str
-        ) -> Result<String, CoreError>
+        ) -> Result<String, GetImageError>
         {
             if proj == Project(1) && img_name == "img.png" {
                 Ok("https://example.com/img.png".into())
             }
             else {
-                Err(CoreError::NotFound)
+                Err(GetImageError::NotFound)
             }
         }
 
