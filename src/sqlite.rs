@@ -474,7 +474,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         img_name: &str,
         url: &str,
         now: i64
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         images::add_image_url(&self.0, owner, proj, img_name, url, now).await
     }

@@ -69,7 +69,7 @@ async fn update_image_row<'e, E>(
     img_name: &str,
     url: &str,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -108,7 +108,7 @@ async fn create_image_revision_row<'e, E>(
     img_name: &str,
     url: &str,
     now: i64
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -142,7 +142,7 @@ pub async fn add_image_url<'a, A>(
     img_name: &str,
     url: &str,
     now: i64,
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -322,7 +322,7 @@ mod test {
                     "https://example.com/image.png",
                     0
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -340,7 +340,7 @@ mod test {
                     "https://example.com/image.png",
                     0
                 ).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
