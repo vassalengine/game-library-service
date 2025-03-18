@@ -5,7 +5,6 @@ use sqlx::{
 
 use crate::{
     db::DatabaseError,
-    core::CoreError,
     model::{Project, User, Users}
 };
 
@@ -162,7 +161,7 @@ pub async fn remove_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj: Project
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
@@ -179,7 +178,7 @@ where
 
     // prevent removal of last owner
     if !has_owner(&mut *tx, proj).await? {
-        return Err(CoreError::CannotRemoveLastOwner);
+        return Err(DatabaseError::CannotRemoveLastOwner);
     }
 
     tx.commit().await?;

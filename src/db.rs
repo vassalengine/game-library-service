@@ -18,7 +18,9 @@ pub enum DatabaseError {
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
     #[error("Not found")]
-    NotFound
+    NotFound,
+    #[error("Cannot remove last owner")]
+    CannotRemoveLastOwner
 }
 
 impl PartialEq for DatabaseError {
@@ -156,7 +158,7 @@ pub trait DatabaseClient {
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> impl Future<Output = Result<(), CoreError>> + Send;
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn has_owner(
         &self,

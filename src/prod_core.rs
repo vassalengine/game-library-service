@@ -93,7 +93,7 @@ where
         proj: Project
     ) -> Result<(), CoreError>
     {
-        self.db.remove_owners(owners, proj).await
+        Ok(self.db.remove_owners(owners, proj).await?)
     }
 
     async fn user_is_owner(
@@ -2291,7 +2291,7 @@ mod test {
         let users = Users { users: vec!["bob".into()] };
         assert_eq!(
             core.remove_owners(&users, Project(1)).await.unwrap_err(),
-            CoreError::CannotRemoveLastOwner
+            CoreError::XDatabaseError(DatabaseError::CannotRemoveLastOwner)
         );
     }
 
