@@ -88,7 +88,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         users::add_owners(&self.0, owners, proj).await
     }

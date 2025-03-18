@@ -115,7 +115,7 @@ pub async fn add_owners<'a, A>(
     conn: A,
     owners: &Users,
     proj: Project
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
 {
