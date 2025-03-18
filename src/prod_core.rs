@@ -53,9 +53,11 @@ where
     async fn get_user_id(
          &self,
         username: &str
-    ) -> Result<User, CoreError>
+    ) -> Result<User, GetIdError>
     {
-        Ok(self.db.get_user_id(username).await?)
+        self.db.get_user_id(username)
+            .await?
+            .ok_or(GetIdError::NotFound)
     }
 
     async fn get_project_id(

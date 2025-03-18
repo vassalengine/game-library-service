@@ -121,7 +121,7 @@ pub trait DatabaseClient {
     fn get_user_id(
         &self,
         _username: &str
-    ) -> impl Future<Output = Result<User, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Option<User>, DatabaseError>> + Send;
 
     fn get_owners(
         &self,

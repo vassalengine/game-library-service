@@ -53,7 +53,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_user_id(
         &self,
         username: &str
-    ) -> Result<User, CoreError>
+    ) -> Result<Option<User>, DatabaseError>
     {
         users::get_user_id(&self.0, username).await
     }

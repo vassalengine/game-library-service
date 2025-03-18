@@ -12,23 +12,24 @@ use crate::{
 pub async fn get_user_id<'e, E>(
     ex: E,
     username: &str
-) -> Result<User, CoreError>
+) -> Result<Option<User>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query_scalar!(
-        "
+    Ok(
+        sqlx::query_scalar!(
+            "
 SELECT user_id
 FROM users
 WHERE username = ?
 LIMIT 1
-        ",
-        username
+            ",
+            username
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(User)
     )
-    .fetch_optional(ex)
-    .await?
-    .map(User)
-    .ok_or(CoreError::NotAUser)
 }
 
 pub async fn get_owners<'e, E>(
@@ -122,7 +123,9 @@ where
 
     for username in &owners.users {
         // get user id of new owner
-        let owner = get_user_id(&mut *tx, username).await?;
+        let owner = get_user_id(&mut *tx, username)
+            .await?
+            .ok_or(DatabaseError::NotFound)?;
         // associate new owner with the project
         add_owner(&mut *tx, owner, proj).await?;
     }
@@ -167,7 +170,9 @@ where
 
     for username in &owners.users {
         // get user id of owner
-        let owner = get_user_id(&mut *tx, username).await?;
+        let owner = get_user_id(&mut *tx, username)
+            .await?
+            .ok_or(DatabaseError::NotFound)?;
         // remove old owner from the project
         remove_owner(&mut *tx, owner, proj).await?;
     }

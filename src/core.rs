@@ -191,7 +191,7 @@ pub trait Core {
     async fn get_user_id(
          &self,
         _username: &str
-    ) -> Result<User, CoreError>
+    ) -> Result<User, GetIdError>
     {
         unimplemented!();
     }
