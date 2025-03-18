@@ -12,7 +12,7 @@ use crate::{
 pub async fn get_players<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Users, CoreError>
+) -> Result<Users, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

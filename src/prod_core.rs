@@ -376,7 +376,7 @@ where
         proj: Project
     ) -> Result<Users, CoreError>
     {
-        self.db.get_players(proj).await
+        Ok(self.db.get_players(proj).await?)
     }
 
     async fn add_player(

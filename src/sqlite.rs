@@ -425,7 +425,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_players(
         &self,
         proj: Project
-    ) -> Result<Users, CoreError>
+    ) -> Result<Users, DatabaseError>
     {
         players::get_players(&self.0, proj).await
     }
