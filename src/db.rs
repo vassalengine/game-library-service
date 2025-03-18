@@ -126,7 +126,7 @@ pub trait DatabaseClient {
     fn get_owners(
         &self,
         _proj: Project
-    ) -> impl Future<Output = Result<Users, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Users, DatabaseError>> + Send;
 
     fn user_is_owner(
         &self,

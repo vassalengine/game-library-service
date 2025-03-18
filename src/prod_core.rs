@@ -73,7 +73,7 @@ where
         proj: Project
     ) -> Result<Users, CoreError>
     {
-        self.db.get_owners(proj).await
+        Ok(self.db.get_owners(proj).await?)
     }
 
     async fn add_owners(

@@ -34,7 +34,7 @@ LIMIT 1
 pub async fn get_owners<'e, E>(
     ex: E,
     proj: Project
-) -> Result<Users, CoreError>
+) -> Result<Users, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {

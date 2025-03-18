@@ -61,7 +61,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     async fn get_owners(
         &self,
         proj: Project
-    ) -> Result<Users, CoreError>
+    ) -> Result<Users, DatabaseError>
     {
         users::get_owners(&self.0, proj).await
     }
