@@ -4,7 +4,6 @@ use sqlx::{
 };
 
 use crate::{
-   core::CoreError,
    db::DatabaseError,
    model::{Project, User, Users}
 };
