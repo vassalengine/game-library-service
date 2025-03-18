@@ -385,7 +385,7 @@ where
         proj: Project
     ) -> Result<(), CoreError>
     {
-        self.db.add_player(player, proj).await
+        Ok(self.db.add_player(player, proj).await?)
     }
 
     async fn remove_player(

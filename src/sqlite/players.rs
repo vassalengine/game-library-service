@@ -5,6 +5,7 @@ use sqlx::{
 
 use crate::{
    core::CoreError,
+   db::DatabaseError,
    model::{Project, User, Users}
 };
 
@@ -40,7 +41,7 @@ pub async fn add_player<'e, E>(
     ex: E,
     user: User,
     proj: Project
-) -> Result<(), CoreError>
+) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -165,7 +166,7 @@ mod test {
         assert!(
             matches!(
                 add_player(&pool, User(2), Project(0)).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }
@@ -175,7 +176,7 @@ mod test {
         assert!(
             matches!(
                 add_player(&pool, User(0), Project(42)).await.unwrap_err(),
-                CoreError::DatabaseError(_)
+                DatabaseError::SqlxError(_)
             )
         );
     }

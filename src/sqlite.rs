@@ -434,7 +434,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), DatabaseError>
     {
         players::add_player(&self.0, player, proj).await
     }
