@@ -4,7 +4,6 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
     db::DatabaseError,
     model::{GalleryImage, Owner, Project},
     sqlite::project::update_project_non_project_data
