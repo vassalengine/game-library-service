@@ -16,12 +16,12 @@ use tokio::io::AsyncSeekExt;
 
 use crate::{
     core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
-    db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
-    time::{self, nanos_to_rfc3339},
+    time::{self, nanos_to_rfc3339, rfc3339_to_nanos},
     upload::{InvalidFilename, LocalUploader, Uploader, UploadError, safe_filename, stream_to_writer},
     version::Version
 };
@@ -686,6 +686,87 @@ where
         )
     }
 
+/*
+    match sort_by {
+      SortBy::CreationTime | SortBy::ModificationTime => rfc3339_to_nanos(field),
+      _ => field
+    }
+*/
+
+    async fn get_projects_mid_window(
+        &self,
+        sort_by: SortBy,
+        dir: Direction,
+        field: &str,
+        id: u32,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    {
+        Ok(
+            match sort_by {
+                SortBy::CreationTime |
+                SortBy::ModificationTime => self.db.get_projects_mid_window(
+                    sort_by,
+                    dir,
+                    MidField::Timestamp(rfc3339_to_nanos(field)?),
+                    id,
+                    limit
+                ).await,
+                _ => self.db.get_projects_mid_window(
+                    sort_by,
+                    dir,
+                    MidField::Other(&field),
+                    id,
+                    limit
+                ).await
+            }?
+        )
+    }
+
+    async fn get_projects_query_mid_window(
+        &self,
+        query: &str,
+        sort_by: SortBy,
+        dir: Direction,
+        field: &str,
+        id: u32,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    {
+        Ok(
+            match sort_by {
+                SortBy::CreationTime |
+                SortBy::ModificationTime => self.db.get_projects_query_mid_window(
+                    query,
+                    sort_by,
+                    dir,
+                    QueryMidField::Timestamp(rfc3339_to_nanos(field)?),
+                    id,
+                    limit
+                ).await,
+                SortBy::Relevance => self.db.get_projects_query_mid_window(
+                    query,
+                    sort_by,
+                    dir,
+                    QueryMidField::Weight(
+                        field.parse::<f64>()
+                            .map_err(|_| CoreError::MalformedQuery)?
+                    ),
+                    id,
+                    limit
+                ).await,
+                _ => self.db.get_projects_query_mid_window(
+                    query,
+                    sort_by,
+                    dir,
+                    QueryMidField::Other(&field),
+                    id,
+                    limit
+                ).await
+            }?
+        )
+    }
+
     async fn get_projects_window(
         &self,
         anchor: &Anchor,
@@ -695,14 +776,15 @@ where
     ) -> Result<Vec<ProjectSummaryRow>, CoreError>
     {
         match anchor {
-            Anchor::Start =>
+            Anchor::Start => Ok(
                 self.db.get_projects_end_window(
                     sort_by,
                     dir,
                     limit_extra
-                ).await,
+                ).await?
+            ),
             Anchor::After(field, id) =>
-                self.db.get_projects_mid_window(
+                self.get_projects_mid_window(
                     sort_by,
                     dir,
                     field,
@@ -710,22 +792,23 @@ where
                     limit_extra
                 ).await,
             Anchor::Before(field, id) =>
-                self.db.get_projects_mid_window(
+                self.get_projects_mid_window(
                     sort_by,
                     dir.rev(),
                     field,
                     *id,
                     limit_extra
                 ).await,
-            Anchor::StartQuery(query) =>
+            Anchor::StartQuery(query) => Ok(
                 self.db.get_projects_query_end_window(
                     query,
                     sort_by,
                     dir,
                     limit_extra
-                ).await,
+                ).await?
+            ),
             Anchor::AfterQuery(query, field, id) =>
-                self.db.get_projects_query_mid_window(
+                self.get_projects_query_mid_window(
                     query,
                     sort_by,
                     dir,
@@ -734,7 +817,7 @@ where
                     limit_extra
                 ).await,
             Anchor::BeforeQuery(query, field, id) =>
-                self.db.get_projects_query_mid_window(
+                self.get_projects_query_mid_window(
                     query,
                     sort_by,
                     dir.rev(),

@@ -13,8 +13,7 @@ mod tags;
 mod users;
 
 use crate::{
-    core::CoreError,
-    db::{DatabaseClient, DatabaseError, FileRow, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     time::rfc3339_to_nanos,
@@ -124,7 +123,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         sort_by: SortBy,
         dir: Direction,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
         projects::get_projects_end_window(&self.0, sort_by, dir, limit).await
     }
@@ -135,7 +134,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         sort_by: SortBy,
         dir: Direction,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
         projects::get_projects_query_end_window(&self.0, query, sort_by, dir, limit).await
     }
@@ -144,26 +143,25 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         sort_by: SortBy,
         dir: Direction,
-        field: &str,
+        field: MidField<'_>,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        match sort_by {
-            SortBy::CreationTime |
-            SortBy::ModificationTime => projects::get_projects_mid_window(
+        match field {
+            MidField::Timestamp(f) => projects::get_projects_mid_window(
                 &self.0,
                 sort_by,
                 dir,
-                &rfc3339_to_nanos(field)?,
+                &f,
                 id,
                 limit
             ).await,
-            _ => projects::get_projects_mid_window(
+            MidField::Other(f) => projects::get_projects_mid_window(
                 &self.0,
                 sort_by,
                 dir,
-                &field,
+                &f,
                 id,
                 limit
             ).await
@@ -175,37 +173,36 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         query: &str,
         sort_by: SortBy,
         dir: Direction,
-        field: &str,
+        field: QueryMidField<'_>,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        match sort_by {
-            SortBy::CreationTime |
-            SortBy::ModificationTime => projects::get_projects_query_mid_window(
+        match field {
+            QueryMidField::Timestamp(f) => projects::get_projects_query_mid_window(
                 &self.0,
                 query,
                 sort_by,
                 dir,
-                &rfc3339_to_nanos(field)?,
+                &f,
                 id,
                 limit
             ).await,
-            SortBy::Relevance => projects::get_projects_query_mid_window(
+            QueryMidField::Weight(f) => projects::get_projects_query_mid_window(
                 &self.0,
                 query,
                 sort_by,
                 dir,
-                &field.parse::<f64>().map_err(|_| CoreError::MalformedQuery)?,
+                &f,
                 id,
                 limit
             ).await,
-            _ => projects::get_projects_query_mid_window(
+            QueryMidField::Other(f) => projects::get_projects_query_mid_window(
                 &self.0,
                 query,
                 sort_by,
                 dir,
-                &field,
+                &f,
                 id,
                 limit
             ).await

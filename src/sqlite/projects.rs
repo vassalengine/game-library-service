@@ -4,7 +4,6 @@ use sqlx::{
 };
 
 use crate::{
-    core::CoreError,
     db::{DatabaseError, ProjectSummaryRow},
     pagination::{Direction, SortBy}
 };
@@ -83,7 +82,7 @@ pub async fn get_projects_end_window<'e, E>(
     sort_by: SortBy,
     dir: Direction,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, CoreError>
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -136,7 +135,7 @@ pub async fn get_projects_query_end_window<'e, E>(
     sort_by: SortBy,
     dir: Direction,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, CoreError>
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
@@ -187,7 +186,7 @@ pub async fn get_projects_mid_window<'e, 'f, E, F>(
     field: &'f F,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, CoreError>
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>,
     F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
@@ -250,7 +249,7 @@ pub async fn get_projects_query_mid_window<'e, 'f, E, F>(
     field: &'f F,
     id: u32,
     limit: u32
-) -> Result<Vec<ProjectSummaryRow>, CoreError>
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>,
     F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
@@ -339,7 +338,7 @@ mod test {
 
     #[track_caller]
     fn assert_projects_window(
-        act: Result<Vec<ProjectSummaryRow>, CoreError>,
+        act: Result<Vec<ProjectSummaryRow>, DatabaseError>,
         exp: &[&str]
     )
     {

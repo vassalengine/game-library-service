@@ -105,6 +105,17 @@ pub struct FileRow {
     pub published_by: String
 }
 
+pub enum MidField<'a> {
+    Timestamp(i64),
+    Other(&'a str)
+}
+
+pub enum QueryMidField<'a> {
+    Timestamp(i64),
+    Weight(f64),
+    Other(&'a str)
+}
+
 pub trait DatabaseClient {
     fn get_project_id(
         &self,
@@ -170,7 +181,7 @@ pub trait DatabaseClient {
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
     fn get_projects_query_end_window(
         &self,
@@ -178,26 +189,26 @@ pub trait DatabaseClient {
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
     fn get_projects_mid_window(
         &self,
         _sort_by: SortBy,
         _dir: Direction,
-        _field: &str,
+        _field: MidField<'_>,
         _id: u32,
         _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
     fn get_projects_query_mid_window(
         &self,
         _query: &str,
         _sort_by: SortBy,
         _dir: Direction,
-        _field: &str,
+        _field: QueryMidField<'_>,
         _id: u32,
         _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
     fn create_project(
         &self,
