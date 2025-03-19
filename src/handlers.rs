@@ -141,26 +141,6 @@ pub async fn packages_post(
 // TODO
 //pub async fn packages_patch(
 
-pub async fn release_get(
-    ProjectPackage(proj, pkg): ProjectPackage,
-    State(core): State<CoreArc>
-) -> Result<Redirect, AppError>
-{
-    Ok(Redirect::to(&core.get_release(proj, pkg).await?))
-}
-
-pub async fn release_version_get(
-    ProjectPackageVersion(proj, pkg, version): ProjectPackageVersion,
-    State(core): State<CoreArc>
-) -> Result<Redirect, AppError>
-{
-    Ok(
-        Redirect::to(
-            &core.get_release_version(proj, pkg, &version).await?
-        )
-    )
-}
-
 pub async fn release_post(
     Owned(owner, proj): Owned,
     ProjectPackageVersion(_, pkg, version): ProjectPackageVersion,

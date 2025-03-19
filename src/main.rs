@@ -121,13 +121,12 @@ fn routes(api: &str) -> Router<AppState> {
         )
         .route(
             "/projects/{proj}/packages/{pkg_name}",
-            get(handlers::release_get)
-            .post(handlers::packages_post)
+            post(handlers::packages_post)
         )
         .route(
             "/projects/{proj}/packages/{pkg_name}/{version}",
-            get(handlers::release_version_get)
-            .put(handlers::release_put)
+// FIXME: release_version_post?
+            post(handlers::release_post)
         )
         .route(
             "/projects/{proj}/images/{img_name}",
@@ -577,30 +576,6 @@ mod test {
             match revision {
                 1 => self.get_project(proj).await,
                 _ => Err(CoreError::NotARevision)
-            }
-        }
-
-        async fn get_release(
-            &self,
-            _proj: Project,
-            _pkg: Package
-        ) -> Result<String, CoreError>
-        {
-            Ok("https://example.com/package".into())
-        }
-
-        async fn get_release_version(
-            &self,
-            _proj: Project,
-            _pkg: Package,
-            version: &Version
-        ) -> Result<String, CoreError>
-        {
-            match version {
-                Version { major: 1, minor: 2, patch: 3, .. } => {
-                    Ok("https://example.com/package-1.2.3".into())
-                },
-                _ => Err(CoreError::NotAVersion)
             }
         }
 
