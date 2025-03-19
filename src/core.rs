@@ -286,25 +286,6 @@ pub trait Core {
         unimplemented!();
     }
 
-    async fn get_release(
-        &self,
-        _proj: Project,
-        _pkg: Package
-    ) -> Result<String, CoreError>
-    {
-        unimplemented!();
-    }
-
-    async fn get_release_version(
-        &self,
-        _proj: Project,
-        _pkg: Package,
-        _version: &Version
-    ) -> Result<String, CoreError>
-    {
-        unimplemented!();
-    }
-
     async fn create_release(
         &self,
         _owner: Owner,

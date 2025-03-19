@@ -320,19 +320,6 @@ pub trait DatabaseClient {
         _pkg_ver_id: i64
     ) -> impl Future<Output = Result<Users, DatabaseError>> + Send;
 
-/*
-    fn get_release_url(
-        &self,
-        _pkg: Package
-    ) -> impl Future<Output = Result<String, CoreError>> + Send;
-
-    fn get_release_version_url(
-        &self,
-        _pkg: Package,
-        _version: &Version
-    ) -> impl Future<Output = Result<String, CoreError>> + Send;
-*/
-
     fn add_file_url(
         &self,
         _owner: Owner,

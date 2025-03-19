@@ -237,27 +237,6 @@ where
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
-/*
-    async fn get_release(
-        &self,
-        _proj: Project,
-        pkg: Package
-    ) -> Result<String, CoreError>
-    {
-        self.db.get_release_url(pkg).await
-    }
-
-    async fn get_release_version(
-        &self,
-        _proj: Project,
-        pkg: Package,
-        version: &Version
-    ) -> Result<String, CoreError>
-    {
-        self.db.get_release_version_url(pkg, version).await
-    }
-*/
-
     async fn get_release_id(
         &self,
         proj: Project,
