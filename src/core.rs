@@ -4,7 +4,6 @@ use futures::Stream;
 use mime::Mime;
 use std::{
     io,
-    error::Error,
     mem,
     sync::Arc
 };

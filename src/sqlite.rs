@@ -16,7 +16,6 @@ use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
-    time::rfc3339_to_nanos,
     version::Version
 };
 
