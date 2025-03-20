@@ -129,6 +129,10 @@ fn routes(api: &str) -> Router<AppState> {
             post(handlers::release_post)
         )
         .route(
+            "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+            post(handlers::file_post)
+        )
+        .route(
             "/projects/{proj}/images/{img_name}",
             get(handlers::image_get)
             .post(handlers::image_post)
