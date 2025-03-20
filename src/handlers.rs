@@ -188,7 +188,7 @@ fn limit_content_length(
 
 pub async fn file_post(
     Owned(owner, proj): Owned,
-    ProjectPackageRelease(_, pkg, release): ProjectPackageRelease,
+    ProjectPackageRelease(_, _, release): ProjectPackageRelease,
     Path((_, _, _, filename)): Path<(String, String, String, String)>,
     TypedHeader(content_type): TypedHeader<ContentType>,
     content_length: Option<TypedHeader<ContentLength>>,

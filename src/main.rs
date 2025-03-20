@@ -269,8 +269,7 @@ mod test {
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
-        params::ProjectsParams,
-        version::Version
+        params::ProjectsParams
     };
 
     const API_V1: &str = "/api/v1";
