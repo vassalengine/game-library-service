@@ -148,6 +148,12 @@ pub enum AddFileError {
 }
 
 #[derive(Debug, Error)]
+pub enum GetPlayersError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
 pub enum GetImageError {
     #[error("Not found")]
     NotFound,
@@ -346,7 +352,7 @@ pub trait Core {
     async fn get_players(
         &self,
         _proj: Project
-    ) -> Result<Users, CoreError>
+    ) -> Result<Users, GetPlayersError>
     {
         unimplemented!();
     }
