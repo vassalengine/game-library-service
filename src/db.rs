@@ -106,13 +106,13 @@ pub struct FileRow {
 
 pub enum MidField<'a> {
     Timestamp(i64),
-    Other(&'a str)
+    Text(&'a str)
 }
 
 pub enum QueryMidField<'a> {
     Timestamp(i64),
     Weight(f64),
-    Other(&'a str)
+    Text(&'a str)
 }
 
 pub trait DatabaseClient {

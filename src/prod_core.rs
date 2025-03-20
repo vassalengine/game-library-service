@@ -665,13 +665,6 @@ where
         )
     }
 
-/*
-    match sort_by {
-      SortBy::CreationTime | SortBy::ModificationTime => rfc3339_to_nanos(field),
-      _ => field
-    }
-*/
-
     async fn get_projects_mid_window(
         &self,
         sort_by: SortBy,
@@ -694,7 +687,7 @@ where
                 _ => self.db.get_projects_mid_window(
                     sort_by,
                     dir,
-                    MidField::Other(field),
+                    MidField::Text(field),
                     id,
                     limit
                 ).await
@@ -738,7 +731,7 @@ where
                     query,
                     sort_by,
                     dir,
-                    QueryMidField::Other(field),
+                    QueryMidField::Text(field),
                     id,
                     limit
                 ).await

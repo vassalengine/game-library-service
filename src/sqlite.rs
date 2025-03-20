@@ -156,7 +156,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 id,
                 limit
             ).await,
-            MidField::Other(f) => projects::get_projects_mid_window(
+            MidField::Text(f) => projects::get_projects_mid_window(
                 &self.0,
                 sort_by,
                 dir,
@@ -196,7 +196,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 id,
                 limit
             ).await,
-            QueryMidField::Other(f) => projects::get_projects_query_mid_window(
+            QueryMidField::Text(f) => projects::get_projects_query_mid_window(
                 &self.0,
                 query,
                 sort_by,
