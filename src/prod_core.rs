@@ -694,7 +694,7 @@ where
                 _ => self.db.get_projects_mid_window(
                     sort_by,
                     dir,
-                    MidField::Other(&field),
+                    MidField::Other(field),
                     id,
                     limit
                 ).await
@@ -738,7 +738,7 @@ where
                     query,
                     sort_by,
                     dir,
-                    QueryMidField::Other(&field),
+                    QueryMidField::Other(field),
                     id,
                     limit
                 ).await

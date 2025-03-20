@@ -17,10 +17,9 @@ use std::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::{ProjectPackage, ProjectPackageRelease, ProjectPackageVersion, Wrapper},
-    model::{Owned, Package, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    extractors::{ProjectPackageRelease, ProjectPackageVersion, Wrapper},
+    model::{Owned, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
-    version::Version
 };
 
 pub async fn not_found() -> Result<(), AppError>
