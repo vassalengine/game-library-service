@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{AddFileError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
+    core::{AddFileError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetProjectsError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -108,7 +108,7 @@ where
     async fn get_projects(
         &self,
         params: ProjectsParams
-    ) -> Result<Projects, CoreError>
+    ) -> Result<Projects, GetProjectsError>
     {
         let ProjectsParams { seek, limit } = params;
         let (prev, next, projects, total) = self.get_projects_from(
@@ -672,7 +672,7 @@ where
         field: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
         Ok(
             match sort_by {
@@ -680,7 +680,10 @@ where
                 SortBy::ModificationTime => self.db.get_projects_mid_window(
                     sort_by,
                     dir,
-                    MidField::Timestamp(rfc3339_to_nanos(field)?),
+                    MidField::Timestamp(
+                        rfc3339_to_nanos(field)
+                            .map_err(|_| GetProjectsError::MalformedQuery)?
+                    ),
                     id,
                     limit
                 ).await,
@@ -703,7 +706,7 @@ where
         field: &str,
         id: u32,
         limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
         Ok(
             match sort_by {
@@ -712,7 +715,10 @@ where
                     query,
                     sort_by,
                     dir,
-                    QueryMidField::Timestamp(rfc3339_to_nanos(field)?),
+                    QueryMidField::Timestamp(
+                        rfc3339_to_nanos(field)
+                            .map_err(|_| GetProjectsError::MalformedQuery)?
+                    ),
                     id,
                     limit
                 ).await,
@@ -722,7 +728,7 @@ where
                     dir,
                     QueryMidField::Weight(
                         field.parse::<f64>()
-                            .map_err(|_| CoreError::MalformedQuery)?
+                            .map_err(|_| GetProjectsError::MalformedQuery)?
                     ),
                     id,
                     limit
@@ -745,7 +751,7 @@ where
         sort_by: SortBy,
         dir: Direction,
         limit_extra: u32
-    ) -> Result<Vec<ProjectSummaryRow>, CoreError>
+    ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
         match anchor {
             Anchor::Start => Ok(
@@ -804,7 +810,7 @@ where
         &self,
         seek: Seek,
         limit: Limit
-    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), CoreError>
+    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
     {
         // unpack the seek
         let Seek { sort_by, dir, anchor } = seek;
@@ -871,7 +877,7 @@ fn get_prev_for_before(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<Option<Seek>, CoreError>
+) -> Result<Option<Seek>, GetProjectsError>
 {
     // make the prev link
     if projects.len() == limit_extra as usize {
@@ -912,7 +918,7 @@ fn get_next_for_before(
     sort_by: SortBy,
     dir: Direction,
     projects: &[ProjectSummaryRow]
-) -> Result<Option<Seek>, CoreError>
+) -> Result<Option<Seek>, GetProjectsError>
 {
     // make the next link
     if projects.is_empty() {
@@ -948,7 +954,7 @@ fn get_next_for_after(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<Option<Seek>, CoreError>
+) -> Result<Option<Seek>, GetProjectsError>
 {
     // make the next link
     if projects.len() == limit_extra as usize {
@@ -989,7 +995,7 @@ fn get_prev_for_after(
     sort_by: SortBy,
     dir: Direction,
     projects: &[ProjectSummaryRow]
-) -> Result<Option<Seek>, CoreError>
+) -> Result<Option<Seek>, GetProjectsError>
 {
     // make the prev link
     match anchor {
@@ -1030,7 +1036,7 @@ fn get_links(
     dir: Direction,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
-) -> Result<(Option<Seek>, Option<Seek>), CoreError>
+) -> Result<(Option<Seek>, Option<Seek>), GetProjectsError>
 {
     match anchor {
         Anchor::Before(..) |
@@ -1077,7 +1083,7 @@ fn get_links(
 }
 
 impl ProjectSummaryRow {
-    fn sort_field(&self, sort_by: SortBy) -> Result<String, CoreError> {
+    fn sort_field(&self, sort_by: SortBy) -> Result<String, time::Error> {
         Ok(
             match sort_by {
                 SortBy::ProjectName => self.name.clone(),
@@ -1091,7 +1097,7 @@ impl ProjectSummaryRow {
 }
 
 impl TryFrom<ProjectSummaryRow> for ProjectSummary {
-    type Error = CoreError;
+    type Error = time::Error;
 
     fn try_from(r: ProjectSummaryRow) -> Result<Self, Self::Error> {
         Ok(

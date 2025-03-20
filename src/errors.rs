@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddFileError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddFileError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetProjectsError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -75,6 +75,17 @@ impl From<UserIsOwnerError> for AppError {
     }
 }
 
+impl From<GetProjectsError> for AppError {
+    fn from(err: GetProjectsError) -> Self {
+        match err {
+            GetProjectsError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            GetProjectsError::MalformedQuery => AppError::MalformedQuery,
+            GetProjectsError::SeekError(_) => AppError::InternalError,
+            GetProjectsError::TimeError(_) => AppError::InternalError
+        }
+    }
+}
+
 impl From<CreateProjectError> for AppError {
     fn from(err: CreateProjectError) -> Self {
         match err {
@@ -110,7 +121,6 @@ impl From<CreateReleaseError> for AppError {
         }
     }
 }
-
 
 impl From<AddFileError> for AppError {
     fn from(err: AddFileError) -> Self {

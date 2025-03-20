@@ -265,7 +265,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddFileError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
+        core::{AddFileError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, GetProjectsError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -506,7 +506,7 @@ mod test {
         async fn get_projects(
             &self,
             params: ProjectsParams
-        ) -> Result<Projects, CoreError>
+        ) -> Result<Projects, GetProjectsError>
         {
             Ok(
                 Projects {

@@ -92,6 +92,18 @@ pub enum UserIsOwnerError {
 }
 
 #[derive(Debug, Error)]
+pub enum GetProjectsError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("Malformed query")]
+    MalformedQuery,
+    #[error("{0}")]
+    SeekError(#[from] pagination::SeekError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error)]
 pub enum CreateProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -259,7 +271,7 @@ pub trait Core {
     async fn get_projects(
         &self,
         _params: ProjectsParams
-    ) -> Result<Projects, CoreError>
+    ) -> Result<Projects, GetProjectsError>
     {
         unimplemented!();
     }
