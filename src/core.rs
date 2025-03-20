@@ -35,12 +35,6 @@ pub enum CoreError {
     MalformedQuery,
     #[error("Not found")]
     NotFound,
-    #[error("Not a package")]
-    NotAPackage,
-    #[error("Not a project")]
-    NotAProject,
-    #[error("Not a release")]
-    NotARelease,
     #[error("Not a revision")]
     NotARevision,
     #[error("Not a user")]
