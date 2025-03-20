@@ -265,7 +265,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
+        core::{AddFileError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -379,13 +379,12 @@ mod test {
 
     async fn exhaust_stream(
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-    ) -> Result<(), CoreError>
+    ) -> Result<(), io::Error>
     {
         let mut reader = StreamReader::new(stream);
         let mut writer = tokio::io::empty();
 
         tokio::io::copy(&mut reader, &mut writer)
-            .map_err(|_| CoreError::TooLarge)
             .await
             .map(|_| ())
     }
@@ -643,7 +642,13 @@ mod test {
                 Err(CoreError::BadMimeType)
             }
             else {
-                exhaust_stream(stream).await
+                match exhaust_stream(stream).await {
+                    Ok(_) => Ok(()),
+                    Err(e) => match e.kind() {
+                        io::ErrorKind::FileTooLarge => Err(CoreError::TooLarge),
+                        _ => Err(CoreError::IOError(e))
+                    }
+                }
             }
         }
 
@@ -656,9 +661,15 @@ mod test {
             _filename: &str,
             _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-        ) -> Result<(), CoreError>
+        ) -> Result<(), AddFileError>
         {
-            exhaust_stream(stream).await
+            match exhaust_stream(stream).await {
+                Ok(_) => Ok(()),
+                Err(e) => match e.kind() {
+                    io::ErrorKind::FileTooLarge => Err(AddFileError::TooLarge),
+                    _ => Err(AddFileError::IOError(e))
+                }
+            }
         }
     }
 

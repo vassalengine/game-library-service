@@ -116,6 +116,32 @@ pub enum CreatePackageError {
 }
 
 #[derive(Debug, Error)]
+pub enum CreateReleaseError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error)]
+pub enum AddFileError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("Invalid filename")]
+    InvalidFilename,
+    #[error("{0}")]
+    IOError(#[from] io::Error),
+    #[error("{0}")]
+    ModuleError(#[from] module::Error),
+    #[error("{0}")]
+    TimeError(#[from] time::Error),
+    #[error("File too large")]
+    TooLarge,
+    #[error("{0}")]
+    UploadError(#[from] upload::UploadError)
+}
+
+#[derive(Debug, Error)]
 pub enum GetImageError {
     #[error("Not found")]
     NotFound,
@@ -281,7 +307,7 @@ pub trait Core {
         _proj: Project,
         _pkg: &str,
         _pkg_data: &PackageDataPost
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreatePackageError>
     {
         unimplemented!();
     }
@@ -292,7 +318,7 @@ pub trait Core {
         _proj: Project,
         _pkg: Package,
         _version: &Version
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreateReleaseError>
     {
         unimplemented!();
     }
@@ -306,7 +332,7 @@ pub trait Core {
         _filename: &str,
         _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddFileError>
     {
         unimplemented!();
     }

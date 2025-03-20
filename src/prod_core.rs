@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{Core, CoreError, CreatePackageError, CreateProjectError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
+    core::{AddFileError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -231,7 +231,7 @@ where
         proj: Project,
         pkg: &str,
         pkg_data: &PackageDataPost
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreatePackageError>
     {
         let now = self.now_nanos()?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
@@ -267,7 +267,7 @@ where
         proj: Project,
         pkg: Package,
         version: &Version,
-    ) -> Result<(), CoreError>
+    ) -> Result<(), CreateReleaseError>
     {
         let now = self.now_nanos()?;
         Ok(self.db.create_release(owner, proj, pkg, version, now).await?)
@@ -282,13 +282,13 @@ where
         filename: &str,
         content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddFileError>
     {
         let now = self.now_nanos()?;
 
         // ensure the filename is valid
         let filename = safe_filename(filename)
-            .or(Err(CoreError::InvalidFilename))?;
+            .or(Err(AddFileError::InvalidFilename))?;
 
         // write the stream to a file
         let mut file = TempFile::new_in(&*self.uploads_dir)
