@@ -154,6 +154,18 @@ pub enum GetPlayersError {
 }
 
 #[derive(Debug, Error)]
+pub enum AddPlayerError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
+pub enum RemovePlayerError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
 pub enum GetImageError {
     #[error("Not found")]
     NotFound,
@@ -361,7 +373,7 @@ pub trait Core {
         &self,
         _player: User,
         _proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddPlayerError>
     {
         unimplemented!();
     }
@@ -370,7 +382,7 @@ pub trait Core {
         &self,
         _player: User,
         _proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), RemovePlayerError>
     {
         unimplemented!();
     }

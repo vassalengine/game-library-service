@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{AddFileError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, UpdateProjectError, UserIsOwnerError},
+    core::{AddFileError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -364,7 +364,7 @@ where
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddPlayerError>
     {
         Ok(self.db.add_player(player, proj).await?)
     }
@@ -373,7 +373,7 @@ where
         &self,
         player: User,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), RemovePlayerError>
     {
         Ok(self.db.remove_player(player, proj).await?)
     }
