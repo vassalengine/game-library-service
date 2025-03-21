@@ -63,6 +63,18 @@ pub enum UserIsOwnerError {
 }
 
 #[derive(Debug, Error)]
+pub enum GetOwnersError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
+pub enum AddOwnersError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error)]
 pub enum GetProjectsError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -253,7 +265,7 @@ pub trait Core {
     async fn get_owners(
         &self,
         _proj: Project
-    ) -> Result<Users, CoreError>
+    ) -> Result<Users, GetOwnersError>
     {
         unimplemented!();
     }
@@ -262,7 +274,7 @@ pub trait Core {
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddOwnersError>
     {
         unimplemented!();
     }

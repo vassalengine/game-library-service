@@ -320,7 +320,7 @@ mod test {
 
     use crate::{
         app::AppState,
-        core::{Core, CoreError, GetIdError, UserIsOwnerError},
+        core::{Core, CoreError, GetIdError, GetOwnersError, UserIsOwnerError},
         jwt::EncodingKey,
         model::Users
     };
@@ -654,7 +654,7 @@ mod test {
         async fn get_owners(
             &self,
             _proj: Project
-        ) -> Result<Users, CoreError>
+        ) -> Result<Users, GetOwnersError>
         {
             Ok(Users { users: vec!["bob".into()] })
         }
