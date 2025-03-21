@@ -22,8 +22,6 @@ use crate::{
 
 #[derive(Debug, Error, PartialEq)]
 pub enum CoreError {
-    #[error("Cannot remove last owner")]
-    CannotRemoveLastOwner,
     #[error("Invalid project name")]
     InvalidProjectName,
     #[error("Project name in use")]

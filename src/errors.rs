@@ -36,7 +36,6 @@ pub enum AppError {
 impl From<CoreError> for AppError {
     fn from(err: CoreError) -> Self {
         match err {
-            CoreError::CannotRemoveLastOwner => AppError::CannotRemoveLastOwner  ,
             CoreError::InvalidProjectName => AppError::MalformedQuery, // FIXME
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
             CoreError::NotAUser => AppError::NotAUser
