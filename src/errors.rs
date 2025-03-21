@@ -40,7 +40,6 @@ impl From<CoreError> for AppError {
             CoreError::InvalidProjectName => AppError::MalformedQuery, // FIXME
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
             CoreError::NotAUser => AppError::NotAUser,
-            CoreError::InternalError => AppError::InternalError,
             CoreError::XDatabaseError(e) => AppError::DatabaseError(e.to_string())
         }
     }

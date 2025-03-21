@@ -30,8 +30,6 @@ pub enum CoreError {
     ProjectNameInUse,
     #[error("Not a user")]
     NotAUser,
-    #[error("Internal error")]
-    InternalError,
     #[error("{0}")]
     XDatabaseError(#[from] db::DatabaseError)
 }
