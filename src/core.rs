@@ -32,8 +32,6 @@ pub enum CoreError {
     NotARevision,
     #[error("Not a user")]
     NotAUser,
-    #[error("Not a version")]
-    NotAVersion,
     #[error("Internal error")]
     InternalError,
     #[error("{0}")]

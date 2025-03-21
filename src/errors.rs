@@ -41,7 +41,6 @@ impl From<CoreError> for AppError {
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
             CoreError::NotARevision => AppError::NotFound,
             CoreError::NotAUser => AppError::NotAUser,
-            CoreError::NotAVersion => AppError::NotFound,
             CoreError::InternalError => AppError::InternalError,
             CoreError::XDatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CoreError::TimeError(_) => AppError::InternalError
