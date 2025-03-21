@@ -28,8 +28,6 @@ pub enum CoreError {
     InvalidProjectName,
     #[error("Project name in use")]
     ProjectNameInUse,
-    #[error("Not found")]
-    NotFound,
     #[error("Not a revision")]
     NotARevision,
     #[error("Not a user")]
@@ -41,9 +39,7 @@ pub enum CoreError {
     #[error("{0}")]
     XDatabaseError(#[from] db::DatabaseError),
     #[error("{0}")]
-    TimeError(#[from] time::Error),
-    #[error("{0}")]
-    IOError(#[from] io::Error)
+    TimeError(#[from] time::Error)
 }
 
 impl PartialEq for CoreError {
