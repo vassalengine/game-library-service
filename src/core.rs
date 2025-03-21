@@ -39,8 +39,6 @@ pub enum CoreError {
     #[error("Internal error")]
     InternalError,
     #[error("{0}")]
-    DatabaseError(#[from] sqlx::Error),
-    #[error("{0}")]
     XDatabaseError(#[from] db::DatabaseError),
     #[error("{0}")]
     TimeError(#[from] time::Error),
@@ -50,9 +48,7 @@ pub enum CoreError {
 
 impl PartialEq for CoreError {
     fn eq(&self, other: &Self) -> bool {
-        // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, CoreError::DatabaseError(_))
+        mem::discriminant(self) == mem::discriminant(other)
     }
 }
 

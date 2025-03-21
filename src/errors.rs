@@ -44,7 +44,6 @@ impl From<CoreError> for AppError {
             CoreError::NotAUser => AppError::NotAUser,
             CoreError::NotAVersion => AppError::NotFound,
             CoreError::InternalError => AppError::InternalError,
-            CoreError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CoreError::XDatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CoreError::TimeError(_) => AppError::InternalError,
             CoreError::SeekError(_) => AppError::InternalError
