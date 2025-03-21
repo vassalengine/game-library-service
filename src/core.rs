@@ -33,9 +33,7 @@ pub enum CoreError {
     #[error("Internal error")]
     InternalError,
     #[error("{0}")]
-    XDatabaseError(#[from] db::DatabaseError),
-    #[error("{0}")]
-    TimeError(#[from] time::Error)
+    XDatabaseError(#[from] db::DatabaseError)
 }
 
 impl PartialEq for CoreError {
