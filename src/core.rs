@@ -28,8 +28,6 @@ pub enum CoreError {
     InvalidProjectName,
     #[error("Project name in use")]
     ProjectNameInUse,
-    #[error("Not a revision")]
-    NotARevision,
     #[error("Not a user")]
     NotAUser,
     #[error("Internal error")]
