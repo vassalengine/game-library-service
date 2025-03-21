@@ -22,8 +22,6 @@ use crate::{
 
 #[derive(Debug, Error, PartialEq)]
 pub enum CoreError {
-    #[error("Invalid project name")]
-    InvalidProjectName,
     #[error("Project name in use")]
     ProjectNameInUse,
     #[error("Not a user")]
@@ -106,8 +104,18 @@ pub enum GetProjectError {
 pub enum CreateProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
+    #[error("Invalid project name")]
+    InvalidProjectName,
     #[error("{0}")]
     TimeError(#[from] time::Error)
+}
+
+impl PartialEq for CreateProjectError {
+    fn eq(&self, other: &Self) -> bool {
+        // sqlx::Error is not PartialEq, so we must exclude it
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(self, Self::DatabaseError(_))
+    }
 }
 
 #[derive(Debug, Error)]

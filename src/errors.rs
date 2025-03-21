@@ -36,7 +36,6 @@ pub enum AppError {
 impl From<CoreError> for AppError {
     fn from(err: CoreError) -> Self {
         match err {
-            CoreError::InvalidProjectName => AppError::MalformedQuery, // FIXME
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
             CoreError::NotAUser => AppError::NotAUser
         }
@@ -110,6 +109,7 @@ impl From<CreateProjectError> for AppError {
     fn from(err: CreateProjectError) -> Self {
         match err {
             CreateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            CreateProjectError::InvalidProjectName => AppError::MalformedQuery,
             CreateProjectError::TimeError(_) => AppError::InternalError
         }
     }

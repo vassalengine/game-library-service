@@ -860,7 +860,7 @@ where
     }
 }
 
-fn check_new_project_name(projname: &str) -> Result<(), CoreError> {
+fn check_new_project_name(projname: &str) -> Result<(), CreateProjectError> {
     // Require that project name matches ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$
     static PAT: Lazy<Regex> = Lazy::new(||
         Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -868,7 +868,7 @@ fn check_new_project_name(projname: &str) -> Result<(), CoreError> {
     );
 
     if !PAT.is_match(projname) {
-        Err(CoreError::InvalidProjectName)
+        Err(CreateProjectError::InvalidProjectName)
     }
     else {
         Ok(())
@@ -1211,7 +1211,7 @@ mod test {
     fn check_new_project_name_non_ascii() {
         assert_eq!(
             check_new_project_name("💩").unwrap_err(),
-            CoreError::InvalidProjectName
+            CreateProjectError::InvalidProjectName
         );
     }
 
@@ -1219,7 +1219,7 @@ mod test {
     fn check_new_project_name_leading_non_alphanumeric() {
         assert_eq!(
             check_new_project_name("-abc").unwrap_err(),
-            CoreError::InvalidProjectName
+            CreateProjectError::InvalidProjectName
         );
     }
 
@@ -1227,7 +1227,7 @@ mod test {
     fn check_new_project_name_too_short() {
         assert_eq!(
             check_new_project_name("").unwrap_err(),
-            CoreError::InvalidProjectName
+            CreateProjectError::InvalidProjectName
         );
     }
 
@@ -1235,7 +1235,7 @@ mod test {
     fn check_new_project_name_too_long() {
         assert_eq!(
             check_new_project_name(&"x".repeat(100)).unwrap_err(),
-            CoreError::InvalidProjectName
+            CreateProjectError::InvalidProjectName
         );
     }
 
