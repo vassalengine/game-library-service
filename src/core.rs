@@ -16,15 +16,12 @@ use crate::{
     params::ProjectsParams,
     pagination,
     time,
+    upload,
     version::Version
 };
 
 #[derive(Debug, Error)]
 pub enum CoreError {
-    #[error("Unsupported media type")]
-    BadMimeType,
-    #[error("File too large")]
-    TooLarge,
     #[error("Cannot remove last owner")]
     CannotRemoveLastOwner,
     #[error("Invalid project name")]
