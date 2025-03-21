@@ -253,7 +253,6 @@ mod test {
         }
     };
     use futures::Stream;
-    use futures_util::TryFutureExt;
     use mime::{APPLICATION_JSON, IMAGE_PNG, TEXT_PLAIN, Mime};
     use once_cell::sync::Lazy;
     use nix::{
