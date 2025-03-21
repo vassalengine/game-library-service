@@ -20,7 +20,7 @@ use crate::{
     version::Version
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CoreError {
     #[error("Cannot remove last owner")]
     CannotRemoveLastOwner,
@@ -29,15 +29,7 @@ pub enum CoreError {
     #[error("Project name in use")]
     ProjectNameInUse,
     #[error("Not a user")]
-    NotAUser,
-    #[error("{0}")]
-    XDatabaseError(#[from] db::DatabaseError)
-}
-
-impl PartialEq for CoreError {
-    fn eq(&self, other: &Self) -> bool {
-        mem::discriminant(self) == mem::discriminant(other)
-    }
+    NotAUser
 }
 
 #[derive(Debug, Error)]
