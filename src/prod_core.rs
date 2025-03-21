@@ -2263,41 +2263,6 @@ mod test {
         );
     }
 
-/*
-    #[sqlx::test(fixtures("users", "projects", "packages"))]
-    async fn get_release_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        assert_eq!(
-            core.get_release(Project(42), Package(1)).await.unwrap(),
-            "https://example.com/a_package-1.2.4"
-        );
-    }
-
-    #[sqlx::test(fixtures("users", "projects", "packages"))]
-    async fn get_release_version_ok(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        let version = "1.2.3".parse::<Version>().unwrap();
-        assert_eq!(
-            core.get_release_version(Project(42), Package(1), &version)
-                .await
-                .unwrap(),
-            "https://example.com/a_package-1.2.3"
-        );
-    }
-
-    #[sqlx::test(fixtures("users", "projects", "packages"))]
-    async fn get_release_version_not_a_version(pool: Pool) {
-        let core = make_core(pool, fake_now);
-        let version = "1.0.0".parse::<Version>().unwrap();
-        assert_eq!(
-            core.get_release_version(Project(42), Package(1), &version)
-                .await
-                .unwrap_err(),
-            CoreError::NotAVersion
-        );
-    }
-*/
-
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn get_owners_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
