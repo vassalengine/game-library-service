@@ -81,6 +81,16 @@ pub enum GetProjectsError {
 }
 
 #[derive(Debug, Error)]
+pub enum GetProjectError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("Not found")]
+    NotFound,
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error)]
 pub enum CreateProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -292,7 +302,7 @@ pub trait Core {
     async fn get_project(
         &self,
         _proj: Project
-    ) -> Result<ProjectData, CoreError>
+    ) -> Result<ProjectData, GetProjectError>
     {
         unimplemented!();
     }
@@ -321,7 +331,7 @@ pub trait Core {
         &self,
         _proj: Project,
         _revision: i64
-    ) -> Result<ProjectData, CoreError>
+    ) -> Result<ProjectData, GetProjectError>
     {
         unimplemented!();
     }

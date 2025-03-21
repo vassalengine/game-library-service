@@ -265,7 +265,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -544,7 +544,7 @@ mod test {
         async fn get_project(
             &self,
             _proj: Project,
-        ) -> Result<ProjectData, CoreError>
+        ) -> Result<ProjectData, GetProjectError>
         {
             Ok(EIA_PROJECT_DATA.clone())
         }
@@ -573,11 +573,11 @@ mod test {
             &self,
             proj: Project,
             revision: i64
-        ) -> Result<ProjectData, CoreError>
+        ) -> Result<ProjectData, GetProjectError>
         {
             match revision {
                 1 => self.get_project(proj).await,
-                _ => Err(CoreError::NotARevision)
+                _ => Err(GetProjectError::NotFound)
             }
         }
 

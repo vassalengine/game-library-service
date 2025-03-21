@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -140,7 +140,7 @@ where
     async fn get_project(
         &self,
         proj: Project
-    ) -> Result<ProjectData, CoreError>
+    ) -> Result<ProjectData, GetProjectError>
     {
         self.get_project_impl(
             proj,
@@ -182,7 +182,7 @@ where
         &self,
         proj: Project,
         revision: i64
-    ) -> Result<ProjectData, CoreError>
+    ) -> Result<ProjectData, GetProjectError>
     {
         let proj_row = self.db.get_project_row_revision(proj, revision)
             .await?;
@@ -529,7 +529,7 @@ where
     async fn make_file_data(
         &self,
         r: FileRow
-    ) -> Result<FileData, CoreError>
+    ) -> Result<FileData, GetProjectError>
     {
         let authors = self.db.get_authors(r.id)
             .await?
@@ -553,7 +553,7 @@ where
         &'s self,
         rr: ReleaseRow,
         get_files_rows: &FF
-    ) -> Result<ReleaseData, CoreError>
+    ) -> Result<ReleaseData, GetProjectError>
     where
         FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, DatabaseError>>
@@ -578,7 +578,7 @@ where
         pr: PackageRow,
         get_release_rows: &RF,
         get_files_rows: &FF
-    ) -> Result<PackageData, CoreError>
+    ) -> Result<PackageData, GetProjectError>
     where
         RF: Fn(&'s Self, Package) -> RR,
         RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
@@ -613,14 +613,14 @@ where
         package_rows: Vec<PackageRow>,
         get_release_rows: RF,
         get_file_rows: FF,
-    ) -> Result<ProjectData, CoreError>
+    ) -> Result<ProjectData, GetProjectError>
     where
         RF: Fn(&'s Self, Package) -> RR,
         RR: Future<Output = Result<Vec<ReleaseRow>, DatabaseError>>,
         FF: Fn(&'s Self, Release) -> FR,
         FR: Future<Output = Result<Vec<FileRow>, DatabaseError>>
     {
-        let owners = self.get_owners(proj)
+        let owners = self.db.get_owners(proj)
             .await?
             .users;
 
