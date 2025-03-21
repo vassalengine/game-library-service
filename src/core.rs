@@ -31,8 +31,6 @@ pub enum CoreError {
     InvalidProjectName,
     #[error("Project name in use")]
     ProjectNameInUse,
-    #[error("Malformed query")]
-    MalformedQuery,
     #[error("Not found")]
     NotFound,
     #[error("Not a revision")]

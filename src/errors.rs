@@ -41,7 +41,6 @@ impl From<CoreError> for AppError {
             CoreError::CannotRemoveLastOwner => AppError::CannotRemoveLastOwner  ,
             CoreError::InvalidProjectName => AppError::MalformedQuery, // FIXME
             CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
-            CoreError::MalformedQuery => AppError::MalformedQuery,
             CoreError::NotFound => AppError::NotFound,
             CoreError::NotARevision => AppError::NotFound,
             CoreError::NotAUser => AppError::NotAUser,
