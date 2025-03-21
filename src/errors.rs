@@ -50,8 +50,8 @@ impl From<CoreError> for AppError {
 impl From<GetIdError> for AppError {
     fn from(err: GetIdError) -> Self {
         match err {
-            GetIdError::NotFound => AppError::NotFound,
-            GetIdError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
+            GetIdError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            GetIdError::NotFound => AppError::NotFound
         }
     }
 }
@@ -162,8 +162,8 @@ impl From<RemovePlayerError> for AppError {
 impl From<GetImageError> for AppError {
     fn from(err: GetImageError) -> Self {
         match err {
-            GetImageError::NotFound => AppError::NotFound,
-            GetImageError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
+            GetImageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            GetImageError::NotFound => AppError::NotFound
         }
     }
 }
