@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{AddFileError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePatch, Release, ReleaseData, User, Users},
     module::check_version,
@@ -412,18 +412,18 @@ where
         content_type: &Mime,
         content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddImageError>
     {
         let now = self.now_nanos()?;
 
         // MIME type should be an images
         if !image_mime_type_ok(content_type) {
-            return Err(CoreError::BadMimeType);
+            return Err(AddImageError::BadMimeType);
         }
 
         // ensure the filename is valid
         let filename = safe_filename(filename)
-            .or(Err(CoreError::InvalidFilename))?;
+            .or(Err(AddImageError::InvalidFilename))?;
 
         // write the stream to a file
         let mut file = TempFile::new_in(&*self.uploads_dir)

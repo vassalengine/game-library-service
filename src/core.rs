@@ -181,6 +181,24 @@ impl PartialEq for GetImageError {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum AddImageError {
+    #[error("Unsupported media type")]
+    BadMimeType,
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("Invalid filename")]
+    InvalidFilename,
+    #[error("{0}")]
+    IOError(#[from] io::Error),
+    #[error("{0}")]
+    TimeError(#[from] time::Error),
+    #[error("File too large")]
+    TooLarge,
+    #[error("{0}")]
+    UploadError(#[from] upload::UploadError)
+}
+
 #[async_trait]
 pub trait Core {
     fn max_file_size(&self) -> usize {
@@ -414,7 +432,7 @@ pub trait Core {
         _content_type: &Mime,
         _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-    ) -> Result<(), CoreError>
+    ) -> Result<(), AddImageError>
     {
         unimplemented!();
     }

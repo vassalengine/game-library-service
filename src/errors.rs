@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddFileError, AddPlayerError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddImageError, AddFileError, AddPlayerError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -165,3 +165,19 @@ impl From<GetImageError> for AppError {
         }
     }
 }
+
+impl From<AddImageError> for AppError {
+    fn from(err: AddImageError) -> Self {
+        match err {
+            AddImageError::BadMimeType => AppError::BadMimeType,
+            AddImageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            AddImageError::InvalidFilename => AppError::MalformedQuery,
+            AddImageError::IOError(_) => AppError::InternalError,
+            AddImageError::TimeError(_) => AppError::InternalError,
+            AddImageError::TooLarge => AppError::TooLarge,
+            AddImageError::UploadError(e) => AppError::UploadError(e.to_string())
+        }
+    }
+}
+
+

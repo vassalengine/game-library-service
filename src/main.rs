@@ -265,7 +265,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddFileError, AddPlayerError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddPlayerError, Core, CoreError, CreateProjectError, GetIdError, GetImageError, GetPlayersError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -636,17 +636,17 @@ mod test {
             content_type: &Mime,
             _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
-        ) -> Result<(), CoreError>
+        ) -> Result<(), AddImageError>
         {
             if content_type == &TEXT_PLAIN {
-                Err(CoreError::BadMimeType)
+                Err(AddImageError::BadMimeType)
             }
             else {
                 match exhaust_stream(stream).await {
                     Ok(_) => Ok(()),
                     Err(e) => match e.kind() {
-                        io::ErrorKind::FileTooLarge => Err(CoreError::TooLarge),
-                        _ => Err(CoreError::IOError(e))
+                        io::ErrorKind::FileTooLarge => Err(AddImageError::TooLarge),
+                        _ => Err(AddImageError::IOError(e))
                     }
                 }
             }
