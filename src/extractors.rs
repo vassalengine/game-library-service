@@ -320,7 +320,7 @@ mod test {
 
     use crate::{
         app::AppState,
-        core::{Core, CoreError, GetIdError, GetOwnersError, UserIsOwnerError},
+        core::{Core, GetIdError, GetOwnersError, UserIsOwnerError},
         jwt::EncodingKey,
         model::Users
     };
