@@ -179,5 +179,3 @@ impl From<AddImageError> for AppError {
         }
     }
 }
-
-

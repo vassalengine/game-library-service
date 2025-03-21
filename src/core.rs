@@ -41,8 +41,6 @@ pub enum CoreError {
     NotAUser,
     #[error("Not a version")]
     NotAVersion,
-    #[error("Invalid filename")]
-    InvalidFilename,
     #[error("Internal error")]
     InternalError,
     #[error("{0}")]
