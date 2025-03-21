@@ -45,8 +45,8 @@ impl From<CoreError> for AppError {
             CoreError::NotAVersion => AppError::NotFound,
             CoreError::InternalError => AppError::InternalError,
             CoreError::XDatabaseError(e) => AppError::DatabaseError(e.to_string()),
-            CoreError::TimeError(_) => AppError::InternalError,
-            CoreError::SeekError(_) => AppError::InternalError
+            CoreError::IOError(_) => AppError::InternalError, // FIXME
+            CoreError::TimeError(_) => AppError::InternalError
         }
     }
 }

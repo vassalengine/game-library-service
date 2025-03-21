@@ -43,7 +43,7 @@ pub enum CoreError {
     #[error("{0}")]
     TimeError(#[from] time::Error),
     #[error("{0}")]
-    SeekError(#[from] pagination::SeekError)
+    IOError(#[from] io::Error)
 }
 
 impl PartialEq for CoreError {
