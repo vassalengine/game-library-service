@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -74,6 +74,15 @@ impl From<AddOwnersError> for AppError {
     fn from(err: AddOwnersError) -> Self {
         match err {
             AddOwnersError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
+        }
+    }
+}
+
+impl From<RemoveOwnersError> for AppError {
+    fn from(err: RemoveOwnersError) -> Self {
+        match err {
+            RemoveOwnersError::CannotRemoveLastOwner => AppError::CannotRemoveLastOwner,
+            RemoveOwnersError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
         }
     }
 }

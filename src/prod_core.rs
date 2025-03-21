@@ -15,7 +15,7 @@ use std::{
 use tokio::io::AsyncSeekExt;
 
 use crate::{
-    core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
@@ -91,9 +91,13 @@ where
         &self,
         owners: &Users,
         proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), RemoveOwnersError>
     {
-        Ok(self.db.remove_owners(owners, proj).await?)
+        match self.db.remove_owners(owners, proj).await {
+            Ok(()) => Ok(()),
+            Err(DatabaseError::CannotRemoveLastOwner) => Err(RemoveOwnersError::CannotRemoveLastOwner),
+            Err(e) => Err(RemoveOwnersError::DatabaseError(e))
+        }
     }
 
     async fn user_is_owner(
@@ -2317,7 +2321,7 @@ mod test {
         let users = Users { users: vec!["bob".into()] };
         assert_eq!(
             core.remove_owners(&users, Project(1)).await.unwrap_err(),
-            CoreError::XDatabaseError(DatabaseError::CannotRemoveLastOwner)
+            RemoveOwnersError::CannotRemoveLastOwner
         );
     }
 

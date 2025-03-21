@@ -75,6 +75,22 @@ pub enum AddOwnersError {
 }
 
 #[derive(Debug, Error)]
+pub enum RemoveOwnersError {
+    #[error("Cannot remove last owner")]
+    CannotRemoveLastOwner,
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+impl PartialEq for RemoveOwnersError {
+    fn eq(&self, other: &Self) -> bool {
+        // sqlx::Error is not PartialEq, so we must exclude it
+        mem::discriminant(self) == mem::discriminant(other) &&
+        !matches!(self, Self::DatabaseError(_))
+    }
+}
+
+#[derive(Debug, Error)]
 pub enum GetProjectsError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -283,7 +299,7 @@ pub trait Core {
         &self,
         _owners: &Users,
         _proj: Project
-    ) -> Result<(), CoreError>
+    ) -> Result<(), RemoveOwnersError>
     {
         unimplemented!();
     }
