@@ -381,7 +381,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         owner.0
     )
     .execute(ex)
-    .await?;
+    .await
+    .map_err(map_unique)?;
 
     Ok(())
 }
@@ -549,4 +550,5 @@ mod test {
     }
 
 // TODO: create_release tests
+// TODO: add_file_url tests
 }
