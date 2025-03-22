@@ -32,6 +32,13 @@ impl PartialEq for DatabaseError {
     }
 }
 
+pub fn map_unique(e: sqlx::Error) -> DatabaseError {
+    match e {
+        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
+        e => DatabaseError::SqlxError(e)
+    }
+}
+
 #[derive(Debug, Deserialize, FromRow, PartialEq)]
 pub struct ProjectSummaryRow {
     pub rank: f64,

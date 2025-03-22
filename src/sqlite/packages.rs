@@ -4,7 +4,7 @@ use sqlx::{
 };
 
 use crate::{
-    db::{DatabaseError, PackageRow},
+    db::{DatabaseError, PackageRow, map_unique},
     model::{Owner, Package, PackageDataPost, Project},
     sqlite::project::update_project_non_project_data
 };
@@ -144,10 +144,7 @@ VALUES (?, ?, ?, ?)
     )
     .execute(ex)
     .await
-    .map_err(|e| match e {
-        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
-        e => DatabaseError::SqlxError(e)
-    })?;
+    .map_err(map_unique)?;
 
     Ok(())
 }

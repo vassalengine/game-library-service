@@ -6,7 +6,7 @@ use sqlx::{
 use std::cmp::Ordering;
 
 use crate::{
-    db::{DatabaseError, FileRow, ReleaseRow},
+    db::{DatabaseError, FileRow, ReleaseRow, map_unique},
     model::{Owner, Package, Project, Release},
     sqlite::project::update_project_non_project_data,
     version::Version
@@ -338,10 +338,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     )
     .execute(ex)
     .await
-    .map_err(|e| match e {
-        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
-        e => DatabaseError::SqlxError(e)
-    })?;
+    .map_err(map_unique)?;
 
     Ok(())
 }

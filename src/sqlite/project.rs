@@ -4,7 +4,7 @@ use sqlx::{
 };
 
 use crate::{
-    db::{DatabaseError, ProjectRow},
+    db::{DatabaseError, ProjectRow, map_unique},
     model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
     sqlite::users::add_owner
 };
@@ -84,10 +84,7 @@ RETURNING project_id
     .fetch_one(ex)
     .await
     .map(Project)
-    .map_err(|e| match e {
-        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
-        e => DatabaseError::SqlxError(e)
-    })
+    .map_err(map_unique)
 }
 
 #[derive(Debug)]
