@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, CoreError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -31,15 +31,6 @@ pub enum AppError {
     NotFound,
     #[error("Unauthorized")]
     Unauthorized
-}
-
-impl From<CoreError> for AppError {
-    fn from(err: CoreError) -> Self {
-        match err {
-            CoreError::ProjectNameInUse => AppError::MalformedQuery, // FIXME
-            CoreError::NotAUser => AppError::NotAUser
-        }
-    }
 }
 
 impl From<GetIdError> for AppError {

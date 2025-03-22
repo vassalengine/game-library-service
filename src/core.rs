@@ -20,13 +20,6 @@ use crate::{
     version::Version
 };
 
-#[derive(Debug, Error, PartialEq)]
-pub enum CoreError {
-    #[error("Project name in use")]
-    ProjectNameInUse,
-    #[error("Not a user")]
-    NotAUser
-}
 
 #[derive(Debug, Error)]
 pub enum GetIdError {
