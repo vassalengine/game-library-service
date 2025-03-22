@@ -216,13 +216,7 @@ where
     let mut tx = conn.begin().await?;
 
     // insert release row
-    create_release_row(
-        &mut *tx,
-        owner,
-        pkg,
-        version,
-        now
-    ).await?;
+    create_release_row(&mut *tx, owner, pkg, version, now).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -343,7 +337,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         owner.0
     )
     .execute(ex)
-    .await?;
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
+        e => DatabaseError::SqlxError(e)
+    })?;
 
     Ok(())
 }
@@ -552,4 +550,6 @@ mod test {
             []
         );
     }
+
+// TODO: create_release tests
 }
