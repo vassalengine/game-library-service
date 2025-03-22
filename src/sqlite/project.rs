@@ -48,7 +48,7 @@ where
     let proj_norm = normalize_project_name(proj);
 
     match sqlx::query_scalar!(
-                "
+        "
 INSERT INTO projects (
     name,
     normalized_name,
@@ -66,23 +66,23 @@ INSERT INTO projects (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_id
-                ",
-                proj,
-                proj_norm,
-                now,
-                proj_data.description,
-                proj_data.game.title,
-                proj_data.game.title_sort_key,
-                proj_data.game.publisher,
-                proj_data.game.year,
-                "",
-                None::<&str>,
-                now,
-                user.0,
-                1
-            )
-            .fetch_one(ex)
-            .await
+        ",
+        proj,
+        proj_norm,
+        now,
+        proj_data.description,
+        proj_data.game.title,
+        proj_data.game.title_sort_key,
+        proj_data.game.publisher,
+        proj_data.game.year,
+        "",
+        None::<&str>,
+        now,
+        user.0,
+        1
+    )
+    .fetch_one(ex)
+    .await
     {
         Ok(id) => Ok(Project(id)),
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(DatabaseError::AlreadyExists),
