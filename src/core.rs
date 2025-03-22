@@ -60,7 +60,7 @@ pub enum RemoveOwnersError {
     #[error("Cannot remove last owner")]
     CannotRemoveLastOwner,
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError)
+    DatabaseError(db::DatabaseError)
 }
 
 impl PartialEq for RemoveOwnersError {
@@ -68,6 +68,15 @@ impl PartialEq for RemoveOwnersError {
         // sqlx::Error is not PartialEq, so we must exclude it
         mem::discriminant(self) == mem::discriminant(other) &&
         !matches!(self, Self::DatabaseError(_))
+    }
+}
+
+impl From<db::DatabaseError> for RemoveOwnersError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::CannotRemoveLastOwner => RemoveOwnersError::CannotRemoveLastOwner,
+            e => RemoveOwnersError::DatabaseError(e)
+        }
     }
 }
 

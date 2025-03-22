@@ -93,11 +93,7 @@ where
         proj: Project
     ) -> Result<(), RemoveOwnersError>
     {
-        match self.db.remove_owners(owners, proj).await {
-            Ok(()) => Ok(()),
-            Err(DatabaseError::CannotRemoveLastOwner) => Err(RemoveOwnersError::CannotRemoveLastOwner),
-            Err(e) => Err(RemoveOwnersError::DatabaseError(e))
-        }
+        Ok(self.db.remove_owners(owners, proj).await?)
     }
 
     async fn user_is_owner(
