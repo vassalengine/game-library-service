@@ -139,14 +139,18 @@ INSERT INTO packages (
     created_by
 )
 VALUES (?, ?, ?, ?)
-            ",
-            proj.0,
-            pkg,
-            now,
-            owner.0
+        ",
+        proj.0,
+        pkg,
+        now,
+        owner.0
     )
     .execute(&mut *tx)
-    .await?;
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
+        e => DatabaseError::SqlxError(e)
+    })?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -296,20 +300,18 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn create_package_already_exists(pool: Pool) {
-        assert!(
-            matches!(
-                create_package(
-                    &pool,
-                    Owner(1),
-                    Project(42),
-                    "a_package",
-                    &PackageDataPost {
-                        description: "".into()
-                    },
-                    1699804206419538067
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_eq!(
+            create_package(
+                &pool,
+                Owner(1),
+                Project(42),
+                "a_package",
+                &PackageDataPost {
+                    description: "".into()
+                },
+                1699804206419538067
+            ).await.unwrap_err(),
+            DatabaseError::AlreadyExists
         );
     }
 }
