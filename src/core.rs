@@ -95,12 +95,23 @@ pub enum GetProjectError {
 
 #[derive(Debug, Error)]
 pub enum CreateProjectError {
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError),
+    DatabaseError(db::DatabaseError),
     #[error("Invalid project name")]
     InvalidProjectName,
     #[error("{0}")]
     TimeError(#[from] time::Error)
+}
+
+impl From<db::DatabaseError> for CreateProjectError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::AlreadyExists => CreateProjectError::AlreadyExists,
+            e => CreateProjectError::DatabaseError(e)
+        }
+    }
 }
 
 impl PartialEq for CreateProjectError {

@@ -14,12 +14,14 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum DatabaseError {
-    #[error("{0}")]
-    SqlxError(#[from] sqlx::Error),
+    #[error("Cannot remove last owner")]
+    CannotRemoveLastOwner,
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("Not found")]
     NotFound,
-    #[error("Cannot remove last owner")]
-    CannotRemoveLastOwner
+    #[error("{0}")]
+    SqlxError(#[from] sqlx::Error)
 }
 
 impl PartialEq for DatabaseError {

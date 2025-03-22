@@ -47,9 +47,7 @@ where
 {
     let proj_norm = normalize_project_name(proj);
 
-    Ok(
-        Project(
-            sqlx::query_scalar!(
+    match sqlx::query_scalar!(
                 "
 INSERT INTO projects (
     name,
@@ -84,9 +82,12 @@ RETURNING project_id
                 1
             )
             .fetch_one(ex)
-            .await?
-        )
-    )
+            .await
+    {
+        Ok(id) => Ok(Project(id)),
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(DatabaseError::AlreadyExists),
+        Err(e) => Err(DatabaseError::SqlxError(e))
+    }
 }
 
 #[derive(Debug)]
@@ -641,17 +642,15 @@ mod test {
             Some(Project(row.project_id))
         );
 
-        assert!(
-            matches!(
-                create_project(
-                    &pool,
-                    User(1),
-                    &row.name,
-                    &CREATE_DATA,
-                    row.created_at
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_eq!(
+            create_project(
+                &pool,
+                User(1),
+                &row.name,
+                &CREATE_DATA,
+                row.created_at
+            ).await.unwrap_err(),
+            DatabaseError::AlreadyExists
         );
     }
 
@@ -668,17 +667,15 @@ mod test {
             Some(Project(row.project_id))
         );
 
-        assert!(
-            matches!(
-                create_project(
-                    &pool,
-                    User(1),
-                    &row.name,
-                    &CREATE_DATA,
-                    row.created_at
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_eq!(
+            create_project(
+                &pool,
+                User(1),
+                &row.name,
+                &CREATE_DATA,
+                row.created_at
+            ).await.unwrap_err(),
+            DatabaseError::AlreadyExists
         );
     }
 
@@ -695,17 +692,15 @@ mod test {
             Some(Project(row.project_id))
         );
 
-        assert!(
-            matches!(
-                create_project(
-                    &pool,
-                    User(1),
-                    &row.name,
-                    &CREATE_DATA,
-                    row.created_at
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_eq!(
+            create_project(
+                &pool,
+                User(1),
+                &row.name,
+                &CREATE_DATA,
+                row.created_at
+            ).await.unwrap_err(),
+            DatabaseError::AlreadyExists
         );
     }
 

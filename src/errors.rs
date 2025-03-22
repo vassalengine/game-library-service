@@ -99,6 +99,7 @@ impl From<GetProjectError> for AppError {
 impl From<CreateProjectError> for AppError {
     fn from(err: CreateProjectError) -> Self {
         match err {
+            CreateProjectError::AlreadyExists => AppError::MalformedQuery,
             CreateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreateProjectError::InvalidProjectName => AppError::MalformedQuery,
             CreateProjectError::TimeError(_) => AppError::InternalError
