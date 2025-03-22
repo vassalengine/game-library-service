@@ -117,19 +117,16 @@ WHERE projects.name = ?
     )
 }
 
-pub async fn create_package<'a, A>(
-    conn: A,
+async fn create_package_row<'e, E>(
+    ex: E,
     owner: Owner,
     proj: Project,
     pkg: &str,
-    pkg_data: &PackageDataPost,
     now: i64
 ) -> Result<(), DatabaseError>
 where
-    A: Acquire<'a, Database = Sqlite>
+ E: Executor<'e, Database = Sqlite>
 {
-    let mut tx = conn.begin().await?;
-
     sqlx::query!(
         "
 INSERT INTO packages (
@@ -145,12 +142,31 @@ VALUES (?, ?, ?, ?)
         now,
         owner.0
     )
-    .execute(&mut *tx)
+    .execute(ex)
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
         e => DatabaseError::SqlxError(e)
     })?;
+
+    Ok(())
+}
+
+pub async fn create_package<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    pkg: &str,
+    pkg_data: &PackageDataPost,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // insert package row
+    create_package_row(&mut *tx, owner, proj, pkg, now).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
