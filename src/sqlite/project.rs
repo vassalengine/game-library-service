@@ -47,7 +47,7 @@ where
 {
     let proj_norm = normalize_project_name(proj);
 
-    match sqlx::query_scalar!(
+    sqlx::query_scalar!(
         "
 INSERT INTO projects (
     name,
@@ -83,11 +83,11 @@ RETURNING project_id
     )
     .fetch_one(ex)
     .await
-    {
-        Ok(id) => Ok(Project(id)),
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(DatabaseError::AlreadyExists),
-        Err(e) => Err(DatabaseError::SqlxError(e))
-    }
+    .map(Project)
+    .map_err(|e| match e {
+        sqlx::Error::Database(e) if e.is_unique_violation() => DatabaseError::AlreadyExists,
+        e => DatabaseError::SqlxError(e)
+    })
 }
 
 #[derive(Debug)]
