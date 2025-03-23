@@ -20,8 +20,7 @@ use crate::{
     version::Version
 };
 
-
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetIdError {
     #[error("Not found")]
     NotFound,
@@ -29,46 +28,30 @@ pub enum GetIdError {
     DatabaseError(#[from] db::DatabaseError)
 }
 
-impl PartialEq for GetIdError {
-    fn eq(&self, other: &Self) -> bool {
-        // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, Self::DatabaseError(_))
-    }
-}
-
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum UserIsOwnerError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetOwnersError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum AddOwnersError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum RemoveOwnersError {
     #[error("Cannot remove last owner")]
     CannotRemoveLastOwner,
     #[error("{0}")]
     DatabaseError(db::DatabaseError)
-}
-
-impl PartialEq for RemoveOwnersError {
-    fn eq(&self, other: &Self) -> bool {
-        // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, Self::DatabaseError(_))
-    }
 }
 
 impl From<db::DatabaseError> for RemoveOwnersError {
@@ -80,7 +63,7 @@ impl From<db::DatabaseError> for RemoveOwnersError {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetProjectsError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -92,7 +75,7 @@ pub enum GetProjectsError {
     TimeError(#[from] time::Error)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -102,7 +85,7 @@ pub enum GetProjectError {
     TimeError(#[from] time::Error)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CreateProjectError {
     #[error("Already exists")]
     AlreadyExists,
@@ -123,15 +106,7 @@ impl From<db::DatabaseError> for CreateProjectError {
     }
 }
 
-impl PartialEq for CreateProjectError {
-    fn eq(&self, other: &Self) -> bool {
-        // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, Self::DatabaseError(_))
-    }
-}
-
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum UpdateProjectError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -139,7 +114,7 @@ pub enum UpdateProjectError {
     TimeError(#[from] time::Error)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CreatePackageError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -147,7 +122,7 @@ pub enum CreatePackageError {
     TimeError(#[from] time::Error)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CreateReleaseError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -173,38 +148,30 @@ pub enum AddFileError {
     UploadError(#[from] upload::UploadError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetPlayersError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum AddPlayerError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum RemovePlayerError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GetImageError {
     #[error("Not found")]
     NotFound,
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
-}
-
-impl PartialEq for GetImageError {
-    fn eq(&self, other: &Self) -> bool {
-        // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, Self::DatabaseError(_))
-    }
 }
 
 #[derive(Debug, Error)]
