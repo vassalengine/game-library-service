@@ -4,7 +4,6 @@ use futures::Stream;
 use mime::Mime;
 use std::{
     io,
-    mem,
     sync::Arc
 };
 use thiserror::Error;
@@ -148,6 +147,21 @@ pub enum AddFileError {
     UploadError(#[from] upload::UploadError)
 }
 
+impl PartialEq for AddFileError {
+    fn eq(&self, other: &Self) -> bool {
+        // io::Error is not PartialEq, so we must exclude it
+        match (self, other) {
+            (Self::DatabaseError(l), Self::DatabaseError(r)) => l == r,
+            (Self::ModuleError(l), Self::ModuleError(r)) => l == r,
+            (Self::TimeError(l), Self::TimeError(r)) => l == r,
+            (Self::UploadError(l), Self::UploadError(r)) => l == r,
+            (Self::InvalidFilename, Self::InvalidFilename) |
+            (Self::TooLarge, Self::TooLarge) => true,
+            (_, _) => false
+        }
+    }
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum GetPlayersError {
     #[error("{0}")]
@@ -190,6 +204,21 @@ pub enum AddImageError {
     TooLarge,
     #[error("{0}")]
     UploadError(#[from] upload::UploadError)
+}
+
+impl PartialEq for AddImageError {
+    fn eq(&self, other: &Self) -> bool {
+        // io::Error is not PartialEq, so we must exclude it
+        match (self, other) {
+            (Self::DatabaseError(l), Self::DatabaseError(r)) => l == r,
+            (Self::TimeError(l), Self::TimeError(r)) => l == r,
+            (Self::UploadError(l), Self::UploadError(r)) => l == r,
+            (Self::BadMimeType, Self::BadMimeType) |
+            (Self::InvalidFilename, Self::InvalidFilename) |
+            (Self::TooLarge, Self::TooLarge) => true,
+            (_, _) => false
+        }
+    }
 }
 
 #[async_trait]

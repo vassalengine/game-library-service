@@ -35,6 +35,13 @@ pub enum UploadError {
     S3Error(#[from] S3Error),
 }
 
+impl PartialEq for UploadError {
+    fn eq(&self, other: &Self) -> bool {
+        // S3Error is not PartialEq, so we must exclude it
+        false
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Error)]
 #[error("Invalid filename")]
 pub struct InvalidFilename;

@@ -27,8 +27,11 @@ pub enum DatabaseError {
 impl PartialEq for DatabaseError {
     fn eq(&self, other: &Self) -> bool {
         // sqlx::Error is not PartialEq, so we must exclude it
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(self, Self::SqlxError(_))
+        match (self, other) {
+            (Self::SqlxError(_), _) |
+            (_, Self::SqlxError(_)) => false,
+            (_, _) => mem::discriminant(self) == mem::discriminant(other)
+        }
     }
 }
 

@@ -328,11 +328,12 @@ impl PartialEq for SeekError {
     fn eq(&self, other: &Self) -> bool {
         // csv::Error and csv::CsvIntoInnerError are not PartialEq,
         // so we must exclude those
-        mem::discriminant(self) == mem::discriminant(other) &&
-        !matches!(
-            self,
-            SeekError::CsvError(_) | SeekError::CsvIntoInnerError(_)
-        )
+        match (self, other) {
+            (Self::Utf8Error(l), Self::Utf8Error(r)) => l == r,
+            (Self::RelevanceMismatch(l), Self::RelevanceMismatch(r)) => l == r,
+            (Self::EmptySeek, Self::EmptySeek) => true,
+            _ => false
+        }
     }
 }
 
