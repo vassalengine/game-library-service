@@ -14,6 +14,10 @@ pub enum AppError {
     CannotRemoveLastOwner,
     #[error("{0}")]
     DatabaseError(String),
+    #[error("{0}")]
+    UploadError(String),
+    #[error("{0}")]
+    ModuleError(String),
 // TODO: Internal error should have a string? cause?
     #[error("Internal error")]
     InternalError,
@@ -23,6 +27,8 @@ pub enum AppError {
     LimitOutOfRange,
     #[error("Bad request")]
     MalformedQuery,
+    #[error("Bad request")]
+    MalformedUpload,
     #[error("Bad request")]
     MalformedVersion,
     #[error("Not found")]
