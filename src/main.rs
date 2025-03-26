@@ -31,6 +31,7 @@ mod db;
 mod errors;
 mod extractors;
 mod handlers;
+mod image;
 mod jwt;
 mod model;
 mod module;
