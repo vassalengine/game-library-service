@@ -26,6 +26,7 @@ pub fn check_magic<P: AsRef<Path>>(
     buf: &[u8]
 ) -> bool
 {
+    // check that MIME type matches file extension and is an expected type
     match infer::get(buf) {
         Some(info) =>
             extension_ok(path, &info) && 
