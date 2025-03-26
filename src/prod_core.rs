@@ -12,11 +12,15 @@ use std::{
     io,
     path::{Path, PathBuf}
 };
-use tokio::io::AsyncSeekExt;
+use tokio::io::{
+    AsyncReadExt,
+    AsyncSeekExt
+};
 
 use crate::{
     core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    image,
     model::{FileData, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -417,7 +421,7 @@ where
         let now = self.now_nanos()?;
 
         // MIME type should be an images
-        if !image_mime_type_ok(content_type) {
+        if !image::mime_type_ok(content_type) {
             return Err(AddImageError::BadMimeType);
         }
 
@@ -431,27 +435,6 @@ where
             .map_err(io::Error::other)?;
 
         let mut stream = Box::into_pin(stream);
-
-// TODO: check actual MIME type
-// TODO: check dimensions? resize?
-/*
-        let mut stream = std::pin::pin!(stream.peekable());
-        let chunk = stream.as_mut().peek()
-            .await
-            .ok_or(CoreError::InternalError)?
-            .as_ref()
-            .or(Err(CoreError::InternalError))?;
-
-        let magic = infer::get(chunk.as_ref())
-            .ok_or(CoreError::BadMimeType)?
-            .mime_type()
-            .parse::<Mime>()
-            .or(Err(CoreError::BadMimeType))?;
-
-        if magic != *content_type {
-            return Err(CoreError::BadMimeType);
-        }
-*/
 
         let (sha256, size) = stream_to_writer(stream, &mut file)
             .await?;
@@ -479,6 +462,18 @@ where
 
         file.rewind().await?;
 
+        // check actual MIME type
+        let mut buf = vec![0; 16];
+        file.read_exact(&mut buf).await?;
+
+        if !image::check_magic(filename, &buf) {
+            return Err(AddImageError::BadMimeType);
+        }
+
+// TODO: check dimensions? resize?
+
+        file.rewind().await?;
+
 // TODO: do we need to set content-type on upload?
         let url = self.uploader.upload(
             &bucket_path,
@@ -491,19 +486,6 @@ where
 
         Ok(())
     }
-}
-
-fn image_mime_type_ok(mime: &Mime) -> bool {
-    mime == &mime::IMAGE_PNG ||
-    mime == &mime::IMAGE_GIF ||
-    mime == &mime::IMAGE_JPEG ||
-    mime == &mime::IMAGE_SVG ||
-    (
-        mime.type_() == mime::IMAGE && (
-            mime.subtype() == "avif" ||
-            mime.subtype() == "webp"
-        )
-    )
 }
 
 fn range_if_some(min: Option<i64>, max: Option<i64>) -> Option<Range> {
