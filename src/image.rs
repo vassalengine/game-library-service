@@ -1,8 +1,5 @@
 use mime::Mime;
-use std::{
-    io,
-    path::Path
-};
+use std::path::Path;
 
 pub fn mime_type_ok(mime: &Mime) -> bool {
     mime == &mime::IMAGE_PNG ||

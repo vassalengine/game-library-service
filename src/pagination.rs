@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     str::{self, FromStr},
-    mem,
     num::NonZeroU8
 };
 
