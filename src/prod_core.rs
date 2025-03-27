@@ -1116,7 +1116,7 @@ mod test {
         upload::UploadError
     };
 
-    const NOW: &str = "2023-11-12T15:50:06.419538067+00:00";
+    const NOW: &str = "2023-11-12T15:50:06.419538067Z";
 
     static NOW_DT: Lazy<DateTime<Utc>> = Lazy::new(||
         DateTime::parse_from_rfc3339(NOW)
@@ -1163,9 +1163,9 @@ mod test {
             name: name.into(),
             description: "".into(),
             revision: 1,
-            created_at: "1970-01-01T00:00:00+00:00".into(),
+            created_at: "1970-01-01T00:00:00Z".into(),
             modified_at: format!(
-                "1970-01-01T00:00:00.0000000{:02}+00:00",
+                "1970-01-01T00:00:00.0000000{:02}Z",
                 name.as_bytes()[0] - b'a' + 1
             ),
             tags: vec![],
@@ -1663,7 +1663,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::After(
-                        "1970-01-01T00:00:00.000000008+00:00".into(),
+                        "1970-01-01T00:00:00.000000008Z".into(),
                         8
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1720,7 +1720,7 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
                 anchor: Anchor::After(
-                    "1970-01-01T00:00:00.000000001+00:00".into(),
+                    "1970-01-01T00:00:00.000000001Z".into(),
                     1
                 )
             },
@@ -1743,7 +1743,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::Before(
-                        "1970-01-01T00:00:00.000000002+00:00".into(),
+                        "1970-01-01T00:00:00.000000002Z".into(),
                         2
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1757,7 +1757,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::After(
-                        "1970-01-01T00:00:00.000000004+00:00".into(),
+                        "1970-01-01T00:00:00.000000004Z".into(),
                         4
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1776,7 +1776,7 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
                 anchor: Anchor::After(
-                    "1970-01-01T00:00:00.000000008+00:00".into(),
+                    "1970-01-01T00:00:00.000000008Z".into(),
                     8
                 )
             },
@@ -1799,7 +1799,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::Before(
-                        "1970-01-01T00:00:00.000000007+00:00".into(),
+                        "1970-01-01T00:00:00.000000007Z".into(),
                         7
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1813,7 +1813,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::After(
-                        "1970-01-01T00:00:00.000000005+00:00".into(),
+                        "1970-01-01T00:00:00.000000005Z".into(),
                         5
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1832,7 +1832,7 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Ascending,
                 anchor: Anchor::Before(
-                    "1970-01-01T00:00:00.000000005+00:00".into(),
+                    "1970-01-01T00:00:00.000000005Z".into(),
                     5
                 )
             },
@@ -1855,7 +1855,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::Before(
-                        "1970-01-01T00:00:00.000000002+00:00".into(),
+                        "1970-01-01T00:00:00.000000002Z".into(),
                         2
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1869,7 +1869,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::After(
-                        "1970-01-01T00:00:00.000000004+00:00".into(),
+                        "1970-01-01T00:00:00.000000004Z".into(),
                         4
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1888,7 +1888,7 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
                 anchor: Anchor::Before(
-                    "1970-01-01T00:00:00.000000006+00:00".into(),
+                    "1970-01-01T00:00:00.000000006Z".into(),
                     5
                 )
             },
@@ -1911,7 +1911,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::Before(
-                        "1970-01-01T00:00:00.000000008+00:00".into(),
+                        "1970-01-01T00:00:00.000000008Z".into(),
                         8
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1925,7 +1925,7 @@ mod test {
             Some(
                 Seek {
                     anchor: Anchor::After(
-                        "1970-01-01T00:00:00.000000006+00:00".into(),
+                        "1970-01-01T00:00:00.000000006Z".into(),
                         6
                     ),
                     sort_by: SortBy::ModificationTime,
@@ -1944,8 +1944,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
+                created_at: "2023-11-12T15:50:06.419538067Z".into(),
+                modified_at: "2023-12-14T15:50:06.419538067Z".into(),
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -1971,7 +1971,7 @@ mod test {
                                         url: "https://example.com/a_package-1.2.4".into(),
                                         size: 5678,
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                                        published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                                        published_at: "2023-12-10T15:56:29.180282477Z".into(),
                                         published_by: "alice".into(),
                                         requires: Some(">= 3.7.12".into()),
                                         authors: vec!["alice".into(), "bob".into()]
@@ -1986,7 +1986,7 @@ mod test {
                                         url: "https://example.com/a_package-1.2.3".into(),
                                         size: 1234,
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                                        published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                                        published_at: "2023-12-09T15:56:29.180282477Z".into(),
                                         published_by: "bob".into(),
                                         requires: Some(">= 3.2.17".into()),
                                         authors: vec!["alice".into()]
@@ -2012,7 +2012,7 @@ mod test {
                                         url: "https://example.com/c_package-0.1.0".into(),
                                         size: 123456,
                                         sha256: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
-                                        published_at: "2023-12-15T15:56:29.180282477+00:00".into(),
+                                        published_at: "2023-12-15T15:56:29.180282477Z".into(),
                                         published_by: "chuck".into(),
                                         requires: None,
                                         authors: vec![]
@@ -2036,8 +2036,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-12-14T15:50:06.419538067+00:00".into(),
+                created_at: "2023-11-12T15:50:06.419538067Z".into(),
+                modified_at: "2023-12-14T15:50:06.419538067Z".into(),
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -2063,7 +2063,7 @@ mod test {
                                         url: "https://example.com/a_package-1.2.4".into(),
                                         size: 5678,
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
-                                        published_at: "2023-12-10T15:56:29.180282477+00:00".into(),
+                                        published_at: "2023-12-10T15:56:29.180282477Z".into(),
                                         published_by: "alice".into(),
                                         requires: Some(">= 3.7.12".into()),
                                         authors: vec!["alice".into(), "bob".into()]
@@ -2078,7 +2078,7 @@ mod test {
                                         url: "https://example.com/a_package-1.2.3".into(),
                                         size: 1234,
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
-                                        published_at: "2023-12-09T15:56:29.180282477+00:00".into(),
+                                        published_at: "2023-12-09T15:56:29.180282477Z".into(),
                                         published_by: "bob".into(),
                                         requires: Some(">= 3.2.17".into()),
                                         authors: vec!["alice".into()]
@@ -2112,8 +2112,8 @@ mod test {
                 name: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 1,
-                created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
-                modified_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+                created_at: "2023-11-12T15:50:06.419538067Z".into(),
+                modified_at: "2023-11-12T15:50:06.419538067Z".into(),
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
@@ -2200,7 +2200,7 @@ mod test {
             name: name.into(),
             description: "new description".into(),
             revision: 4,
-            created_at: "2023-11-12T15:50:06.419538067+00:00".into(),
+            created_at: "2023-11-12T15:50:06.419538067Z".into(),
             modified_at: NOW.into(),
             tags: vec![],
             game: GameData {

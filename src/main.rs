@@ -295,8 +295,8 @@ mod test {
             name: "project_a".into(),
             description: "whatever".into(),
             revision: 1,
-            created_at: "2024-03-29T16:51:08+00:00".into(),
-            modified_at: "2024-03-29T16:51:08+00:00".into(),
+            created_at: "2024-03-29T16:51:08Z".into(),
+            modified_at: "2024-03-29T16:51:08Z".into(),
             tags: vec![],
             game: GameData {
                 title: "a".into(),
@@ -314,8 +314,8 @@ mod test {
             name: "project_b".into(),
             description: "la la la".into(),
             revision: 1,
-            created_at: "2024-03-29T17:00:23+00:00".into(),
-            modified_at: "2024-03-29T17:00:23+00:00".into(),
+            created_at: "2024-03-29T17:00:23Z".into(),
+            modified_at: "2024-03-29T17:00:23Z".into(),
             tags: vec![],
             game: GameData {
                 title: "b".into(),
@@ -335,8 +335,8 @@ mod test {
             name: "eia".into(),
             description: "A module for Empires in Arms".into(),
             revision: 1,
-            created_at: "2023-10-26T00:00:00,000000000+01:00".into(),
-            modified_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+            created_at: "2023-10-26T00:00:00.000000000Z".into(),
+            modified_at: "2023-10-30T18:53:53.056386142Z".into(),
             tags: vec![],
             game: GameData {
                 title: "Empires in Arms".into(),
@@ -362,7 +362,7 @@ mod test {
                                     url: "https://example.com/eia.vmod".into(),
                                     size: 0,
                                     sha256: "deadbeef".into(),
-                                    published_at: "2023-10-30T18:53:53,056386142+00:00".into(),
+                                    published_at: "2023-10-30T18:53:53.056386142Z".into(),
                                     published_by: "alice".into(),
                                     requires: None,
                                     authors: vec![]
