@@ -369,7 +369,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         pkg_ver_id: i64
     ) -> Result<Users, DatabaseError>
     {
-        get_authors(&self.0, pkg_ver_id).await
+        users::get_authors(&self.0, pkg_ver_id).await
     }
 
     async fn add_file_url(
@@ -486,58 +486,5 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         date: i64
     ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery_at(&self.0, proj, date).await
-    }
-}
-
-// TODO: move this... somewhere else
-async fn get_authors<'e, E>(
-    ex: E,
-    pkg_ver_id: i64
-) -> Result<Users, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        Users {
-            users: sqlx::query_scalar!(
-                "
-SELECT users.username
-FROM users
-JOIN authors
-ON users.user_id = authors.user_id
-WHERE authors.release_id = ?
-ORDER BY users.username
-                ",
-                pkg_ver_id
-            )
-            .fetch_all(ex)
-            .await?
-        }
-    )
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
-    async fn get_authors_ok(pool: Pool) {
-        assert_eq!(
-            get_authors(&pool, 2).await.unwrap(),
-            Users {
-                users: vec![
-                    "alice".into(),
-                    "bob".into()
-                ]
-            }
-        );
-    }
-
-    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
-    async fn get_authors_not_a_release(pool: Pool) {
-        assert_eq!(
-            get_authors(&pool, 0).await.unwrap(),
-            Users { users: vec![] }
-        );
     }
 }
