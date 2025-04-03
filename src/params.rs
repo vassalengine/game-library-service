@@ -46,11 +46,11 @@ pub enum Error {
     #[error("invalid combination {0:?}")]
     InvalidCombination(MaybeProjectsParams),
     #[error("invalid base64 {0}")]
-    Base64DecodeError(#[from] base64::DecodeError),
+    Base64Decode(#[from] base64::DecodeError),
     #[error("invalid UTF-8 {0}")]
-    Utf8Error(#[from] std::str::Utf8Error),
+    Utf8(#[from] std::str::Utf8Error),
     #[error("{0}")]
-    SeekError(#[from] SeekError)
+    Seek(#[from] SeekError)
 }
 
 fn decode_seek(enc: &str) -> Result<Seek, Error> {
@@ -186,7 +186,7 @@ mod test {
         assert!(
             matches!(
                 decode_seek("garbage!!!").unwrap_err(),
-                Error::Base64DecodeError(_)
+                Error::Base64Decode(_)
             )
         );
     }
@@ -197,7 +197,7 @@ mod test {
         assert!(
             matches!(
                 decode_seek("____").unwrap_err(),
-                Error::Utf8Error(_)
+                Error::Utf8(_)
             )
         );
     }
@@ -248,7 +248,7 @@ mod test {
         assert!(
             matches!(
                 ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::Base64DecodeError(_)
+                Error::Base64Decode(_)
             )
         );
     }
@@ -264,7 +264,7 @@ mod test {
         assert!(
             matches!(
                 ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::Utf8Error(_)
+                Error::Utf8(_)
             )
         );
     }

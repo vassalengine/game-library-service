@@ -7,7 +7,7 @@ pub enum Error {
     #[error("{0} is out of range")]
     OutOfRangeDateTime(DateTime<Utc>),
     #[error("{0}")]
-    ParseError(#[from] chrono::format::ParseError)
+    Parse(#[from] chrono::format::ParseError)
 }
 
 pub fn nanos_to_rfc3339(ns: i64) -> Result<String, Error> {
