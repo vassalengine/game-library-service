@@ -27,7 +27,10 @@ pub fn rfc3339_to_nanos(s: &str) -> Result<i64, Error> {
         .ok_or(Error::OutOfRangeDateTime(dt))
 }
 
+#[cfg(test)]
 mod test {
+    use super::*;
+
     #[test]
     fn nanos_to_rfc3339_too_small() {
         assert!(nanos_to_rfc3339(-1).is_err());

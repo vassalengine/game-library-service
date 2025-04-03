@@ -33,7 +33,7 @@ pub fn check_magic<P: AsRef<Path>>(
     }
 }
 
-
+#[cfg(test)]
 mod test {
     use super::*;
 
