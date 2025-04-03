@@ -36,7 +36,7 @@ pub enum UploadError {
 }
 
 impl PartialEq for UploadError {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _other: &Self) -> bool {
         // S3Error is not PartialEq, so we must exclude it
         false
     }
