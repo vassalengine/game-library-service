@@ -135,7 +135,8 @@ pub struct MaybeProjectDataPatch {
 
 impl MaybeProjectDataPatch {
     fn empty(&self) -> bool {
-        match self {
+        matches!(
+            self,
             MaybeProjectDataPatch {
                 description: None,
                 tags: None,
@@ -156,9 +157,7 @@ impl MaybeProjectDataPatch {
                 readme: None,
                 image: None
             }
-            => true,
-            _ => false
-        }
+        )
     }
 }
 
