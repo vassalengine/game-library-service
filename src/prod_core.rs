@@ -26,7 +26,7 @@ use crate::{
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::{self, nanos_to_rfc3339, rfc3339_to_nanos},
-    upload::{InvalidFilename, LocalUploader, Uploader, UploadError, safe_filename, stream_to_writer},
+    upload::{Uploader, safe_filename, stream_to_writer},
     version::Version
 };
 
