@@ -24,28 +24,6 @@ impl From<&ReleaseRow> for Version {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct ReducedFileRow {
-    url: String,
-    version_major: i64,
-    version_minor: i64,
-    version_patch: i64,
-    version_pre: String,
-    version_build: String,
-}
-
-impl From<&ReducedFileRow> for Version {
-    fn from(r: &ReducedFileRow) -> Self {
-        Version {
-            major: r.version_major,
-            minor: r.version_minor,
-            patch: r.version_patch,
-            pre: Some(&r.version_pre).filter(|v| !v.is_empty()).cloned(),
-            build: Some(&r.version_build).filter(|v| !v.is_empty()).cloned()
-        }
-    }
-}
-
 fn release_row_desc_cmp<R>(a: &R, b: &R) -> Ordering
 where
     Version: for<'r> From<&'r R>
