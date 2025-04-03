@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use sqlx::{
     Acquire, Executor,
     sqlite::Sqlite
