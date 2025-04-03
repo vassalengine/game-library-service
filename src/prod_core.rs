@@ -434,7 +434,7 @@ where
             .await
             .map_err(io::Error::other)?;
 
-        let mut stream = Box::into_pin(stream);
+        let stream = Box::into_pin(stream);
 
         let (sha256, size) = stream_to_writer(stream, &mut file)
             .await?;

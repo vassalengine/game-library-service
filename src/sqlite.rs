@@ -1,5 +1,5 @@
 use sqlx::{
-    Database, Executor,
+    Database,
     sqlite::Sqlite
 };
 
