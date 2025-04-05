@@ -71,6 +71,7 @@ impl From<&AppError> for StatusCode {
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
             AppError::NotAUser => StatusCode::NOT_FOUND,
             AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
     }
@@ -1675,10 +1676,10 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
+            HttpError::from(AppError::Forbidden)
         );
     }
 
@@ -1905,10 +1906,10 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
+            HttpError::from(AppError::Forbidden)
         );
     }
 
@@ -2040,10 +2041,10 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
+            HttpError::from(AppError::Forbidden)
         );
     }
 
@@ -2380,10 +2381,10 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
+            HttpError::from(AppError::Forbidden)
         );
     }
 
@@ -2630,10 +2631,10 @@ mod test {
         )
         .await;
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
         assert_eq!(
             body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
+            HttpError::from(AppError::Forbidden)
         );
     }
 

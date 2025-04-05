@@ -14,6 +14,8 @@ pub enum AppError {
     CannotRemoveLastOwner,
     #[error("{0}")]
     DatabaseError(String),
+    #[error("Forbidden")]
+    Forbidden,
     #[error("{0}")]
     UploadError(String),
     #[error("{0}")]

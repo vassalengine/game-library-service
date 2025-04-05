@@ -245,7 +245,7 @@ where
         // check that that requester owns the project
         match core.user_is_owner(user, proj).await? {
             true => Ok(Owned(Owner(user.0), proj)),
-            false =>  Err(AppError::Unauthorized)
+            false =>  Err(AppError::Forbidden)
         }
     }
 }
@@ -723,7 +723,7 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]
