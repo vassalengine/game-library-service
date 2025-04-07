@@ -1974,10 +1974,8 @@ mod test {
         .await
     }
 
-    #[tokio::test]
-    async fn get_project_ok_rw() {
-        let response = get_project_ok(true).await;
-
+    #[track_caller]
+    async fn assert_project_data_ok(response: Response) {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<ProjectData>(response).await,
@@ -1986,14 +1984,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_project_ok_rw() {
+        let response = get_project_ok(true).await;
+        assert_project_data_ok(response).await;
+    }
+
+    #[tokio::test]
     async fn get_project_ok_ro() {
         let response = get_project_ok(false).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<ProjectData>(response).await,
-            *EIA_PROJECT_DATA
-        );
+        assert_project_data_ok(response).await;
     }
 
     async fn get_project_not_a_project(rw: bool) -> Response {
@@ -2496,10 +2495,8 @@ mod test {
         .await
     }
 
-    #[tokio::test]
-    async fn get_owners_ok_rw() {
-        let response = get_owners_ok(true).await;
-
+    #[track_caller]
+    async fn assert_owners_ok(response: Response) {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<Users>(response).await,
@@ -2513,19 +2510,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_owners_ok_rw() {
+        let response = get_owners_ok(true).await;
+        assert_owners_ok(response).await;
+    }
+
+    #[tokio::test]
     async fn get_owners_ok_ro() {
         let response = get_owners_ok(false).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<Users>(response).await,
-            Users {
-                users: vec![
-                    "alice".into(),
-                    "bob".into()
-                ]
-            }
-        );
+        assert_owners_ok(response).await;
     }
 
     async fn get_owners_bad_project(rw: bool) -> Response {
