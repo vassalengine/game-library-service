@@ -27,6 +27,11 @@ pub async fn not_found() -> Result<(), AppError>
     Err(AppError::NotFound)
 }
 
+pub async fn forbidden() -> Result<(), AppError>
+{
+    Err(AppError::Forbidden)
+}
+
 pub async fn root_get() -> &'static str {
     "hello world"
 }

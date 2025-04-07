@@ -96,60 +96,116 @@ impl IntoResponse for AppError {
     }
 }
 
-fn routes(api: &str) -> Router<AppState> {
-    let api_router = Router::new()
-        .route(
-            "/projects",
-            get(handlers::projects_get)
-        )
-        .route(
-            "/projects/{proj}",
-            get(handlers::project_get)
-            .post(handlers::project_post)
-            .patch(handlers::project_patch)
-        )
-        .route(
-            "/projects/{proj}/{revision}",
-            get(handlers::project_revision_get)
-        )
-        .route(
-            "/projects/{proj}/owners",
-            get(handlers::owners_get)
-            .put(handlers::owners_add)
-            .delete(handlers::owners_remove)
-        )
-        .route(
-            "/projects/{proj}/players",
-            get(handlers::players_get)
-            .put(handlers::players_add)
-            .delete(handlers::players_remove)
-        )
-        .route(
-            "/projects/{proj}/packages/{pkg_name}",
-            post(handlers::packages_post)
-        )
-        .route(
-            "/projects/{proj}/packages/{pkg_name}/{version}",
-// FIXME: release_version_post?
-            post(handlers::release_post)
-        )
-        .route(
-            "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
-            post(handlers::file_post)
-        )
-        .route(
-            "/projects/{proj}/images/{img_name}",
-            get(handlers::image_get)
-            .post(handlers::image_post)
-        )
-        .route(
-            "/projects/{proj}/images/{img_name}/{revision}",
-            get(handlers::image_revision_get)
-        )
-        .route(
-            "/projects/{proj}/flag",
-            post(handlers::flag_post)
-        );
+fn routes(api: &str, read_only: bool) -> Router<AppState> {
+    let api_router = if read_only {
+        Router::new()
+            .route(
+                "/projects",
+                get(handlers::projects_get)
+            )
+            .route(
+                "/projects/{proj}",
+                get(handlers::project_get)
+                .post(handlers::forbidden)
+                .patch(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/{revision}",
+                get(handlers::project_revision_get)
+            )
+            .route(
+                "/projects/{proj}/owners",
+                get(handlers::owners_get)
+                .put(handlers::forbidden)
+                .delete(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/players",
+                get(handlers::players_get)
+                .put(handlers::forbidden)
+                .delete(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}",
+                post(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}/{version}",
+                post(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+                post(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/images/{img_name}",
+                get(handlers::image_get)
+                .post(handlers::forbidden)
+            )
+            .route(
+                "/projects/{proj}/images/{img_name}/{revision}",
+                get(handlers::image_revision_get)
+            )
+            .route(
+                "/projects/{proj}/flag",
+                post(handlers::forbidden)
+            )
+    }
+    else {
+        Router::new()
+            .route(
+                "/projects",
+                get(handlers::projects_get)
+            )
+            .route(
+                "/projects/{proj}",
+                get(handlers::project_get)
+                .post(handlers::project_post)
+                .patch(handlers::project_patch)
+            )
+            .route(
+                "/projects/{proj}/{revision}",
+                get(handlers::project_revision_get)
+            )
+            .route(
+                "/projects/{proj}/owners",
+                get(handlers::owners_get)
+                .put(handlers::owners_add)
+                .delete(handlers::owners_remove)
+            )
+            .route(
+                "/projects/{proj}/players",
+                get(handlers::players_get)
+                .put(handlers::players_add)
+                .delete(handlers::players_remove)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}",
+                post(handlers::packages_post)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}/{version}",
+    // FIXME: release_version_post?
+                post(handlers::release_post)
+            )
+            .route(
+                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+                post(handlers::file_post)
+            )
+            .route(
+                "/projects/{proj}/images/{img_name}",
+                get(handlers::image_get)
+                .post(handlers::image_post)
+            )
+            .route(
+                "/projects/{proj}/images/{img_name}/{revision}",
+                get(handlers::image_revision_get)
+            )
+            .route(
+                "/projects/{proj}/flag",
+                post(handlers::flag_post)
+            )
+    };
 
     Router::new()
         .route(
@@ -233,7 +289,10 @@ async fn main() -> Result<(), StartupError> {
         core: Arc::new(core) as CoreArc
     };
 
-    let app: Router = routes(&config.api_base_path).with_state(state);
+    let app: Router = routes(
+        &config.api_base_path,
+        config.read_only
+    ).with_state(state);
 
     let ip: IpAddr = config.listen_ip.parse()?;
     let addr = SocketAddr::from((ip, config.listen_port));
@@ -690,8 +749,8 @@ mod test {
         format!("Bearer {token}")
     }
 
-    async fn try_request(request: Request<Body>) -> Response {
-        routes(API_V1)
+    async fn try_request(request: Request<Body>, rw: bool) -> Response {
+        routes(API_V1, !rw)
             .with_state(test_state())
             .oneshot(request)
             .await
@@ -715,6 +774,7 @@ mod test {
         values
     }
 
+    #[track_caller]
     async fn assert_shutdown(sig: Signal) {
         let listener = TcpListener::bind("localhost:0").await.unwrap();
         let app = Router::new();
@@ -732,6 +792,84 @@ mod test {
         sys::signal::kill(pid, sig).unwrap();
 
         server_handle.await.unwrap().unwrap();
+    }
+
+    #[track_caller]
+    async fn assert_ok(response: Response) {
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(body_empty(response).await);
+    }
+
+    #[track_caller]
+    async fn assert_forbidden(response: Response) {
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Forbidden)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_not_found(response: Response) {
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::NotFound)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_malformed_query(response: Response) {
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::MalformedQuery)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_limit_out_of_range(response: Response) {
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::LimitOutOfRange)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_payload_too_large(response: Response) {
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::TooLarge)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_unauthorized(response: Response) {
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::Unauthorized)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_unsupported_media_type(response: Response) {
+        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::BadMimeType)
+        );
+    }
+
+    #[track_caller]
+    async fn assert_unprocessable_entity(response: Response) {
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            body_as::<HttpError>(response).await,
+            HttpError::from(AppError::JsonError)
+        );
     }
 
     #[tokio::test]
@@ -756,7 +894,8 @@ mod test {
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            true
         )
         .await;
 
@@ -777,6 +916,7 @@ mod test {
         );
     }
 
+    #[track_caller]
     async fn try_compression(comp: &str) {
         let response = try_request(
             Request::builder()
@@ -784,12 +924,12 @@ mod test {
                 .uri(&format!("{API_V1}/projects"))
                 .header(ACCEPT_ENCODING, comp)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            true
         )
         .await;
 
         assert_eq!(response.status(), StatusCode::OK);
-
         assert_eq!(
             headers(&response, "content-encoding"),
             [comp.as_bytes()]
@@ -816,49 +956,73 @@ mod test {
         try_compression("zstd").await;
     }
 
-    #[tokio::test]
-    async fn bad_path() {
-        let response = try_request(
+    async fn get_bad_path(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/bogus/whatever"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn root_ok() {
-        let response = try_request(
+    async fn get_bad_path_rw() {
+        let response = get_bad_path(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_bad_path_ro() {
+        let response = get_bad_path(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn get_root_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_root_ok_rw() {
+        let response = get_root_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(&body_bytes(response).await[..], b"hello world");
     }
 
     #[tokio::test]
-    async fn get_projects_no_params_ok() {
-        let response = try_request(
+    async fn get_root_ok_ro() {
+        let response = get_root_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(&body_bytes(response).await[..], b"hello world");
+    }
+
+    async fn get_projects_no_params_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_no_params_ok_rw() {
+        let response = get_projects_no_params_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -897,15 +1061,60 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_limit_ok() {
-        let response = try_request(
+    async fn get_projects_no_params_ok_ro() {
+        let response = get_projects_no_params_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_limit_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?limit=5"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_ok_rw() {
+        let response = get_projects_limit_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -943,79 +1152,141 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_limit_zero() {
-        let response = try_request(
+    async fn get_projects_limit_ok_ro() {
+        let response = get_projects_limit_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_limit_zero(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?limit=0"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::LimitOutOfRange)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_limit_too_large() {
-        let response = try_request(
+    async fn get_projects_limit_zero_rw() {
+        let response = get_projects_limit_zero(true).await;
+        assert_limit_out_of_range(response);
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_zero_ro() {
+        let response = get_projects_limit_zero(false).await;
+        assert_limit_out_of_range(response);
+    }
+
+    async fn get_projects_limit_too_large(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?limit=100000"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::LimitOutOfRange)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_limit_empty() {
-        let response = try_request(
+    async fn get_projects_limit_too_large_rw() {
+        let response = get_projects_limit_too_large(true).await;
+        assert_limit_out_of_range(response);
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_too_large_ro() {
+        let response = get_projects_limit_too_large(false).await;
+        assert_limit_out_of_range(response);
+    }
+
+    async fn get_projects_limit_empty(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?limit="))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::LimitOutOfRange)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_limit_not_a_number() {
-        let response = try_request(
+    async fn get_projects_limit_empty_rw() {
+        let response = get_projects_limit_empty(true).await;
+        assert_limit_out_of_range(response);
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_empty_ro() {
+        let response = get_projects_limit_empty(false).await;
+        assert_limit_out_of_range(response);
+    }
+
+    async fn get_projects_limit_not_a_number(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?limit=eleventeen"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::LimitOutOfRange)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_seek_start_ok() {
+    async fn get_projects_limit_not_a_number_rw() {
+        let response = get_projects_limit_not_a_number(true).await;
+        assert_limit_out_of_range(response);
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_not_a_number_ro() {
+        let response = get_projects_limit_not_a_number(false).await;
+        assert_limit_out_of_range(response);
+    }
+
+    async fn get_projects_seek_start_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::Start,
@@ -1025,14 +1296,20 @@ mod test {
             None
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_start_ok_rw() {
+        let response = get_projects_seek_start_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1070,7 +1347,45 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_seek_end_ok() {
+    async fn get_projects_seek_start_ok_ro() {
+        let response = get_projects_seek_start_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_seek_end_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::Start,
@@ -1080,14 +1395,20 @@ mod test {
             None
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_end_ok_rw() {
+        let response = get_projects_seek_end_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1125,7 +1446,45 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_seek_before_ok() {
+    async fn get_projects_seek_end_ok_ro() {
+        let response = get_projects_seek_end_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_seek_before_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::Before("xyz".into(), 0),
@@ -1135,14 +1494,20 @@ mod test {
             None
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_before_ok_rw() {
+        let response = get_projects_seek_before_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1180,7 +1545,45 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_seek_after_ok() {
+    async fn get_projects_seek_before_ok_ro() {
+        let response = get_projects_seek_before_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_seek_after_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::After("xyz".into(), 0),
@@ -1190,14 +1593,20 @@ mod test {
             None
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_after_ok_rw() {
+        let response = get_projects_seek_after_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1235,43 +1644,93 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_seek_empty() {
-        let response = try_request(
+    async fn get_projects_seek_after_ok_ro() {
+        let response = get_projects_seek_after_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            None
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_projects_seek_empty(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?seek="))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::MalformedQuery)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_seek_bad() {
-        let response = try_request(
+    async fn get_projects_seek_empty_rw() {
+        let response = get_projects_seek_empty(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_empty_ro() {
+        let response = get_projects_seek_empty(false).await;
+        assert_malformed_query(response).await;
+    }
+
+    async fn get_projects_seek_bad(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?seek=%@$"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::MalformedQuery)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_seek_too_long() {
+    async fn get_projects_seek_bad_rw() {
+        let response = get_projects_seek_bad(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_bad_ro() {
+        let response = get_projects_seek_bad(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    async fn get_projects_seek_too_long(rw: bool) -> Response {
         let long = "x".repeat(1000);
 
         let query = SeekLink::new(
@@ -1283,24 +1742,30 @@ mod test {
             Limit::new(5)
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects?seek={query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::MalformedQuery)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_projects_seek_and_limit_ok() {
+    async fn get_projects_seek_too_long_rw() {
+        let response = get_projects_seek_too_long(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_too_long_ro() {
+        let response = get_projects_seek_too_long(false).await;
+        assert_malformed_query(response).await;
+    }
+
+    async fn get_projects_seek_and_limit_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::Start,
@@ -1310,14 +1775,20 @@ mod test {
             Limit::new(5)
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_seek_and_limit_ok_rw() {
+        let response = get_projects_seek_and_limit_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1355,7 +1826,44 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_projects_limit_and_seek_ok() {
+    async fn get_projects_seek_and_limit_ok_ro() {
+        let response = get_projects_seek_and_limit_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+    async fn get_projects_limit_and_seek_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
                 anchor: Anchor::Start,
@@ -1365,14 +1873,20 @@ mod test {
             Limit::new(5)
         ).unwrap();
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_projects_limit_and_seek_ok_rw() {
+        let response = get_projects_limit_and_seek_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1410,15 +1924,59 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_project_ok() {
-        let response = try_request(
+    async fn get_projects_limit_and_seek_ok_ro() {
+        let response = get_projects_limit_and_seek_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Projects>(response).await,
+            Projects {
+                projects: vec![
+                    PROJECT_SUMMARY_A.clone(),
+                    PROJECT_SUMMARY_B.clone()
+                ],
+                meta: Pagination {
+                    prev_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::Before("project_a".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    next_page: Some(
+                        SeekLink::new(
+                            &Seek {
+                                anchor: Anchor::After("project_b".into(), 0),
+                                sort_by: SortBy::ProjectName,
+                                dir: Direction::Ascending
+                            },
+                            Limit::new(5)
+                        ).unwrap()
+                    ),
+                    total: 1234
+                }
+            }
+        );
+    }
+
+    async fn get_project_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_project_ok_rw() {
+        let response = get_project_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1428,25 +1986,41 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_project_not_a_project() {
-        let response = try_request(
+    async fn get_project_ok_ro() {
+        let response = get_project_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<ProjectData>(response).await,
+            *EIA_PROJECT_DATA
+        );
+    }
+
+    async fn get_project_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_project_ok() {
+    async fn get_project_not_a_project_rw() {
+        let response = get_project_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_project_not_a_project_ro() {
+        let response = get_project_not_a_project(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn post_project_ok(rw: bool) -> Response {
         let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
@@ -1462,23 +2036,32 @@ mod test {
             image: None
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn post_project_unauth() {
+    async fn post_project_ok_rw() {
+        let response = post_project_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_project_ok_ro() {
+        let response = post_project_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_project_unauth(rw: bool) -> Response {
         let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
@@ -1494,265 +2077,348 @@ mod test {
             image: None
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_project_wrong_json() {
-        let response = try_request(
+    async fn post_project_unauth_rw() {
+        let response = post_project_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_project_unauth_ro() {
+        let response = post_project_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_project_wrong_json(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::JsonError)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_project_wrong_mime_type() {
-        let response = try_request(
+    async fn post_project_wrong_json_rw() {
+        let response = post_project_wrong_json(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_project_wrong_json_ro() {
+        let response = post_project_wrong_json(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_project_wrong_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_project_no_mime_type() {
-        let response = try_request(
+    async fn post_project_wrong_mime_type_rw() {
+        let response = post_project_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_project_wrong_mime_type_ro() {
+        let response = post_project_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_project_no_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_ok() {
+    async fn post_project_no_mime_type_rw() {
+        let response = post_project_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_project_no_mime_type_ro() {
+        let response = post_project_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_ok(rw: bool) -> Response {
         let proj_data = ProjectDataPatch {
             description: Some("A module for Empires in Arms".into()),
             ..Default::default()
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_clear_image_ok() {
+    async fn patch_project_ok_rw() {
+        let response = patch_project_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_ok_ro() {
+        let response = patch_project_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_clear_image_ok(rw: bool) -> Response {
         let proj_data = ProjectDataPatch {
             image: Some(None),
             ..Default::default()
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_no_data() {
-        let response = try_request(
+    async fn patch_project_clear_image_ok_rw() {
+        let response = patch_project_clear_image_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_clear_image_ok_ro() {
+        let response = patch_project_clear_image_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_no_data(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from("{}"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(),  StatusCode::UNPROCESSABLE_ENTITY);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::JsonError)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_unauth() {
+    async fn patch_project_no_data_rw() {
+        let response = patch_project_no_data(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_no_data_ro() {
+        let response = patch_project_no_data(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_unauth(rw: bool) -> Response {
         let proj_data = ProjectDataPatch {
             description: Some("A module for Empires in Arms".into()),
             ..Default::default()
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_not_owner() {
+    async fn patch_project_unauth_rw() {
+        let response = patch_project_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_unauth_ro() {
+        let response = patch_project_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_not_owner(rw: bool) -> Response {
         let proj_data = ProjectDataPatch {
             description: Some("A module for Empires in Arms".into()),
             ..Default::default()
         };
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Forbidden)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_wrong_json() {
-        let response = try_request(
+    async fn patch_project_not_owner_rw() {
+        let response = patch_project_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_not_owner_ro() {
+        let response = patch_project_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_wrong_json(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::JsonError)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_wrong_mime_type() {
-        let response = try_request(
+    async fn patch_project_wrong_json_rw() {
+        let response = patch_project_wrong_json(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_wrong_json_ro() {
+        let response = patch_project_wrong_json(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_wrong_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn patch_project_no_mime_type() {
-        let response = try_request(
+    async fn patch_project_wrong_mime_type_rw() {
+        let response = patch_project_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_wrong_mime_type_ro() {
+        let response = patch_project_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_project_no_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_project_revision_ok() {
-        let response = try_request(
+    async fn patch_project_no_mime_type_rw() {
+        let response = patch_project_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_project_no_mime_type_ro() {
+        let response = patch_project_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn get_project_revision_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/1"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
 
+    #[tokio::test]
+    async fn get_project_revision_ok_rw() {
+        let response = get_project_revision_ok(true).await;
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<ProjectData>(response).await,
@@ -1761,51 +2427,78 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_project_revision_not_a_project() {
-        let response = try_request(
+    async fn get_project_revision_ok_ro() {
+        let response = get_project_revision_ok(false).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<ProjectData>(response).await,
+            *EIA_PROJECT_DATA
+        );
+    }
+
+    async fn get_project_revision_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/1"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_project_revision_not_a_revision() {
-        let response = try_request(
+    async fn get_project_revision_not_a_project_rw() {
+        let response = get_project_revision_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_project_revision_not_a_project_ro() {
+        let response = get_project_revision_not_a_project(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn get_project_revision_not_a_revision(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/2"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_owners_ok() {
-        let response = try_request(
+    async fn get_project_revision_not_a_revision_rw() {
+        let response = get_project_revision_not_a_revision(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_project_revision_not_a_revision_ro() {
+        let response = get_project_revision_not_a_revision(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn get_owners_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_owners_ok_rw() {
+        let response = get_owners_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -1820,303 +2513,420 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_owners_bad_project() {
-        let response = try_request(
+    async fn get_owners_ok_ro() {
+        let response = get_owners_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Users>(response).await,
+            Users {
+                users: vec![
+                    "alice".into(),
+                    "bob".into()
+                ]
+            }
+        );
+    }
+
+    async fn get_owners_bad_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_ok() {
-        let response = try_request(
+    async fn get_owners_bad_project_rw() {
+        let response = get_owners_bad_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_owners_bad_project_ro() {
+        let response = get_owners_bad_project(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn put_owners_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_bad_project() {
-        let response = try_request(
+    async fn put_owners_ok_rw() {
+        let response = put_owners_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_ok_ro() {
+        let response = put_owners_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_bad_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_unauth() {
-        let response = try_request(
+    async fn put_owners_bad_project_rw() {
+        let response =  put_owners_bad_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_bad_project_ro() {
+        let response =  put_owners_bad_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_not_owner() {
-        let response = try_request(
+    async fn put_owners_unauth_rw() {
+        let response =  put_owners_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_unauth_ro() {
+        let response =  put_owners_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_not_owner(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Forbidden)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_wrong_json() {
-        let response = try_request(
+    async fn put_owners_not_owner_rw() {
+        let response =  put_owners_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_not_owner_ro() {
+        let response =  put_owners_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_wrong_json(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::JsonError)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_wrong_mime_type() {
-        let response = try_request(
+    async fn put_owners_wrong_json_rw() {
+        let response =  put_owners_wrong_json(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_wrong_json_ro() {
+        let response =  put_owners_wrong_json(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_wrong_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_owners_no_mime_type() {
-        let response = try_request(
+    async fn put_owners_wrong_mime_type_rw() {
+        let response =  put_owners_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_wrong_mime_type_ro() {
+        let response =  put_owners_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_owners_no_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_ok() {
-        let response = try_request(
+    async fn put_owners_no_mime_type_rw() {
+        let response =  put_owners_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_owners_no_mime_type_ro() {
+        let response =  put_owners_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_bad_project() {
-        let response = try_request(
+    async fn delete_owners_ok_rw() {
+        let response = delete_owners_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_ok_ro() {
+        let response = delete_owners_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_bad_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_unauth() {
-        let response = try_request(
+    async fn delete_owners_bad_project_rw() {
+        let response = delete_owners_bad_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_bad_project_ro() {
+        let response = delete_owners_bad_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_not_owner() {
-        let response = try_request(
+    async fn delete_owners_unauth_rw() {
+        let response = delete_owners_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_unauth_ro() {
+        let response = delete_owners_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_not_owner(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Forbidden)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_wrong_json() {
-        let response = try_request(
+    async fn delete_owners_not_owner_rw() {
+        let response = delete_owners_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_not_owner_ro() {
+        let response = delete_owners_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_wrong_json(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::JsonError)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_wrong_mime_type() {
-        let response = try_request(
+    async fn delete_owners_wrong_json_rw() {
+        let response = delete_owners_wrong_json(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_wrong_json_ro() {
+        let response = delete_owners_wrong_json(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_wrong_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_owners_no_mime_type() {
-        let response = try_request(
+    async fn delete_owners_wrong_mime_type_rw() {
+        let response = delete_owners_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_wrong_mime_type_ro() {
+        let response = delete_owners_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_owners_no_mime_type(rw: bool) -> Response {
+         try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_players_ok() {
-        let response = try_request(
+    async fn delete_owners_no_mime_type_rw() {
+        let response = delete_owners_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_owners_no_mime_type_ro() {
+        let response = delete_owners_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn get_players_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_players_ok_rw() {
+        let response = get_players_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
@@ -2131,139 +2941,208 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_players_not_a_project() {
-        let response = try_request(
+    async fn get_players_ok_ro() {
+        let response = get_players_ok(false).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Users>(response).await,
+            Users {
+                users: vec![
+                    "player 1".into(),
+                    "player 2".into()
+                ]
+            }
+        );
+    }
+
+    async fn get_players_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/players"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_players_ok() {
-        let response = try_request(
+    async fn get_players_not_a_project_rw() {
+        let response = get_players_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_players_not_a_project_ro() {
+        let response = get_players_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    async fn put_players_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn put_players_not_a_project() {
-        let response = try_request(
+    async fn put_players_ok_rw() {
+        let response = put_players_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_players_ok_ro() {
+        let response = put_players_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_players_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn put_players_unauth() {
-        let response = try_request(
+    async fn put_players_not_a_project_rw() {
+        let response = put_players_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_players_not_a_project_ro() {
+        let response = put_players_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn put_players_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::PUT)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_players_ok() {
-        let response = try_request(
+    async fn put_players_unauth_rw() {
+        let response = put_players_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn put_players_unauth_ro() {
+        let response = put_players_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_players_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
                 .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn delete_players_not_a_project() {
-        let response = try_request(
+    async fn delete_players_ok_rw() {
+        let response = delete_players_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_players_ok_ro() {
+        let response = delete_players_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_players_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/not_a_project/players"))
                 .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn delete_players_unauth() {
-        let response = try_request(
+    async fn delete_players_not_a_project_rw() {
+        let response = delete_players_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_players_not_a_project_ro() {
+        let response = delete_players_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_players_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::DELETE)
                 .uri(&format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn get_image_ok() {
-        let response = try_request(
+    async fn delete_players_unauth_rw() {
+        let response = delete_players_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_players_unauth_ro() {
+        let response = delete_players_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn get_image_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_image_ok_rw() {
+        let response = get_image_ok(true).await;
 
         assert_eq!(response.status(), StatusCode::SEE_OTHER);
         assert_eq!(
@@ -2273,44 +3152,93 @@ mod test {
     }
 
     #[tokio::test]
-    async fn get_image_not_a_project() {
-        let response = try_request(
+    async fn get_image_ok_ro() {
+        let response = get_image_ok(true).await;
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers().get(LOCATION).unwrap(),
+            "https://example.com/img.png"
+        );
+    }
+
+    async fn get_image_not_a_project(rw: bool) -> Response {
+         try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
-   #[tokio::test]
-    async fn get_image_not_an_image() {
-        let response = try_request(
+    #[tokio::test]
+    async fn get_image_not_a_project_rw() {
+        let response = get_image_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_image_not_a_project_ro() {
+        let response = get_image_not_a_project(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn get_image_not_an_image(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/projects/a_project/images/not_a.png"))
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_not_a_project() {
-        let response = try_request(
+    async fn get_image_not_an_image_rw() {
+        let response = get_image_not_an_image(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_image_not_an_image_ro() {
+        let response = get_image_not_an_image(false).await;
+        assert_not_found(response).await;
+    }
+
+    async fn post_image_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_image_ok_rw() {
+        let response = post_image_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_ok_ro() {
+        let response = post_image_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
@@ -2318,58 +3246,52 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
-    }
-
-   #[tokio::test]
-    async fn post_image_ok() {
-        let response = try_request(
-            Request::builder()
-                .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
-                .header(AUTHORIZATION, token(BOB_UID))
-                .header(CONTENT_LENGTH, 1)
-                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
-                .body(Body::empty())
-                .unwrap()
-        )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_unauth() {
-        let response = try_request(
+    async fn post_image_not_a_project_rw() {
+        let response = post_image_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_not_a_project_ro() {
+        let response = post_image_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_not_owner() {
-        let response = try_request(
+    async fn post_image_unauth_rw() {
+        let response = post_image_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_unauth_ro() {
+        let response = post_image_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_not_owner(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
@@ -2377,40 +3299,52 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Forbidden)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_no_mime_type() {
-        let response = try_request(
+    async fn post_image_not_owner_rw() {
+        let response = post_image_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_not_owner_ro() {
+        let response = post_image_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_no_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_bad_mime_type() {
-        let response = try_request(
+    async fn post_image_no_mime_type_rw() {
+        let response = post_image_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_no_mime_type_ro() {
+        let response = post_image_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_bad_mime_type(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
@@ -2418,22 +3352,28 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::BadMimeType)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_too_large() {
+    async fn post_image_bad_mime_type_rw() {
+        let response = post_image_bad_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_bad_mime_type_ro() {
+        let response = post_image_bad_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_too_large(rw: bool) -> Response {
         let long = "x".repeat(MAX_IMAGE_SIZE + 1);
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
@@ -2441,42 +3381,54 @@ mod test {
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, long.len())
                 .body(Body::from(long))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_too_large_no_content_length() {
+    async fn post_image_too_large_rw() {
+        let response = post_image_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_too_large_ro() {
+        let response = post_image_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_too_large_no_content_length(rw: bool) -> Response {
         let long = "x".repeat(MAX_IMAGE_SIZE + 1);
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::from(long))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_content_length_too_large() {
-        let response = try_request(
+    async fn post_image_too_large_no_content_length_rw() {
+        let response = post_image_too_large_no_content_length(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_too_large_no_content_length_ro() {
+        let response = post_image_too_large_no_content_length(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_content_length_too_large(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
@@ -2484,20 +3436,26 @@ mod test {
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, MAX_IMAGE_SIZE + 1)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_image_content_length_way_too_large() {
-        let response = try_request(
+    async fn post_image_content_length_too_large_rw() {
+        let response = post_image_content_length_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_content_length_too_large_ro() {
+        let response = post_image_content_length_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_image_content_length_way_too_large(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
@@ -2505,20 +3463,26 @@ mod test {
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, u64::MAX)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_ok() {
-        let response = try_request(
+    async fn post_image_content_length_way_too_large_rw() {
+        let response = post_image_content_length_way_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_image_content_length_way_too_large_ro() {
+        let response = post_image_content_length_way_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_ok(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2526,17 +3490,26 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert!(body_empty(response).await);
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_not_a_project() {
-        let response = try_request(
+    async fn post_file_ok_rw() {
+        let response = post_file_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_ok_ro() {
+        let response = post_file_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_not_a_project(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2544,20 +3517,26 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_not_a_package() {
-        let response = try_request(
+    async fn post_file_not_a_project_rw() {
+        let response = post_file_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_not_a_project_ro() {
+        let response = post_file_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_not_a_package(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/war_and_peace.txt"))
@@ -2565,20 +3544,26 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_not_a_release() {
-        let response = try_request(
+    async fn post_file_not_a_package_rw() {
+        let response = post_file_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_not_a_package_ro() {
+        let response = post_file_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_not_a_release(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus/war_and_peace.txt"))
@@ -2586,40 +3571,52 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::NotFound)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_unauth() {
-        let response = try_request(
+    async fn post_file_not_a_release_rw() {
+        let response = post_file_not_a_release(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_not_a_release_ro() {
+        let response = post_file_not_a_release(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_unauth(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Unauthorized)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_not_owner() {
-        let response = try_request(
+    async fn post_file_unauth_rw() {
+        let response = post_file_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_unauth_ro() {
+        let response = post_file_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_not_owner(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2627,22 +3624,28 @@ mod test {
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::Forbidden)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_too_large() {
+    async fn post_file_not_owner_rw() {
+        let response = post_file_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_not_owner_ro() {
+        let response = post_file_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_too_large(rw: bool) -> Response {
         let long = "x".repeat(MAX_FILE_SIZE + 1);
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2650,42 +3653,54 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, long.len())
                 .body(Body::from(long))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_too_large_no_content_length() {
+    async fn post_file_too_large_rw() {
+        let response = post_file_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_too_large_ro() {
+        let response = post_file_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_too_large_no_content_length(rw: bool) -> Response {
         let long = "x".repeat(MAX_FILE_SIZE + 1);
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from(long))
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_content_length_too_large() {
-        let response = try_request(
+    async fn post_file_too_large_no_content_length_rw() {
+        let response = post_file_too_large_no_content_length(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_too_large_no_content_length_ro() {
+        let response = post_file_too_large_no_content_length(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_content_length_too_large(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2693,20 +3708,26 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, MAX_FILE_SIZE + 1)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_content_length_way_too_large() {
-        let response = try_request(
+    async fn post_file_content_length_too_large_rw() {
+        let response = post_file_content_length_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_content_length_too_large_ro() {
+        let response = post_file_content_length_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_content_length_way_too_large(rw: bool) -> Response {
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2714,22 +3735,28 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, u64::MAX)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
+            rw
         )
-        .await;
-
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+        .await
     }
 
     #[tokio::test]
-    async fn post_file_payload_exceeds_content_length() {
+    async fn post_file_content_length_way_too_large_rw() {
+        let response = post_file_content_length_way_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_content_length_way_too_large_ro() {
+        let response = post_file_content_length_way_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_file_payload_exceeds_content_length(rw: bool) -> Response {
         let long = "x".repeat(MAX_FILE_SIZE);
 
-        let response = try_request(
+        try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
@@ -2737,14 +3764,20 @@ mod test {
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, long.len() - 1)
                 .body(Body::from(long))
-                .unwrap()
-        )
-        .await;
+                .unwrap(),
+            rw
+        ).await
+    }
 
-        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(
-            body_as::<HttpError>(response).await,
-            HttpError::from(AppError::TooLarge)
-        );
+    #[tokio::test]
+    async fn post_file_payload_exceeds_content_length_rw() {
+        let response = post_file_payload_exceeds_content_length(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_file_payload_exceeds_content_length_ro() {
+        let response = post_file_payload_exceeds_content_length(false).await;
+        assert_forbidden(response).await;
     }
 }
