@@ -2924,10 +2924,8 @@ mod test {
         .await
     }
 
-    #[tokio::test]
-    async fn get_players_ok_rw() {
-        let response = get_players_ok(true).await;
-
+    #[track_caller]
+    async fn assert_players_ok(response: Response) {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<Users>(response).await,
@@ -2941,19 +2939,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_players_ok_rw() {
+        let response = get_players_ok(true).await;
+        assert_players_ok(response) .await;
+    }
+
+    #[tokio::test]
     async fn get_players_ok_ro() {
         let response = get_players_ok(false).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<Users>(response).await,
-            Users {
-                users: vec![
-                    "player 1".into(),
-                    "player 2".into()
-                ]
-            }
-        );
+        assert_players_ok(response) .await;
     }
 
     async fn get_players_not_a_project(rw: bool) -> Response {
