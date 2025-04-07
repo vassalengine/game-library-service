@@ -1786,10 +1786,8 @@ mod test {
         .await
     }
 
-    #[tokio::test]
-    async fn get_projects_seek_and_limit_ok_rw() {
-        let response = get_projects_seek_and_limit_ok(true).await;
-
+    #[track_caller]
+    async fn assert_projects_seek_and_limit_ok(response: Response) {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<Projects>(response).await,
@@ -1824,45 +1822,19 @@ mod test {
             }
         );
     }
+
+    #[tokio::test]
+    async fn get_projects_seek_and_limit_ok_rw() {
+        let response = get_projects_seek_and_limit_ok(true).await;
+        assert_projects_seek_and_limit_ok(response).await;
+     }
 
     #[tokio::test]
     async fn get_projects_seek_and_limit_ok_ro() {
         let response = get_projects_seek_and_limit_ok(false).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<Projects>(response).await,
-            Projects {
-                projects: vec![
-                    PROJECT_SUMMARY_A.clone(),
-                    PROJECT_SUMMARY_B.clone()
-                ],
-                meta: Pagination {
-                    prev_page: Some(
-                        SeekLink::new(
-                            &Seek {
-                                anchor: Anchor::Before("project_a".into(), 0),
-                                sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
-                            },
-                            Limit::new(5)
-                        ).unwrap()
-                    ),
-                    next_page: Some(
-                        SeekLink::new(
-                            &Seek {
-                                anchor: Anchor::After("project_b".into(), 0),
-                                sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
-                            },
-                            Limit::new(5)
-                        ).unwrap()
-                    ),
-                    total: 1234
-                }
-            }
-        );
+        assert_projects_seek_and_limit_ok(response).await;
     }
+
     async fn get_projects_limit_and_seek_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
@@ -1884,10 +1856,8 @@ mod test {
         .await
     }
 
-    #[tokio::test]
-    async fn get_projects_limit_and_seek_ok_rw() {
-        let response = get_projects_limit_and_seek_ok(true).await;
-
+    #[track_caller]
+    async fn assert_projects_limit_and_seek(response: Response) {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             body_as::<Projects>(response).await,
@@ -1924,42 +1894,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_projects_limit_and_seek_ok_rw() {
+        let response = get_projects_limit_and_seek_ok(true).await;
+        assert_projects_limit_and_seek(response).await;
+    }
+
+    #[tokio::test]
     async fn get_projects_limit_and_seek_ok_ro() {
         let response = get_projects_limit_and_seek_ok(false).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_as::<Projects>(response).await,
-            Projects {
-                projects: vec![
-                    PROJECT_SUMMARY_A.clone(),
-                    PROJECT_SUMMARY_B.clone()
-                ],
-                meta: Pagination {
-                    prev_page: Some(
-                        SeekLink::new(
-                            &Seek {
-                                anchor: Anchor::Before("project_a".into(), 0),
-                                sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
-                            },
-                            Limit::new(5)
-                        ).unwrap()
-                    ),
-                    next_page: Some(
-                        SeekLink::new(
-                            &Seek {
-                                anchor: Anchor::After("project_b".into(), 0),
-                                sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
-                            },
-                            Limit::new(5)
-                        ).unwrap()
-                    ),
-                    total: 1234
-                }
-            }
-        );
+        assert_projects_limit_and_seek(response).await;
     }
 
     async fn get_project_ok(rw: bool) -> Response {
