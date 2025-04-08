@@ -31,7 +31,7 @@ pub struct Range {
     pub max: Option<i64>
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
     pub title_sort_key: String,
@@ -198,13 +198,66 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
     }
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MaybeProjectDataPost {
+    pub description: String,
+    pub tags: Vec<String>,
+    pub game: GameData,
+    pub readme: String,
+    pub image: Option<String>
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybeProjectDataPost")]
 pub struct ProjectDataPost {
     pub description: String,
     pub tags: Vec<String>,
     pub game: GameData,
     pub readme: String,
     pub image: Option<String>
+}
+
+impl ProjectDataPost {
+    const DESCRIPTION_MAX_LENGTH: usize = 1024;
+    const GAME_TITLE_MAX_LENGTH: usize = 256;
+    const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
+    const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
+    const GAME_YEAR_MAX_LENGTH: usize = 32;
+    const README_MAX_LENGTH: usize = 65536;
+    const IMAGE_MAX_LENGTH: usize = 256;
+// TODO: limit tags vec length, length of tags
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct ProjectDataPostError(MaybeProjectDataPost);
+
+impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
+    type Error = ProjectDataPostError;
+
+    fn try_from(m: MaybeProjectDataPost) -> Result<Self, Self::Error> {
+        if m.description.len() > ProjectDataPost::DESCRIPTION_MAX_LENGTH ||
+            m.game.title.len() > ProjectDataPost::GAME_TITLE_MAX_LENGTH ||
+            m.game.title_sort_key.len() > ProjectDataPost::GAME_TITLE_SORT_KEY_MAX_LENGTH ||
+            m.game.publisher.len() > ProjectDataPost::GAME_PUBLISHER_MAX_LENGTH ||
+            m.game.year.len() > ProjectDataPost::GAME_YEAR_MAX_LENGTH ||
+            m.readme.len() > ProjectDataPost::README_MAX_LENGTH ||
+            m.image.as_ref().is_some_and(|i| i.len() > ProjectDataPost::IMAGE_MAX_LENGTH)
+        {
+            Err(ProjectDataPostError(m))
+        }
+        else {
+            Ok(
+                ProjectDataPost{
+                    description: m.description,
+                    tags: m.tags,
+                    game: m.game,
+                    readme: m.readme,
+                    image: m.image
+                }
+            )
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -227,6 +280,145 @@ pub struct Projects {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn try_from_project_data_post_ok() {
+        assert_eq!(
+            ProjectDataPost::try_from(
+                MaybeProjectDataPost {
+                    description: "description".into(),
+                    tags: vec![],
+                    game: GameData {
+                        title: "the title".into(),
+                        title_sort_key: "title, the".into(),
+                        publisher: "publisher".into(),
+                        year: "1979".into(),
+                        players: None,
+                        length: None
+                    },
+                    readme: "readme".into(),
+                    image: None
+                }
+            ).unwrap(),
+            ProjectDataPost {
+                description: "description".into(),
+                tags: vec![],
+                game: GameData {
+                    title: "the title".into(),
+                    title_sort_key: "title, the".into(),
+                    publisher: "publisher".into(),
+                    year: "1979".into(),
+                    players: None,
+                    length: None
+                },
+                readme: "readme".into(),
+                image: None
+            }
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_description() {
+        let mpdp = MaybeProjectDataPost {
+            description: "x".repeat(ProjectDataPost::DESCRIPTION_MAX_LENGTH + 1),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_title() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameData {
+                title: "x".repeat(ProjectDataPost::GAME_TITLE_MAX_LENGTH + 1),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_title_sort_key() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameData {
+                title_sort_key: "x".repeat(ProjectDataPost::GAME_TITLE_SORT_KEY_MAX_LENGTH + 1),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_publisher() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameData {
+                publisher: "x".repeat(ProjectDataPost::GAME_PUBLISHER_MAX_LENGTH + 1),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_year() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameData {
+                year: "x".repeat(ProjectDataPost::GAME_YEAR_MAX_LENGTH + 1),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_readme() {
+        let mpdp = MaybeProjectDataPost {
+            readme: "x".repeat(ProjectDataPost::README_MAX_LENGTH + 1),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_overlong_image() {
+        let mpdp = MaybeProjectDataPost {
+            image: Some("x".repeat(ProjectDataPost::IMAGE_MAX_LENGTH + 1)),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
 
     #[test]
     fn maybe_project_data_patch_from_json_game_title() {
@@ -304,6 +496,7 @@ mod test {
             }.empty()
         );
     }
+
     #[test]
     fn try_from_project_data_patch_description() {
         assert_eq!(
