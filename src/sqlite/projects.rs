@@ -319,15 +319,18 @@ mod test {
 
     type Pool = sqlx::Pool<Sqlite>;
 
-    async fn fts5_quote_abc() {
+    #[test]
+    fn fts5_quote_abc() {
         assert_eq!("\"abc\"", fts5_quote("abc"));
     }
 
-    async fn fts5_quote_abc_def() {
+    #[test]
+    fn fts5_quote_abc_def() {
         assert_eq!("\"abc def\"", fts5_quote("abc def"));
     }
 
-    async fn fts5_quote_abcq_def() {
+    #[test]
+    fn fts5_quote_abcq_def() {
         assert_eq!("\"abc\"\" def\"", fts5_quote("abc\" def"));
     }
 
