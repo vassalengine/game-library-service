@@ -31,15 +31,6 @@ pub struct Range {
     pub max: Option<i64>
 }
 
-// maximum field lengths
-const DESCRIPTION_MAX_LENGTH: usize = 1024;
-const GAME_TITLE_MAX_LENGTH: usize = 256;
-const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
-const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
-const GAME_YEAR_MAX_LENGTH: usize = 32;
-const README_MAX_LENGTH: usize = 65536;
-const IMAGE_MAX_LENGTH: usize = 256;
-
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
@@ -113,6 +104,15 @@ where
     // Ensure that explicit null in the JSON is mapped to Some(None)
     Deserialize::deserialize(de).map(Some)
 }
+
+// maximum field lengths
+const DESCRIPTION_MAX_LENGTH: usize = 1024;
+const GAME_TITLE_MAX_LENGTH: usize = 256;
+const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
+const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
+const GAME_YEAR_MAX_LENGTH: usize = 32;
+const README_MAX_LENGTH: usize = 65536;
+const IMAGE_MAX_LENGTH: usize = 256;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RangePatch {
