@@ -217,16 +217,14 @@ pub struct ProjectDataPost {
     pub image: Option<String>
 }
 
-impl ProjectDataPost {
-    const DESCRIPTION_MAX_LENGTH: usize = 1024;
-    const GAME_TITLE_MAX_LENGTH: usize = 256;
-    const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
-    const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
-    const GAME_YEAR_MAX_LENGTH: usize = 32;
-    const README_MAX_LENGTH: usize = 65536;
-    const IMAGE_MAX_LENGTH: usize = 256;
+const DESCRIPTION_MAX_LENGTH: usize = 1024;
+const GAME_TITLE_MAX_LENGTH: usize = 256;
+const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
+const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
+const GAME_YEAR_MAX_LENGTH: usize = 32;
+const README_MAX_LENGTH: usize = 65536;
+const IMAGE_MAX_LENGTH: usize = 256;
 // TODO: limit tags vec length, length of tags
-}
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("invalid data {0:?}")]
@@ -236,13 +234,13 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
     type Error = ProjectDataPostError;
 
     fn try_from(m: MaybeProjectDataPost) -> Result<Self, Self::Error> {
-        if m.description.len() > ProjectDataPost::DESCRIPTION_MAX_LENGTH ||
-            m.game.title.len() > ProjectDataPost::GAME_TITLE_MAX_LENGTH ||
-            m.game.title_sort_key.len() > ProjectDataPost::GAME_TITLE_SORT_KEY_MAX_LENGTH ||
-            m.game.publisher.len() > ProjectDataPost::GAME_PUBLISHER_MAX_LENGTH ||
-            m.game.year.len() > ProjectDataPost::GAME_YEAR_MAX_LENGTH ||
-            m.readme.len() > ProjectDataPost::README_MAX_LENGTH ||
-            m.image.as_ref().is_some_and(|i| i.len() > ProjectDataPost::IMAGE_MAX_LENGTH)
+        if m.description.len() > DESCRIPTION_MAX_LENGTH ||
+            m.game.title.len() > GAME_TITLE_MAX_LENGTH ||
+            m.game.title_sort_key.len() > GAME_TITLE_SORT_KEY_MAX_LENGTH ||
+            m.game.publisher.len() > GAME_PUBLISHER_MAX_LENGTH ||
+            m.game.year.len() > GAME_YEAR_MAX_LENGTH ||
+            m.readme.len() > README_MAX_LENGTH ||
+            m.image.as_ref().is_some_and(|i| i.len() > IMAGE_MAX_LENGTH)
         {
             Err(ProjectDataPostError(m))
         }
@@ -320,7 +318,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_description() {
         let mpdp = MaybeProjectDataPost {
-            description: "x".repeat(ProjectDataPost::DESCRIPTION_MAX_LENGTH + 1),
+            description: "x".repeat(DESCRIPTION_MAX_LENGTH + 1),
             ..Default::default()
         };
 
@@ -334,7 +332,7 @@ mod test {
     fn try_from_project_data_post_overlong_title() {
         let mpdp = MaybeProjectDataPost {
             game: GameData {
-                title: "x".repeat(ProjectDataPost::GAME_TITLE_MAX_LENGTH + 1),
+                title: "x".repeat(GAME_TITLE_MAX_LENGTH + 1),
                 ..Default::default()
             },
             ..Default::default()
@@ -350,7 +348,7 @@ mod test {
     fn try_from_project_data_post_overlong_title_sort_key() {
         let mpdp = MaybeProjectDataPost {
             game: GameData {
-                title_sort_key: "x".repeat(ProjectDataPost::GAME_TITLE_SORT_KEY_MAX_LENGTH + 1),
+                title_sort_key: "x".repeat(GAME_TITLE_SORT_KEY_MAX_LENGTH + 1),
                 ..Default::default()
             },
             ..Default::default()
@@ -366,7 +364,7 @@ mod test {
     fn try_from_project_data_post_overlong_publisher() {
         let mpdp = MaybeProjectDataPost {
             game: GameData {
-                publisher: "x".repeat(ProjectDataPost::GAME_PUBLISHER_MAX_LENGTH + 1),
+                publisher: "x".repeat(GAME_PUBLISHER_MAX_LENGTH + 1),
                 ..Default::default()
             },
             ..Default::default()
@@ -382,7 +380,7 @@ mod test {
     fn try_from_project_data_post_overlong_year() {
         let mpdp = MaybeProjectDataPost {
             game: GameData {
-                year: "x".repeat(ProjectDataPost::GAME_YEAR_MAX_LENGTH + 1),
+                year: "x".repeat(GAME_YEAR_MAX_LENGTH + 1),
                 ..Default::default()
             },
             ..Default::default()
@@ -397,7 +395,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_readme() {
         let mpdp = MaybeProjectDataPost {
-            readme: "x".repeat(ProjectDataPost::README_MAX_LENGTH + 1),
+            readme: "x".repeat(README_MAX_LENGTH + 1),
             ..Default::default()
         };
 
@@ -410,7 +408,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_image() {
         let mpdp = MaybeProjectDataPost {
-            image: Some("x".repeat(ProjectDataPost::IMAGE_MAX_LENGTH + 1)),
+            image: Some("x".repeat(IMAGE_MAX_LENGTH + 1)),
             ..Default::default()
         };
 
