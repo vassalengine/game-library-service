@@ -117,9 +117,9 @@ where
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RangePatch {
     #[serde(default, deserialize_with = "double_option")]
-    pub min: Option<Option<i64>>,
+    pub min: Option<Option<u32>>,
     #[serde(default, deserialize_with = "double_option")]
-    pub max: Option<Option<i64>>
+    pub max: Option<Option<u32>>
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -245,10 +245,26 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RangePost {
+    pub min: Option<u32>,
+    pub max: Option<u32>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GameDataPost {
+    pub title: String,
+    pub title_sort_key: String,
+    pub publisher: String,
+    pub year: String,
+    pub players: Option<RangePost>,
+    pub length: Option<RangePost>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeProjectDataPost {
     pub description: String,
     pub tags: Vec<String>,
-    pub game: GameData,
+    pub game: GameDataPost,
     pub readme: String,
     pub image: Option<String>
 }
@@ -270,7 +286,7 @@ impl MaybeProjectDataPost {
 pub struct ProjectDataPost {
     pub description: String,
     pub tags: Vec<String>,
-    pub game: GameData,
+    pub game: GameDataPost,
     pub readme: String,
     pub image: Option<String>
 }
@@ -329,7 +345,7 @@ mod test {
                 MaybeProjectDataPost {
                     description: "description".into(),
                     tags: vec![],
-                    game: GameData {
+                    game: GameDataPost {
                         title: "the title".into(),
                         title_sort_key: "title, the".into(),
                         publisher: "publisher".into(),
@@ -344,7 +360,7 @@ mod test {
             ProjectDataPost {
                 description: "description".into(),
                 tags: vec![],
-                game: GameData {
+                game: GameDataPost {
                     title: "the title".into(),
                     title_sort_key: "title, the".into(),
                     publisher: "publisher".into(),
@@ -374,7 +390,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_title() {
         let mpdp = MaybeProjectDataPost {
-            game: GameData {
+            game: GameDataPost {
                 title: "x".repeat(GAME_TITLE_MAX_LENGTH + 1),
                 ..Default::default()
             },
@@ -390,7 +406,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_title_sort_key() {
         let mpdp = MaybeProjectDataPost {
-            game: GameData {
+            game: GameDataPost {
                 title_sort_key: "x".repeat(GAME_TITLE_SORT_KEY_MAX_LENGTH + 1),
                 ..Default::default()
             },
@@ -406,7 +422,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_publisher() {
         let mpdp = MaybeProjectDataPost {
-            game: GameData {
+            game: GameDataPost {
                 publisher: "x".repeat(GAME_PUBLISHER_MAX_LENGTH + 1),
                 ..Default::default()
             },
@@ -422,7 +438,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_year() {
         let mpdp = MaybeProjectDataPost {
-            game: GameData {
+            game: GameDataPost {
                 year: "x".repeat(GAME_YEAR_MAX_LENGTH + 1),
                 ..Default::default()
             },

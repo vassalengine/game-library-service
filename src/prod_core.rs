@@ -1110,7 +1110,7 @@ mod test {
     use tokio::io::AsyncRead;
 
     use crate::{
-        model::GameDataPatch,
+        model::{GameDataPatch, GameDataPost},
         pagination::Direction,
         sqlite::{Pool, SqlxDatabaseClient},
         upload::UploadError
@@ -2174,7 +2174,7 @@ mod test {
         let cdata = ProjectDataPost {
             description: data.description.clone(),
             tags: vec![],
-            game: GameData {
+            game: GameDataPost {
                 title: data.game.title.clone(),
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),

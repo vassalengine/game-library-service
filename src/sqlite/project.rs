@@ -498,7 +498,7 @@ mod test {
 
     use once_cell::sync::Lazy;
 
-    use crate::model::{GameData, Range};
+    use crate::model::{GameDataPost, RangePost};
 
     type Pool = sqlx::Pool<Sqlite>;
 
@@ -552,21 +552,21 @@ mod test {
         ProjectDataPost {
             description: CREATE_ROW.description.clone(),
             tags: vec![],
-            game: GameData {
+            game: GameDataPost {
                 title: CREATE_ROW.game_title.clone(),
                 title_sort_key: CREATE_ROW.game_title_sort.clone(),
                 publisher: CREATE_ROW.game_publisher.clone(),
                 year: CREATE_ROW.game_year.clone(),
                 players: Some(
-                    Range {
-                        min: CREATE_ROW.game_players_min.clone(),
-                        max: CREATE_ROW.game_players_max.clone()
+                    RangePost {
+                        min: CREATE_ROW.game_players_min.map(|i| i as u32),
+                        max: CREATE_ROW.game_players_max.map(|i| i as u32)
                     }
                 ),
                 length: Some(
-                    Range {
-                        min: CREATE_ROW.game_length_min.clone(),
-                        max: CREATE_ROW.game_length_max.clone()
+                    RangePost {
+                        min: CREATE_ROW.game_length_min.map(|i| i as u32),
+                        max: CREATE_ROW.game_length_max.map(|i| i as u32)
                     }
                 )
             },

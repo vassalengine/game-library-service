@@ -330,7 +330,7 @@ mod test {
     use crate::{
         core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreateProjectError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
+        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -1791,7 +1791,7 @@ mod test {
         let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
-            game: GameData {
+            game: GameDataPost {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
@@ -1832,7 +1832,7 @@ mod test {
         let proj_data = ProjectDataPost {
             description: "A module for Empires in Arms".into(),
             tags: vec![],
-            game: GameData {
+            game: GameDataPost {
                 title: "Empires in Arms".into(),
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
