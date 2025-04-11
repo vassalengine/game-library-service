@@ -1,3 +1,5 @@
+#![feature(async_fn_track_caller)]
+
 use axum::{
     Router, serve,
     body::{Body, Bytes},
