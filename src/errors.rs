@@ -9,8 +9,7 @@ pub enum AppError {
     BadMimeType,
     #[error("Payload too large")]
     TooLarge,
-//    #[error("Cannot remove last project owner")]
-    #[error("Bad request")]
+    #[error("Cannot remove last project owner")]
     CannotRemoveLastOwner,
     #[error("{0}")]
     DatabaseError(String),
