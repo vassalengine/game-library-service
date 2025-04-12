@@ -19,9 +19,8 @@ pub enum AppError {
     UploadError(String),
     #[error("{0}")]
     ModuleError(String),
-// TODO: Internal error should have a string? cause?
-    #[error("Internal error")]
-    InternalError,
+    #[error("Internal error: {0}")]
+    InternalError(String),
     #[error("Unprocessable entity")]
     JsonError,
     #[error("Bad request")]
@@ -87,8 +86,8 @@ impl From<GetProjectsError> for AppError {
         match err {
             GetProjectsError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             GetProjectsError::MalformedQuery => AppError::MalformedQuery,
-            GetProjectsError::SeekError(_) => AppError::InternalError,
-            GetProjectsError::TimeError(_) => AppError::InternalError
+            GetProjectsError::SeekError(e) => AppError::InternalError(e.to_string()),
+            GetProjectsError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -98,7 +97,7 @@ impl From<GetProjectError> for AppError {
         match err {
             GetProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             GetProjectError::NotFound => AppError::NotFound,
-            GetProjectError::TimeError(_) => AppError::InternalError
+            GetProjectError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -109,7 +108,7 @@ impl From<CreateProjectError> for AppError {
             CreateProjectError::AlreadyExists => AppError::MalformedQuery,
             CreateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreateProjectError::InvalidProjectName => AppError::MalformedQuery,
-            CreateProjectError::TimeError(_) => AppError::InternalError
+            CreateProjectError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -118,7 +117,7 @@ impl From<UpdateProjectError> for AppError {
     fn from(err: UpdateProjectError) -> Self {
         match err {
             UpdateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
-            UpdateProjectError::TimeError(_) => AppError::InternalError
+            UpdateProjectError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -127,7 +126,7 @@ impl From<CreatePackageError> for AppError {
     fn from(err: CreatePackageError) -> Self {
         match err {
             CreatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
-            CreatePackageError::TimeError(_) => AppError::InternalError
+            CreatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -136,7 +135,7 @@ impl From<CreateReleaseError> for AppError {
     fn from(err: CreateReleaseError) -> Self {
         match err {
             CreateReleaseError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
-            CreateReleaseError::TimeError(_) => AppError::InternalError
+            CreateReleaseError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
@@ -146,9 +145,9 @@ impl From<AddFileError> for AppError {
         match err {
             AddFileError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             AddFileError::InvalidFilename => AppError::MalformedQuery,
-            AddFileError::IOError(_) => AppError::InternalError,
+            AddFileError::IOError(e) => AppError::InternalError(e.to_string()),
             AddFileError::ModuleError(e) => AppError::ModuleError(e.to_string()),
-            AddFileError::TimeError(_) => AppError::InternalError,
+            AddFileError::TimeError(e) => AppError::InternalError(e.to_string()),
             AddFileError::TooLarge => AppError::TooLarge,
             AddFileError::UploadError(e) => AppError::UploadError(e.to_string())
         }
@@ -194,8 +193,8 @@ impl From<AddImageError> for AppError {
             AddImageError::BadMimeType => AppError::BadMimeType,
             AddImageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             AddImageError::InvalidFilename => AppError::MalformedQuery,
-            AddImageError::IOError(_) => AppError::InternalError,
-            AddImageError::TimeError(_) => AppError::InternalError,
+            AddImageError::IOError(e) => AppError::InternalError(e.to_string()),
+            AddImageError::TimeError(e) => AppError::InternalError(e.to_string()),
             AddImageError::TooLarge => AppError::TooLarge,
             AddImageError::UploadError(e) => AppError::UploadError(e.to_string())
         }

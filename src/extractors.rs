@@ -98,7 +98,7 @@ where
     Ok(
         Path::<Vec<(String, String)>>::from_request_parts(parts, state)
             .await
-            .map_err(|_| AppError::InternalError)?
+            .map_err(|e| AppError::InternalError(e.to_string()))?
             .0
             .into_iter()
             .map(|p| p.1)
@@ -120,7 +120,7 @@ where
         let (proj, ) = get_path_iter(parts, state)
             .await?
             .next_tuple()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(AppError::InternalError("empty path iter".into()))?;
 
         let core = get_state(parts, state).await;
 
@@ -146,7 +146,7 @@ where
         let (proj, pkg) = get_path_iter(parts, state)
             .await?
             .next_tuple()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(AppError::InternalError("empty path iter".into()))?;
 
         let core = get_state(parts, state).await;
 
@@ -176,7 +176,7 @@ where
         let (proj, pkg, ver) = get_path_iter(parts, state)
             .await?
             .next_tuple()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(AppError::InternalError("empty path iter".into()))?;
 
         let core = get_state(parts, state).await;
 
@@ -208,7 +208,7 @@ where
         let (proj, pkg, release) = get_path_iter(parts, state)
             .await?
             .next_tuple()
-            .ok_or(AppError::InternalError)?;
+            .ok_or(AppError::InternalError("empty path iter".into()))?;
 
         let core = get_state(parts, state).await;
 

@@ -65,7 +65,7 @@ impl From<&AppError> for StatusCode {
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::UploadError(_) => StatusCode::BAD_REQUEST,
             AppError::ModuleError(_) => StatusCode::BAD_REQUEST,
-            AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::JsonError => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
             AppError::MalformedQuery => StatusCode::BAD_REQUEST,
