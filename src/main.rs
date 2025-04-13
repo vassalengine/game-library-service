@@ -27,6 +27,7 @@ use tower_http::{
     trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer}
 };
 use tracing::{info, info_span, error, Level, Span};
+use tracing_panic::panic_hook;
 use tracing_subscriber::{
     EnvFilter,
     layer::SubscriberExt,
@@ -363,7 +364,8 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-//    tracing_subscriber::fmt().init();
+    // ensure that panics are logged
+    std::panic::set_hook(Box::new(panic_hook));
 
     info!("Starting");
 
