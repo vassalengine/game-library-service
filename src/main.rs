@@ -120,6 +120,7 @@ fn real_addr(request: &Request) -> String {
 }
 
 fn make_span(request: &Request) -> Span {
+    // adapted from tower_http::trace::DefaultMakeSpan
     info_span!(
         "request",
         source = %real_addr(request),
