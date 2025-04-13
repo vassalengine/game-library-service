@@ -40,6 +40,7 @@ toml = "^0.8"
 tower = { version = "^0.5", features = ["buffer", "limit", "util"] }
 tower-http = { version = "^0.6", features = ["compression-br", "compression-deflate", "compression-gzip", "compression-zstd", "cors", "fs", "timeout", "trace"] }
 tracing = "^0.1"
+tracing-panic = { version = "^0.1", features = ["capture-backtrace"] }
 tracing-subscriber = { version = "^0.3", features = ["env-filter"] }
 unwrap-infallible = "^0.1"
 zip = "^2.2"
