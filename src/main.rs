@@ -26,7 +26,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer}
 };
-use tracing::{info, info_span, Level, Span};
+use tracing::{info, info_span, error, Level, Span};
 use tracing_subscriber::{
     EnvFilter,
     layer::SubscriberExt,
@@ -292,27 +292,7 @@ async fn shutdown_signal() {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), StartupError> {
-// TODO: review
-    tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the
-                // axum::rejection target, at TRACE level.
-                // axum::rejection=trace enables showing those events
-                format!(
-                    "{}=debug,tower_http=debug,axum::rejection=trace",
-                    env!("CARGO_CRATE_NAME")
-                )
-                .into()
-            }),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-
-//    tracing_subscriber::fmt().init();
-
+async fn run() -> Result<(), StartupError> {
     info!("Reading config.toml");
     let config: Config = toml::from_str(&fs::read_to_string("config.toml")?)?;
 
@@ -362,6 +342,36 @@ async fn main() -> Result<(), StartupError> {
     .await?;
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+// TODO: review
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the
+                // axum::rejection target, at TRACE level.
+                // axum::rejection=trace enables showing those events
+                format!(
+                    "{}=debug,tower_http=debug,axum::rejection=trace",
+                    env!("CARGO_CRATE_NAME")
+                )
+                .into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+//    tracing_subscriber::fmt().init();
+
+    info!("Starting");
+
+    if let Err(e) = run().await {
+        error!("{}", e);
+    }
+
+    info!("Exiting");
 }
 
 #[cfg(test)]
