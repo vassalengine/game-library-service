@@ -2,10 +2,8 @@
 
 use axum::{
     Router, serve,
-    body::{Body, Bytes},
-    extract::Request,
+    extract::{ConnectInfo, Request},
     http::StatusCode,
-    middleware::{self, Next},
     response::{IntoResponse, Json, Response},
     routing::{get, post}
 };
@@ -24,7 +22,15 @@ use tower::ServiceBuilder;
 use tower_http::{
     compression::CompressionLayer,
     cors::CorsLayer,
-    timeout::TimeoutLayer
+    services::ServeDir,
+    timeout::TimeoutLayer,
+    trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer}
+};
+use tracing::{info, info_span, Level, Span};
+use tracing_subscriber::{
+    EnvFilter,
+    layer::SubscriberExt,
+    util::SubscriberInitExt
 };
 
 mod app;
@@ -99,53 +105,20 @@ impl IntoResponse for AppError {
     }
 }
 
-async fn print_request_response(
-    req: Request,
-    next: Next,
-) -> Result<impl IntoResponse, (StatusCode, String)>
-{
-    let method = req.method();
-    let uri = req.uri();
-    eprintln!("{method} {uri}");
+fn make_span(request: &Request) -> Span {
+    // Change if deployed behind a proxy (use X-forwarded-for header)
+    let addr = request.extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|info| tracing::field::display(info.ip().to_string()))
+        .unwrap_or_else(|| tracing::field::display("<unknown>".into()));
 
-    let headers = req.headers();
-    eprintln!("headers {headers:?}");
-
-    let (parts, body) = req.into_parts();
-    let bytes = buffer_and_print("request", body).await?;
-    let req = Request::from_parts(parts, Body::from(bytes));
-
-    let res = next.run(req).await;
-
-    let (parts, body) = res.into_parts();
-    let bytes = buffer_and_print("response", body).await?;
-    let res = Response::from_parts(parts, Body::from(bytes));
-
-    Ok(res)
-}
-
-async fn buffer_and_print<B>(
-    direction: &str, body: B
-) -> Result<Bytes, (StatusCode, String)>
-where
-    B: axum::body::HttpBody<Data = Bytes>,
-    B::Error: std::fmt::Display,
-{
-    let bytes = match body.collect().await {
-        Ok(collected) => collected.to_bytes(),
-        Err(err) => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                format!("failed to read {direction} body: {err}"),
-            ));
-        }
-    };
-
-    if let Ok(body) = std::str::from_utf8(&bytes) {
-        eprintln!("{direction} body = {body:?}");
-    }
-
-    Ok(bytes)
+    info_span!(
+        "request",
+        source = addr,
+        uri = %request.uri(),
+        version = ?request.version(),
+        headers = ?request.headers()
+    )
 }
 
 fn routes(api: &str, read_only: bool) -> Router<AppState> {
@@ -266,13 +239,22 @@ fn routes(api: &str, read_only: bool) -> Router<AppState> {
         )
         .nest(api, api_router)
         .fallback(handlers::not_found)
-        .layer(middleware::from_fn(print_request_response))
         .layer(
             ServiceBuilder::new()
                 .layer(CorsLayer::very_permissive())
                 .layer(CompressionLayer::new())
                 // ensure requests don't block shutdown
                 .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        )
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(make_span)
+                .on_response(
+                    DefaultOnResponse::new().level(Level::INFO)
+                )
+                .on_failure(
+                    DefaultOnFailure::new().level(Level::WARN)
+                )
         )
 }
 
@@ -304,16 +286,37 @@ async fn shutdown_signal() {
         .expect("failed to install signal handler");
 
     tokio::select! {
-        _ = interrupt.recv() => eprintln!("exiting on SIGINT"),
-        _ = quit.recv() => eprintln!("exiting on SIGQUIT"),
-        _ = terminate.recv() => eprintln!("exiting on SIGTERM")
+        _ = interrupt.recv() => info!("exiting on SIGINT"),
+        _ = quit.recv() => info!("exiting on SIGQUIT"),
+        _ = terminate.recv() => info!("exiting on SIGTERM")
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
+// TODO: review
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the
+                // axum::rejection target, at TRACE level.
+                // axum::rejection=trace enables showing those events
+                format!(
+                    "{}=debug,tower_http=debug,axum::rejection=trace",
+                    env!("CARGO_CRATE_NAME")
+                )
+                .into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+//    tracing_subscriber::fmt().init();
+
+    info!("Reading config.toml");
     let config: Config = toml::from_str(&fs::read_to_string("config.toml")?)?;
 
+    info!("Opening database {}", config.db_path);
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&format!("sqlite://{}", &config.db_path))
@@ -349,10 +352,14 @@ async fn main() -> Result<(), StartupError> {
 
     let ip: IpAddr = config.listen_ip.parse()?;
     let addr = SocketAddr::from((ip, config.listen_port));
+    info!("Listening on {}", addr);
     let listener = TcpListener::bind(addr).await?;
-    serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>()
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
 
     Ok(())
 }
