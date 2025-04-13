@@ -123,6 +123,7 @@ fn make_span(request: &Request) -> Span {
     info_span!(
         "request",
         source = %real_addr(request),
+        method = %request.method(),
         uri = %request.uri(),
         version = ?request.version(),
         headers = ?request.headers()
