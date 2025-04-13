@@ -106,16 +106,23 @@ impl IntoResponse for AppError {
     }
 }
 
-fn make_span(request: &Request) -> Span {
-    // Change if deployed behind a proxy (use X-forwarded-for header)
-    let addr = request.extensions()
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|info| tracing::field::display(info.ip().to_string()))
-        .unwrap_or_else(|| tracing::field::display("<unknown>".into()));
+fn real_addr(request: &Request) -> String {
+    // If we're behind a proxy, get IP from X-Forwarded-For header
+    match request.headers().get("x-forwarded-for") {
+        Some(addr) => addr.to_str()
+            .map(String::from)
+            .ok(),
+        None => request.extensions()
+            .get::<ConnectInfo<SocketAddr>>()
+            .map(|info| info.ip().to_string())
+    }
+    .unwrap_or_else(|| "<unknown>".into())
+}
 
+fn make_span(request: &Request) -> Span {
     info_span!(
         "request",
-        source = addr,
+        source = %real_addr(request),
         uri = %request.uri(),
         version = ?request.version(),
         headers = ?request.headers()
