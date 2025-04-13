@@ -130,6 +130,7 @@ fn make_span(request: &Request) -> Span {
 }
 
 fn routes(api: &str, read_only: bool) -> Router<AppState> {
+    // set up our routes under api
     let api_router = if read_only {
         Router::new()
             .route(
@@ -240,6 +241,7 @@ fn routes(api: &str, read_only: bool) -> Router<AppState> {
             )
     };
 
+    // set up things wrapped around our routes
     Router::new()
         .route(
             &format!("{api}/"),
