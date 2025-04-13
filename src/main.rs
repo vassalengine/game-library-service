@@ -333,8 +333,9 @@ async fn run() -> Result<(), StartupError> {
 
     let ip: IpAddr = config.listen_ip.parse()?;
     let addr = SocketAddr::from((ip, config.listen_port));
-    info!("Listening on {}", addr);
     let listener = TcpListener::bind(addr).await?;
+    info!("Listening on {}", addr);
+
     serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>()
@@ -347,21 +348,23 @@ async fn run() -> Result<(), StartupError> {
 
 #[tokio::main]
 async fn main() {
-// TODO: review
+    // set up logging
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the
-                // axum::rejection target, at TRACE level.
-                // axum::rejection=trace enables showing those events
-                format!(
-                    "{}=debug,tower_http=debug,axum::rejection=trace",
-                    env!("CARGO_CRATE_NAME")
-                )
-                .into()
+                [
+                    // log this crate at info level
+                    &format!("{}=info", env!("CARGO_CRATE_NAME")),
+                    // tower_http is noisy below info
+                    "tower_http=info",
+                    // axum::rejection=trace shows rejections from extractors
+                    "axum::rejection=trace",
+                    // every panic is a fatal error
+                    "tracing_panic=error"
+                ].join(",").into()
             }),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_target(false))
         .init();
 
     // ensure that panics are logged
