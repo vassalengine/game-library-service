@@ -3,6 +3,7 @@ use sqlx::{
     sqlite::Sqlite
 };
 
+mod flag;
 mod images;
 mod packages;
 mod players;
@@ -14,7 +15,7 @@ mod users;
 
 use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
-    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    model::{Flag, GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -486,5 +487,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         date: i64
     ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery_at(&self.0, proj, date).await
+    }
+
+    async fn add_flag(
+        &self,
+        reporter: User,
+        proj: Project,
+        flag: &Flag
+    ) -> Result<(), DatabaseError> {
+        flag::add_flag(&self.0, reporter, proj, flag).await
     }
 }

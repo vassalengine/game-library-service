@@ -334,6 +334,14 @@ pub struct Projects {
     pub meta: Pagination
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum Flag {
+    Inapproprate,
+    Spam,
+    Illegal(String),
+    Other(String)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

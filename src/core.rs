@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     db,
-    model::{Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
+    model::{Flag, Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
     module,
     params::ProjectsParams,
     pagination,
@@ -219,6 +219,12 @@ impl PartialEq for AddImageError {
             (_, _) => false
         }
     }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum AddFlagError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
 }
 
 #[async_trait]
@@ -455,6 +461,16 @@ pub trait Core {
         _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), AddImageError>
+    {
+        unimplemented!();
+    }
+
+    async fn add_flag(
+        &self,
+        _reporter: User,
+        _proj: Project,
+        _flag: &Flag
+    ) -> Result<(), AddFlagError>
     {
         unimplemented!();
     }

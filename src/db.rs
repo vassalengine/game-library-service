@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::{
-    model::{GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    model::{Flag, GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -405,4 +405,11 @@ pub trait DatabaseClient {
         _proj: Project,
         _date: i64
     ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
+
+    fn add_flag(
+        &self,
+        _reporter: User,
+        _proj: Project,
+        _flag: &Flag
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 }
