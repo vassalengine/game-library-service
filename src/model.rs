@@ -334,12 +334,76 @@ pub struct Projects {
     pub meta: Pagination
 }
 
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("flag tag {0} unknown")]
+pub struct FlagTagError(String);
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "&str")]
+pub enum FlagTag {
+    Inappropriate,
+    Spam,
+    Illegal,
+    Other
+}
+
+impl TryFrom<&str> for FlagTag {
+    type Error = FlagTagError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "inappropriate" => Ok(FlagTag::Inappropriate),
+            "spam" => Ok(FlagTag::Spam),
+            "illegal" => Ok(FlagTag::Illegal),
+            "other" => Ok(FlagTag::Other),
+            _ => Err(FlagTagError(value.into()))
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct FlagData {
+    tag: FlagTag,
+    message: Option<String>
+}
+
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "FlagData")]
 pub enum Flag {
-    Inapproprate,
+    Inappropriate,
     Spam,
     Illegal(String),
     Other(String)
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("flag {0:?} invalid")]
+pub struct FlagError(FlagData);
+
+impl TryFrom<FlagData> for Flag {
+    type Error = FlagError;
+
+    fn try_from(fd: FlagData) -> Result<Self, Self::Error> {
+        match fd {
+            FlagData {
+                tag: FlagTag::Inappropriate,
+                message: None
+            } => Ok(Flag::Inappropriate),
+            FlagData {
+                tag: FlagTag::Spam,
+                message: None
+            } => Ok(Flag::Spam),
+            FlagData {
+                tag: FlagTag::Illegal,
+                message: Some(msg)
+            } => Ok(Flag::Illegal(msg)),
+            FlagData {
+                tag: FlagTag::Other,
+                message: Some(msg)
+            } => Ok(Flag::Other(msg)),
+            _ => Err(FlagError(fd))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -788,6 +852,111 @@ mod test {
         assert_eq!(
             ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
             ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_str_flag_tag() {
+        assert_eq!(FlagTag::try_from("inappropriate").unwrap(), FlagTag::Inappropriate);
+        assert_eq!(FlagTag::try_from("spam").unwrap(), FlagTag::Spam);
+        assert_eq!(FlagTag::try_from("illegal").unwrap(), FlagTag::Illegal);
+        assert_eq!(FlagTag::try_from("other").unwrap(), FlagTag::Other);
+        assert_eq!(FlagTag::try_from("bogus").unwrap_err(), FlagTagError("bogus".into()));
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_inappropriate() {
+        assert_eq!(
+            Flag::try_from(FlagData {
+                tag: FlagTag::Inappropriate,
+                message: None
+            }),
+            Ok(Flag::Inappropriate)
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_inappropriate_msg() {
+        let fd = FlagData {
+            tag: FlagTag::Inappropriate,
+            message: Some("bad".into())
+        };
+
+        assert_eq!(
+            Flag::try_from(fd.clone()),
+            Err(FlagError(fd))
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_spam() {
+        assert_eq!(
+            Flag::try_from(FlagData {
+                tag: FlagTag::Spam,
+                message: None
+            }),
+            Ok(Flag::Spam)
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_spam_msg() {
+        let fd = FlagData {
+            tag: FlagTag::Spam,
+            message: Some("bad".into())
+        };
+
+        assert_eq!(
+            Flag::try_from(fd.clone()),
+            Err(FlagError(fd))
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_illegal() {
+        let fd = FlagData {
+            tag: FlagTag::Illegal,
+            message: None
+        };
+
+        assert_eq!(
+            Flag::try_from(fd.clone()),
+            Err(FlagError(fd))
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_illegal_msg() {
+        assert_eq!(
+            Flag::try_from(FlagData {
+                tag: FlagTag::Illegal,
+                message: Some("ok".into())
+            }),
+            Ok(Flag::Illegal("ok".into()))
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_other() {
+        let fd = FlagData {
+            tag: FlagTag::Other,
+            message: None
+        };
+
+        assert_eq!(
+            Flag::try_from(fd.clone()),
+            Err(FlagError(fd))
+        );
+    }
+
+    #[test]
+    fn try_from_flag_data_flag_other_msg() {
+        assert_eq!(
+            Flag::try_from(FlagData {
+                tag: FlagTag::Other,
+                message: Some("ok".into())
+            }),
+            Ok(Flag::Other("ok".into()))
         );
     }
 }

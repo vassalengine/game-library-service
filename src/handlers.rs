@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackageRelease, ProjectPackageVersion, Wrapper},
-    model::{Owned, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    model::{Flag, Owned, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 
@@ -271,12 +271,13 @@ pub async fn image_post(
 }
 
 pub async fn flag_post(
-    _requester: User,
-    _proj: Project,
-    State(_core): State<CoreArc>
+    requester: User,
+    proj: Project,
+    State(core): State<CoreArc>,
+    Wrapper(Json(flag)): Wrapper<Json<Flag>>,
 ) -> Result<(), AppError>
 {
-    todo!();
+    Ok(core.add_flag(requester, proj, &flag).await?)
 }
 
 #[cfg(test)]
