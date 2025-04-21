@@ -493,7 +493,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self,
         reporter: User,
         proj: Project,
-        flag: &Flag
+        flag: Flag
     ) -> Result<(), DatabaseError> {
         flag::add_flag(&self.0, reporter, proj, flag).await
     }

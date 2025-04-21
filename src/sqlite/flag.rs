@@ -8,11 +8,22 @@ use crate::{
     model::{Flag, Project, User}
 };
 
+impl From<Flag> for (u32, Option<String>) {
+    fn from(f: Flag) -> (u32, Option<String>) {
+        match f {
+            Flag::Inappropriate => (0, None),
+            Flag::Spam => (1, None),
+            Flag::Illegal(msg) => (2, Some(msg)),
+            Flag::Other(msg) => (3, Some(msg))
+        }
+    }
+}
+
 pub async fn add_flag<'e, E>(
     ex: E,
     reporter: User,
     proj: Project,
-    flag: &Flag
+    flag: Flag
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -25,6 +36,26 @@ where
 mod test {
     use super::*;
 
+    #[test]
+    fn tuple_from_flag() {
+        assert_eq!(
+            <(u32, Option<String>)>::from(Flag::Inappropriate),
+            (0, None)
+        );
 
+        assert_eq!(
+            <(u32, Option<String>)>::from(Flag::Spam),
+            (1, None)
+        );
 
+        assert_eq!(
+            <(u32, Option<String>)>::from(Flag::Illegal("x".into())),
+            (2, Some("x".into()))
+        );
+
+        assert_eq!(
+            <(u32, Option<String>)>::from(Flag::Other("x".into())),
+            (3, Some("x".into()))
+        );
+    }
 }

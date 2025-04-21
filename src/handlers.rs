@@ -277,7 +277,7 @@ pub async fn flag_post(
     Wrapper(Json(flag)): Wrapper<Json<Flag>>,
 ) -> Result<(), AppError>
 {
-    Ok(core.add_flag(requester, proj, &flag).await?)
+    Ok(core.add_flag(requester, proj, flag).await?)
 }
 
 #[cfg(test)]

@@ -469,7 +469,7 @@ pub trait Core {
         &self,
         _reporter: User,
         _proj: Project,
-        _flag: &Flag
+        _flag: Flag
     ) -> Result<(), AddFlagError>
     {
         unimplemented!();
