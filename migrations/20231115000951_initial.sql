@@ -183,6 +183,16 @@ CREATE TABLE project_data (
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
 
+CREATE TABLE flags(
+  flag_id INTEGER PRIMARY KEY NOT NULL CHECK(flag_id >= 0),
+  user_id INTEGER NOT NULL CHECK(user_id >= 0),
+  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  flag INTEGER NOT NULL CHECK(flag >= 1 AND flag <= 4),
+  message TEXT,
+  FOREIGN KEY(user_id) REFERENCES users(user_id),
+  FOREIGN KEY(project_id) REFERENCES projects(project_id)
+);
+
 /* Full-text search */
 
 CREATE VIRTUAL TABLE projects_fts USING fts5(
