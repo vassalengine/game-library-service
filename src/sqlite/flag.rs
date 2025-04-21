@@ -28,6 +28,25 @@ pub async fn add_flag<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+    let (flag, msg) = flag.into();
+
+    sqlx::query!(
+        "
+INSERT INTO flags (
+    user_id,
+    project_id,
+    flag,
+    message
+)
+VALUES (?, ?, ?, ?)
+        ",
+        reporter.0,
+        proj.0,
+        flag,
+        msg
+    )
+    .execute(ex)
+    .await?;
 
     Ok(())
 }
