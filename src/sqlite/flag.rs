@@ -23,7 +23,8 @@ pub async fn add_flag<'e, E>(
     ex: E,
     reporter: User,
     proj: Project,
-    flag: &Flag
+    flag: &Flag,
+    now: i64
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -35,13 +36,15 @@ where
 INSERT INTO flags (
     user_id,
     project_id,
+    flagged_at,
     flag,
     message
 )
-VALUES (?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
         ",
         reporter.0,
         proj.0,
+        now,
         flag,
         msg
     )

@@ -204,7 +204,8 @@ impl From<AddImageError> for AppError {
 impl From<AddFlagError> for AppError {
     fn from(err: AddFlagError) -> Self {
         match err {
-            AddFlagError::DatabaseError(e) => AppError::DatabaseError(e.to_string())
+            AddFlagError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            AddFlagError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }

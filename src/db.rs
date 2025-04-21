@@ -410,6 +410,7 @@ pub trait DatabaseClient {
         &self,
         _reporter: User,
         _proj: Project,
-        _flag: &Flag
+        _flag: &Flag,
+        _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 }

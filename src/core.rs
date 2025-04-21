@@ -224,7 +224,9 @@ impl PartialEq for AddImageError {
 #[derive(Debug, Error, PartialEq)]
 pub enum AddFlagError {
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError)
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
 }
 
 #[async_trait]

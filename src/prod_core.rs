@@ -494,7 +494,8 @@ where
         flag: Flag
     ) -> Result<(), AddFlagError>
     {
-        Ok(self.db.add_flag(reporter, proj, &flag).await?)
+        let now = self.now_nanos()?;
+        Ok(self.db.add_flag(reporter, proj, &flag, now).await?)
     }
 }
 
