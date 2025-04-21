@@ -245,9 +245,32 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MaybeRangePost {
+    pub min: Option<u32>,
+    pub max: Option<u32>
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybeRangePost")]
 pub struct RangePost {
     pub min: Option<u32>,
     pub max: Option<u32>
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("min > max: {0:?}")]
+pub struct RangePostError(MaybeRangePost);
+
+impl TryFrom<MaybeRangePost> for RangePost {
+    type Error = RangePostError;
+
+    fn try_from(m: MaybeRangePost) -> Result<Self, Self::Error> {
+        match (m.min, m.max) {
+            (None, _) | (_, None) => Ok(RangePost{ min: m.min, max: m.max }),
+            (Some(min), Some(max)) if min <= max => Ok(RangePost{ min: m.min, max: m.max }),
+            _ => Err(RangePostError(m))
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -957,6 +980,55 @@ mod test {
                 message: Some("ok".into())
             }),
             Ok(Flag::Other("ok".into()))
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_none_none() {
+        assert_eq!(
+            RangePost::try_from(MaybeRangePost { min: None, max: None }),
+            Ok(RangePost { min: None, max: None })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_some_none() {
+        assert_eq!(
+            RangePost::try_from(MaybeRangePost { min: Some(1), max: None }),
+            Ok(RangePost { min: Some(1), max: None })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_none_some() {
+        assert_eq!(
+            RangePost::try_from(MaybeRangePost { min: None, max: Some(1) }),
+            Ok(RangePost { min: None, max: Some(1) })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_some_some_eq() {
+        assert_eq!(
+            RangePost::try_from(MaybeRangePost { min: Some(1), max: Some(1) }),
+            Ok(RangePost { min: Some(1), max: Some(1) })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_some_some_less() {
+        assert_eq!(
+            RangePost::try_from(MaybeRangePost { min: Some(0), max: Some(1) }),
+            Ok(RangePost { min: Some(0), max: Some(1) })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_range_post_some_some_more() {
+        let mrp = MaybeRangePost { min: Some(1), max: Some(0) };
+        assert_eq!(
+            RangePost::try_from(mrp.clone()),
+            Err(RangePostError(mrp))
         );
     }
 }
