@@ -386,7 +386,7 @@ impl TryFrom<&str> for FlagTag {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FlagData {
-    tag: FlagTag,
+    flag: FlagTag,
     message: Option<String>
 }
 
@@ -409,19 +409,19 @@ impl TryFrom<FlagData> for Flag {
     fn try_from(fd: FlagData) -> Result<Self, Self::Error> {
         match fd {
             FlagData {
-                tag: FlagTag::Inappropriate,
+                flag: FlagTag::Inappropriate,
                 message: None
             } => Ok(Flag::Inappropriate),
             FlagData {
-                tag: FlagTag::Spam,
+                flag: FlagTag::Spam,
                 message: None
             } => Ok(Flag::Spam),
             FlagData {
-                tag: FlagTag::Illegal,
+                flag: FlagTag::Illegal,
                 message: Some(msg)
             } => Ok(Flag::Illegal(msg)),
             FlagData {
-                tag: FlagTag::Other,
+                flag: FlagTag::Other,
                 message: Some(msg)
             } => Ok(Flag::Other(msg)),
             _ => Err(FlagError(fd))
@@ -891,7 +891,7 @@ mod test {
     fn try_from_flag_data_flag_inappropriate() {
         assert_eq!(
             Flag::try_from(FlagData {
-                tag: FlagTag::Inappropriate,
+                flag: FlagTag::Inappropriate,
                 message: None
             }),
             Ok(Flag::Inappropriate)
@@ -901,7 +901,7 @@ mod test {
     #[test]
     fn try_from_flag_data_flag_inappropriate_msg() {
         let fd = FlagData {
-            tag: FlagTag::Inappropriate,
+            flag: FlagTag::Inappropriate,
             message: Some("bad".into())
         };
 
@@ -915,7 +915,7 @@ mod test {
     fn try_from_flag_data_flag_spam() {
         assert_eq!(
             Flag::try_from(FlagData {
-                tag: FlagTag::Spam,
+                flag: FlagTag::Spam,
                 message: None
             }),
             Ok(Flag::Spam)
@@ -925,7 +925,7 @@ mod test {
     #[test]
     fn try_from_flag_data_flag_spam_msg() {
         let fd = FlagData {
-            tag: FlagTag::Spam,
+            flag: FlagTag::Spam,
             message: Some("bad".into())
         };
 
@@ -938,7 +938,7 @@ mod test {
     #[test]
     fn try_from_flag_data_flag_illegal() {
         let fd = FlagData {
-            tag: FlagTag::Illegal,
+            flag: FlagTag::Illegal,
             message: None
         };
 
@@ -952,7 +952,7 @@ mod test {
     fn try_from_flag_data_flag_illegal_msg() {
         assert_eq!(
             Flag::try_from(FlagData {
-                tag: FlagTag::Illegal,
+                flag: FlagTag::Illegal,
                 message: Some("ok".into())
             }),
             Ok(Flag::Illegal("ok".into()))
@@ -962,7 +962,7 @@ mod test {
     #[test]
     fn try_from_flag_data_flag_other() {
         let fd = FlagData {
-            tag: FlagTag::Other,
+            flag: FlagTag::Other,
             message: None
         };
 
@@ -976,7 +976,7 @@ mod test {
     fn try_from_flag_data_flag_other_msg() {
         assert_eq!(
             Flag::try_from(FlagData {
-                tag: FlagTag::Other,
+                flag: FlagTag::Other,
                 message: Some("ok".into())
             }),
             Ok(Flag::Other("ok".into()))
