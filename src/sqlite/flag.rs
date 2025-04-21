@@ -8,8 +8,8 @@ use crate::{
     model::{Flag, Project, User}
 };
 
-impl From<Flag> for (u32, Option<String>) {
-    fn from(f: Flag) -> (u32, Option<String>) {
+impl<'a> From<&'a Flag> for (u32, Option<&'a str>) {
+    fn from(f: &Flag) -> (u32, Option<&str>) {
         match f {
             Flag::Inappropriate => (0, None),
             Flag::Spam => (1, None),
@@ -23,7 +23,7 @@ pub async fn add_flag<'e, E>(
     ex: E,
     reporter: User,
     proj: Project,
-    flag: Flag
+    flag: &Flag
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -56,25 +56,28 @@ mod test {
     use super::*;
 
     #[test]
-    fn tuple_from_flag() {
-        assert_eq!(
-            <(u32, Option<String>)>::from(Flag::Inappropriate),
-            (0, None)
-        );
+    fn tuple_from_flag_inappropriate() {
+        let (t, m): (u32, Option<&str>) = (&Flag::Inappropriate).into();
+        assert_eq!((t, m), (0, None));
+    }
 
-        assert_eq!(
-            <(u32, Option<String>)>::from(Flag::Spam),
-            (1, None)
-        );
+    #[test]
+    fn tuple_from_flag_spam() {
+        let (t, m): (u32, Option<&str>) = (&Flag::Spam).into();
+        assert_eq!((t, m), (1, None));
+    }
 
-        assert_eq!(
-            <(u32, Option<String>)>::from(Flag::Illegal("x".into())),
-            (2, Some("x".into()))
-        );
+    #[test]
+    fn tuple_from_flag_illegal() {
+        let f = Flag::Illegal("x".into());
+        let (t, m): (u32, Option<&str>) = (&f).into();
+        assert_eq!((t, m), (2, Some("x")));
+    }
 
-        assert_eq!(
-            <(u32, Option<String>)>::from(Flag::Other("x".into())),
-            (3, Some("x".into()))
-        );
+    #[test]
+    fn tuple_from_flag_other() {
+        let f = Flag::Other("x".into());
+        let (t, m): (u32, Option<&str>) = (&f).into();
+        assert_eq!((t, m), (3, Some("x")));
     }
 }

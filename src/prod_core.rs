@@ -494,7 +494,7 @@ where
         flag: Flag
     ) -> Result<(), AddFlagError>
     {
-        Ok(self.db.add_flag(reporter, proj, flag).await?)
+        Ok(self.db.add_flag(reporter, proj, &flag).await?)
     }
 }
 
