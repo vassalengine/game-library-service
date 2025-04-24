@@ -1,13 +1,13 @@
 /* TODO: add indices */
 
 CREATE TABLE users(
-  user_id INTEGER PRIMARY KEY NOT NULL CHECK(user_id >= 0),
+  user_id INTEGER PRIMARY KEY NOT NULL,
   username TEXT NOT NULL,
   UNIQUE(username)
 );
 
 CREATE TABLE owners(
-  user_id INTEGER NOT NULL CHECK(user_id >= 0),
+  user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
@@ -15,7 +15,7 @@ CREATE TABLE owners(
 );
 
 CREATE TABLE authors(
-  user_id INTEGER NOT NULL CHECK(user_id >= 0),
+  user_id INTEGER NOT NULL,
   release_id INTEGER NOT NULL CHECK(release_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
   FOREIGN KEY(release_id) REFERENCES releases(release_id),
@@ -23,7 +23,7 @@ CREATE TABLE authors(
 );
 
 CREATE TABLE players(
-  user_id INTEGER NOT NULL CHECK(user_id >= 0),
+  user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
@@ -185,7 +185,7 @@ CREATE TABLE project_data (
 
 CREATE TABLE flags(
   flag_id INTEGER PRIMARY KEY NOT NULL CHECK(flag_id >= 0),
-  user_id INTEGER NOT NULL CHECK(user_id >= 0),
+  user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   flagged_at INTEGER NOT NULL,
   flag INTEGER NOT NULL CHECK(flag >= 0 AND flag <= 3),
