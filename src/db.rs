@@ -332,6 +332,7 @@ pub trait DatabaseClient {
         _pkg_ver_id: i64
     ) -> impl Future<Output = Result<Users, DatabaseError>> + Send;
 
+    #[allow(clippy::too_many_arguments)]
     fn add_file_url(
         &self,
         _owner: Owner,

@@ -597,6 +597,7 @@ where
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn get_project_impl<'s, RF, RR, FF, FR>(
         &'s self,
         proj: Project,

@@ -320,6 +320,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn create_file_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -364,6 +365,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn add_file_url<'a, A>(
     conn: A,
     owner: Owner,

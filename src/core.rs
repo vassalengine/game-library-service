@@ -395,6 +395,7 @@ pub trait Core {
         unimplemented!();
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn add_file(
         &self,
         _owner: Owner,
