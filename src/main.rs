@@ -26,7 +26,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer}
 };
-use tracing::{info, info_span, error, Level, Span};
+use tracing::{error, info, info_span, Level, Span};
 use tracing_panic::panic_hook;
 use tracing_subscriber::{
     EnvFilter,
