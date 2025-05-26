@@ -158,7 +158,7 @@ where
     }
 
 // TODO: length limits on strings
-// TODO: packages might need display names?
+// TODO: packages need display names
 
     async fn create_project(
         &self,
@@ -168,6 +168,7 @@ where
     ) -> Result<(), CreateProjectError>
     {
         let now = self.now_nanos()?;
+        let proj = check_new_project_name(proj)?;
         Ok(self.db.create_project(user, proj, proj_data, now).await?)
     }
 
@@ -850,8 +851,7 @@ where
     }
 }
 
-fn check_new_project_name(projname: &str) -> Result<(), CreateProjectError> {
-    // Require that project name matches ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$
+fn check_new_project_name(projname: &str) -> Result<&str, CreateProjectError> {
     static PAT: Lazy<Regex> = Lazy::new(||
         Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
             .expect("bad regex")
@@ -861,7 +861,7 @@ fn check_new_project_name(projname: &str) -> Result<(), CreateProjectError> {
         Err(CreateProjectError::InvalidProjectName)
     }
     else {
-        Ok(())
+        Ok(projname)
     }
 }
 
@@ -1194,7 +1194,8 @@ mod test {
 
     #[test]
     fn check_new_project_name_ok() {
-        check_new_project_name("acceptable_name").unwrap();
+        let name = "acceptable_name";
+        assert_eq!(check_new_project_name(name).unwrap(), name);
     }
 
     #[test]
@@ -2201,6 +2202,55 @@ mod test {
         core.create_project(user, name, &cdata).await.unwrap();
         let proj = core.get_project_id(name).await.unwrap();
         assert_eq!(core.get_project(proj).await.unwrap(), data);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_project_bad_name(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let user = User(1);
+        let name = "  -  bad  ";
+        let data = ProjectData {
+            name: name.into(),
+            description: "A New Game".into(),
+            revision: 1,
+            created_at: NOW.into(),
+            modified_at: NOW.into(),
+            tags: vec![],
+            game: GameData {
+                title: "Some New Game".into(),
+                title_sort_key: "Some New Game".into(),
+                publisher: "XYZ Games".into(),
+                year: "1999".into(),
+                players: None,
+                length: None
+            },
+            readme: "".into(),
+            image: None,
+            owners: vec!["bob".into()],
+            packages: vec![],
+            gallery: vec![]
+        };
+
+        let cdata = ProjectDataPost {
+            description: data.description.clone(),
+            tags: vec![],
+            game: GameDataPost {
+                title: data.game.title.clone(),
+                title_sort_key: data.game.title_sort_key.clone(),
+                publisher: data.game.publisher.clone(),
+                year: data.game.year.clone(),
+                players: None,
+                length: None
+            },
+            readme: "".into(),
+            image: None
+        };
+
+        assert_eq!(
+            core.create_project(user, name, &cdata).await.unwrap_err(),
+            CreateProjectError::InvalidProjectName
+        );
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
