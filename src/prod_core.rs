@@ -158,7 +158,6 @@ where
     }
 
 // TODO: length limits on strings
-// TODO: packages need display names
 
     async fn create_project(
         &self,

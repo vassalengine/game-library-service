@@ -32,6 +32,8 @@ WHERE name = ?
 }
 
 fn normalize_project_name(proj: &str) -> String {
+    // Requiring the normalized project name to be unique ensures that
+    // project names are unique modulo case and hyphens/underscores.
     proj.to_lowercase().replace('-', "_")
 }
 
