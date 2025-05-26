@@ -322,8 +322,6 @@ where
             check_version(file.file_path()).await?;
         }
 
-// TODO: should uploaded files be named for hashes?
-
         // add hash prefix to file upload path
         let bucket_path = format!(
             "{0}/{1}/{filename}",
@@ -450,8 +448,6 @@ where
                 )
             )?;
         }
-
-// TODO: should uploaded files be named for hashes?
 
         // add hash prefix to file upload path
         let bucket_path = format!(
