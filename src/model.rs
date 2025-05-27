@@ -66,11 +66,44 @@ pub struct PackageData {
     pub releases: Vec<ReleaseData>
 }
 
+#[derive(Clone, Debug, Deserialize, Default, Eq, PartialEq, Serialize)]
+pub struct MaybePackageDataPost {
+    pub description: String
+}
+
+impl MaybePackageDataPost {
+    fn overlong(&self) -> bool {
+        self.description.len() > DESCRIPTION_MAX_LENGTH
+    }
+}
+
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybePackageDataPost")]
 pub struct PackageDataPost {
 // TODO: display name?
 //    pub name: String,
     pub description: String
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct PackageDataPostError(MaybePackageDataPost);
+
+impl TryFrom<MaybePackageDataPost> for PackageDataPost {
+    type Error = PackageDataPostError;
+
+    fn try_from(m: MaybePackageDataPost) -> Result<Self, Self::Error> {
+        if m.overlong() {
+            Err(PackageDataPostError(m))
+        }
+        else {
+            Ok(
+                PackageDataPost {
+                    description: m.description
+                }
+            )
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -431,6 +464,33 @@ impl TryFrom<FlagData> for Flag {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn try_from_package_data_post_ok() {
+        assert_eq!(
+            PackageDataPost::try_from(
+                MaybePackageDataPost {
+                    description: "desc".into()
+                }
+            ).unwrap(),
+            PackageDataPost {
+                description: "desc".into()
+            }
+        );
+    }
+
+    #[test]
+    fn try_from_package_data_post_overlong_description() {
+        let mpdp = MaybePackageDataPost {
+            description: "x".repeat(DESCRIPTION_MAX_LENGTH + 1),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            PackageDataPost::try_from(mpdp.clone()).unwrap_err(),
+            PackageDataPostError(mpdp)
+        );
+    }
 
     #[test]
     fn try_from_project_data_post_ok() {
