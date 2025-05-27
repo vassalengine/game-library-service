@@ -43,7 +43,7 @@ tracing = "^0.1"
 tracing-panic = { version = "^0.1", features = ["capture-backtrace"] }
 tracing-subscriber = { version = "^0.3", features = ["env-filter"] }
 unwrap-infallible = "^0.1"
-zip = "^2.2"
+zip = "^4"
 
 [dev-dependencies]
 nix = { version = "^0.30", features = ["signal"] }
