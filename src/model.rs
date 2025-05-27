@@ -59,7 +59,6 @@ pub struct ReleaseData {
     pub files: Vec<FileData>
 }
 
-// TODO: probably needs slug
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,
