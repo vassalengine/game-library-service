@@ -25,6 +25,10 @@ pub enum AppError {
     JsonError,
     #[error("Bad request")]
     LimitOutOfRange,
+    #[error("Project already exists")]
+    ProjectExists,
+    #[error("Invalid project name")]
+    InvalidProjectName,
     #[error("Bad request")]
     MalformedQuery,
     #[error("Bad request")]
@@ -105,9 +109,9 @@ impl From<GetProjectError> for AppError {
 impl From<CreateProjectError> for AppError {
     fn from(err: CreateProjectError) -> Self {
         match err {
-            CreateProjectError::AlreadyExists => AppError::MalformedQuery,
+            CreateProjectError::AlreadyExists => AppError::ProjectExists,
             CreateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
-            CreateProjectError::InvalidProjectName => AppError::MalformedQuery,
+            CreateProjectError::InvalidProjectName => AppError::InvalidProjectName,
             CreateProjectError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
