@@ -103,6 +103,12 @@ impl From<AppError> for HttpError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let code = StatusCode::from(&self);
+
+        // Log 5xx errors
+        if code.is_server_error() {
+            error!("{}", self);
+        }
+
         let body = Json(HttpError::from(self));
         (code, body).into_response()
     }
