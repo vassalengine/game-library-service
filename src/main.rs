@@ -14,6 +14,7 @@ use std::{
     fs,
     io,
     net::{IpAddr, SocketAddr},
+    path::PathBuf,
     sync::Arc,
     time::Duration
 };
@@ -289,7 +290,9 @@ enum StartupError {
     #[error("{0}")]
     Io(#[from] io::Error),
     #[error("{0}")]
-    BucketUploader(#[from] upload::BucketUploaderError)
+    BucketUploader(#[from] upload::BucketUploaderError),
+    #[error("Uploads directory does not exist")]
+    NoUploadsDirectory
 }
 
 async fn shutdown_signal() {
@@ -316,6 +319,11 @@ async fn run() -> Result<(), StartupError> {
     info!("Reading config.toml");
     let config: Config = toml::from_str(&fs::read_to_string("config.toml")?)?;
 
+    let uploads_dir = PathBuf::from(config.uploads_dir);
+    if !uploads_dir.is_dir() {
+        return Err(StartupError::NoUploadsDirectory);
+    }
+
     info!("Opening database {}", config.db_path);
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -337,7 +345,7 @@ async fn run() -> Result<(), StartupError> {
         now: Utc::now,
         max_image_size: config.max_image_size << 20, // MB to bytes
         max_file_size: config.max_file_size << 20,   // MB to bytes
-        uploads_dir: config.uploads_dir.into()
+        uploads_dir
     };
 
     let state = AppState {
