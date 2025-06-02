@@ -27,7 +27,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer}
 };
-use tracing::{error, info, info_span, Level, Span};
+use tracing::{error, info, info_span, warn, Level, Span};
 use tracing_panic::panic_hook;
 use tracing_subscriber::{
     EnvFilter,
@@ -105,9 +105,12 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let code = StatusCode::from(&self);
 
-        // Log 5xx errors
+        // Log errors
         if code.is_server_error() {
             error!("{}", self);
+        }
+        else {
+            warn!("{}", self);
         }
 
         let body = Json(HttpError::from(self));
