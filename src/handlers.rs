@@ -17,7 +17,7 @@ use std::{
 use crate::{
     core::CoreArc,
     errors::AppError,
-    extractors::{ProjectPackageRelease, ProjectPackageVersion, Wrapper},
+    extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
     model::{Flag, Owned, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
 };
@@ -147,7 +147,8 @@ pub async fn packages_post(
 
 pub async fn release_post(
     Owned(owner, proj): Owned,
-    ProjectPackageVersion(_, pkg, version): ProjectPackageVersion,
+    ProjectPackage(_, pkg): ProjectPackage,
+    Path((_, _, version)): Path<(String, String, String)>,
     State(core): State<CoreArc>
 ) -> Result<(), AppError>
 {

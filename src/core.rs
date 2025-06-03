@@ -16,7 +16,7 @@ use crate::{
     pagination,
     time,
     upload,
-    version::Version
+    version
 };
 
 #[derive(Debug, Error, PartialEq)]
@@ -125,6 +125,8 @@ pub enum CreatePackageError {
 pub enum CreateReleaseError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    InvalidVersion(#[from] version::MalformedVersion),
     #[error("{0}")]
     TimeError(#[from] time::Error)
 }
@@ -389,7 +391,7 @@ pub trait Core {
         _owner: Owner,
         _proj: Project,
         _pkg: Package,
-        _version: &Version
+        _version: &str
     ) -> Result<(), CreateReleaseError>
     {
         unimplemented!();

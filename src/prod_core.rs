@@ -270,11 +270,12 @@ where
         owner: Owner,
         proj: Project,
         pkg: Package,
-        version: &Version,
+        version: &str
     ) -> Result<(), CreateReleaseError>
     {
         let now = self.now_nanos()?;
-        Ok(self.db.create_release(owner, proj, pkg, version, now).await?)
+        let version = version.parse::<Version>()?;
+        Ok(self.db.create_release(owner, proj, pkg, &version, now).await?)
     }
 
     async fn add_file(
