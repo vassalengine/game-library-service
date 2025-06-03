@@ -13,3 +13,4 @@ bucket_access_key = ""
 bucket_secret_key = ""
 bucket_base_url = "https://obj.vassalengine.org"
 bucket_base_dir = "test"
+log_headers = false
