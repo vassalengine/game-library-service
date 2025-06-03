@@ -33,7 +33,7 @@ pub enum AppError {
     MalformedQuery,
     #[error("Bad request")]
     MalformedUpload,
-    #[error("Bad request")]
+    #[error("Malformed version")]
     MalformedVersion,
     #[error("Not found")]
     NotAUser,
