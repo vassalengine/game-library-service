@@ -302,12 +302,8 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(SpanMaker::new().include_headers(log_headers))
-                .on_response(
-                    DefaultOnResponse::new().level(Level::INFO)
-                )
-                .on_failure(
-                    DefaultOnFailure::new().level(Level::WARN)
-                )
+                .on_response(DefaultOnResponse::new().level(Level::INFO))
+                .on_failure(DefaultOnFailure::new().level(Level::WARN))
         )
 }
 
