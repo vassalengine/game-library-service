@@ -5,7 +5,7 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, ProjectRow, map_unique},
-    model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
+    model::{Owner, Project, ProjectDataPatch, ProjectDataPost, RangePatch, RangePost, User},
     sqlite::users::add_owner
 };
 
@@ -49,6 +49,14 @@ where
 {
     let proj_norm = normalize_project_name(proj);
 
+    let RangePost { min: pmin, max: pmax } = proj_data.game.players
+        .as_ref()
+        .unwrap_or(&RangePost { min: None, max: None });
+
+    let RangePost { min: lmin, max: lmax } = proj_data.game.length
+        .as_ref()
+        .unwrap_or(&RangePost { min: None, max: None });
+
     sqlx::query_scalar!(
         "
 INSERT INTO projects (
@@ -60,13 +68,17 @@ INSERT INTO projects (
     game_title_sort,
     game_publisher,
     game_year,
+    game_players_min,
+    game_players_max,
+    game_length_min,
+    game_length_max,
     readme,
     image,
     modified_at,
     modified_by,
     revision
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_id
         ",
         proj,
@@ -77,6 +89,10 @@ RETURNING project_id
         proj_data.game.title_sort_key,
         proj_data.game.publisher,
         proj_data.game.year,
+        pmin,
+        pmax,
+        lmin,
+        lmax,
         "",
         None::<&str>,
         now,
@@ -97,6 +113,10 @@ struct ProjectDataRow<'a> {
     game_title_sort: &'a str,
     game_publisher: &'a str,
     game_year: &'a str,
+    game_players_min: Option<u32>,
+    game_players_max: Option<u32>,
+    game_length_min: Option<u32>,
+    game_length_max: Option<u32>,
     readme: &'a str,
     image: Option<&'a str>
 }
@@ -118,10 +138,14 @@ INSERT INTO project_data (
     game_title_sort,
     game_publisher,
     game_year,
+    game_players_min,
+    game_players_max,
+    game_length_min,
+    game_length_max,
     readme,
     image
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_data_id
             ",
             row.project_id,
@@ -130,6 +154,10 @@ RETURNING project_data_id
             row.game_title_sort,
             row.game_publisher,
             row.game_year,
+            row.game_players_min,
+            row.game_players_max,
+            row.game_length_min,
+            row.game_length_max,
             row.readme,
             row.image
         )
@@ -202,6 +230,14 @@ where
     add_owner(&mut *tx, owner, proj).await?;
 
     // create project revision
+    let RangePost { min: pmin, max: pmax } = pd.game.players
+        .as_ref()
+        .unwrap_or(&RangePost { min: None, max: None });
+
+    let RangePost { min: lmin, max: lmax } = pd.game.length
+        .as_ref()
+        .unwrap_or(&RangePost { min: None, max: None });
+
     let dr = ProjectDataRow {
         project_id: proj.0,
         description: &pd.description,
@@ -209,6 +245,10 @@ where
         game_title_sort: &pd.game.title_sort_key,
         game_publisher:  &pd.game.publisher,
         game_year: &pd.game.year,
+        game_players_min: *pmin,
+        game_players_max: *pmax,
+        game_length_min: *lmin,
+        game_length_max: *lmax,
         readme: &pd.readme,
         image: pd.image.as_deref()
     };
@@ -315,6 +355,14 @@ where
     update_project_row(&mut *tx, owner, proj, revision, pd, now).await?;
 
     // create project revision
+    let RangePatch { min: pmin, max: pmax } = pd.game.players
+        .as_ref()
+        .unwrap_or(&RangePatch { min: None, max: None });
+
+    let RangePatch { min: lmin, max: lmax } = pd.game.length
+        .as_ref()
+        .unwrap_or(&RangePatch { min: None, max: None });
+
     let dr = ProjectDataRow {
         project_id: proj.0,
         description: pd.description.as_ref().unwrap_or(&row.description),
@@ -322,6 +370,10 @@ where
         game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
         game_publisher: pd.game.publisher.as_ref().unwrap_or(&row.game_publisher),
         game_year: pd.game.year.as_ref().unwrap_or(&row.game_year),
+        game_players_min: pmin.flatten(),
+        game_players_max: pmax.flatten(),
+        game_length_min: lmin.flatten(),
+        game_length_max: lmax.flatten(),
         readme: pd.readme.as_ref().unwrap_or(&row.readme),
         image: pd.image.as_ref().unwrap_or(&row.image).as_deref()
     };
@@ -542,7 +594,7 @@ mod test {
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
             game_players_min: None,
-            game_players_max: None,
+            game_players_max: Some(3),
             game_length_min: None,
             game_length_max: None,
             readme: "".into(),
@@ -839,7 +891,7 @@ mod test {
             game_publisher: "Test Game Company".into(),
             game_year: "1979".into(),
             game_players_min: None,
-            game_players_max: None,
+            game_players_max: Some(3),
             game_length_min: None,
             game_length_max: None,
             readme: "".into(),
@@ -861,7 +913,7 @@ mod test {
             game_publisher: "Test Game Company".into(),
             game_year: "1978".into(),
             game_players_min: None,
-            game_players_max: None,
+            game_players_max: Some(3),
             game_length_min: None,
             game_length_max: None,
             readme: "".into(),
