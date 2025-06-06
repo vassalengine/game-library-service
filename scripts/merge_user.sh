@@ -4,9 +4,9 @@ src="$1"
 dst="$2"
 
 cat << EOF | sqlite3 projects.db
-UPDATE owners SET user_id = $dst WHERE user_id = $src;
-UPDATE authors SET user_id = $dst WHERE user_id = $src;
-UPDATE players SET user_id = $dst WHERE user_id = $src;
+UPDATE OR IGNORE owners SET user_id = $dst WHERE user_id = $src;
+UPDATE OR IGNORE authors SET user_id = $dst WHERE user_id = $src;
+UPDATE OR IGNORE players SET user_id = $dst WHERE user_id = $src;
 UPDATE packages SET created_by = $dst WHERE created_by = $src;
 UPDATE releases SET published_by = $dst WHERE published_by = $src;
 UPDATE files SET published_by = $dst WHERE published_by = $src;
