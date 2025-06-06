@@ -317,6 +317,26 @@ where
         qbs.push("game_year = ").push_bind_unseparated(game_year);
     }
 
+    if let Some(game_players) = &pd.game.players {
+        if let Some(pmin) = game_players.min {
+            qbs.push("game_players_min = ").push_bind_unseparated(pmin);
+        }
+
+        if let Some(pmax) = game_players.max {
+            qbs.push("game_players_max = ").push_bind_unseparated(pmax);
+        }
+    }
+
+    if let Some(game_length) = &pd.game.length {
+        if let Some(lmin) = game_length.min {
+            qbs.push("game_length_min = ").push_bind_unseparated(lmin);
+        }
+
+        if let Some(lmax) = game_length.max {
+            qbs.push("game_length_max = ").push_bind_unseparated(lmax);
+        }
+    }
+
     if let Some(readme) = &pd.readme {
         qbs.push("readme = ").push_bind_unseparated(readme);
     }
