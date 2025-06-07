@@ -31,12 +31,6 @@ pub struct Range {
     pub max: Option<i64>
 }
 
-impl Range {
-    pub fn empty() -> Range {
-        Range { min: None, max: None }
-    }
-}
-
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameData {
     pub title: String,
@@ -158,12 +152,6 @@ pub struct RangePatch {
     pub min: Option<Option<u32>>,
     #[serde(default, deserialize_with = "double_option")]
     pub max: Option<Option<u32>>
-}
-
-impl RangePatch {
-    pub fn empty() -> RangePatch {
-        RangePatch { min: None, max: None }
-    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -323,12 +311,6 @@ pub struct MaybeRangePost {
 pub struct RangePost {
     pub min: Option<u32>,
     pub max: Option<u32>
-}
-
-impl RangePost {
-    pub fn empty() -> RangePost {
-        RangePost { min: None, max: None }
-    }
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
@@ -546,8 +528,8 @@ mod test {
                         title_sort_key: "title, the".into(),
                         publisher: "publisher".into(),
                         year: "1979".into(),
-                        players: RangePost::empty(),
-                        length: RangePost::empty()
+                        players: RangePost::default(),
+                        length: RangePost::default()
                     },
                     readme: "readme".into(),
                     image: None
@@ -561,8 +543,8 @@ mod test {
                     title_sort_key: "title, the".into(),
                     publisher: "publisher".into(),
                     year: "1979".into(),
-                    players: RangePost::empty(),
-                    length: RangePost::empty()
+                    players: RangePost::default(),
+                    length: RangePost::default()
                 },
                 readme: "readme".into(),
                 image: None

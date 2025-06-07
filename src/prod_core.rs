@@ -1094,8 +1094,8 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                     title_sort_key: r.game_title_sort,
                     publisher: r.game_publisher,
                     year: r.game_year,
-                    players: Range::empty(),
-                    length: Range::empty()
+                    players: Range::default(),
+                    length: Range::default()
                 }
             }
         )
@@ -1173,8 +1173,8 @@ mod test {
                 title_sort_key: "".into(),
                 publisher: "".into(),
                 year: "".into(),
-                players: Range::empty(),
-                length: Range::empty(),
+                players: Range::default(),
+                length: Range::default(),
             }
         }
     }
@@ -1952,8 +1952,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: Range::empty(),
-                    length: Range::empty()
+                    players: Range::default(),
+                    length: Range::default()
                 },
                 readme: "".into(),
                 image: None,
@@ -2044,8 +2044,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: Range::empty(),
-                    length: Range::empty()
+                    players: Range::default(),
+                    length: Range::default()
                 },
                 readme: "".into(),
                 image: None,
@@ -2120,8 +2120,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1978".into(),
-                    players: Range::empty(),
-                    length: Range::empty()
+                    players: Range::default(),
+                    length: Range::default()
                 },
                 readme: "".into(),
                 image: None,
@@ -2161,8 +2161,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: Range::empty(),
-                length: Range::empty()
+                players: Range::default(),
+                length: Range::default()
             },
             readme: "".into(),
             image: None,
@@ -2179,8 +2179,8 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone(),
-                players: RangePost::empty(),
-                length: RangePost::empty()
+                players: RangePost::default(),
+                length: RangePost::default()
             },
             readme: "".into(),
             image: None
@@ -2209,8 +2209,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: Range::empty(),
-                length: Range::empty()
+                players: Range::default(),
+                length: Range::default()
             },
             readme: "".into(),
             image: None,
@@ -2227,8 +2227,8 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone(),
-                players: RangePost::empty(),
-                length: RangePost::empty()
+                players: RangePost::default(),
+                length: RangePost::default()
             },
             readme: "".into(),
             image: None
@@ -2257,8 +2257,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: Range::empty(),
-                length: Range::empty(),
+                players: Range::default(),
+                length: Range::default(),
             },
             readme: "".into(),
             image: None,
@@ -2275,8 +2275,8 @@ mod test {
                 title_sort_key: Some(new_data.game.title_sort_key.clone()),
                 publisher: Some(new_data.game.publisher.clone()),
                 year: Some(new_data.game.year.clone()),
-                players: RangePatch::empty(),
-                length: RangePatch::empty()
+                players: RangePatch::default(),
+                length: RangePatch::default()
             },
             readme: Some("".into()),
             image: None

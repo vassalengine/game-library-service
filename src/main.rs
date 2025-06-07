@@ -501,8 +501,8 @@ mod test {
                 title_sort_key: "a".into(),
                 publisher: "p".into(),
                 year: "2024".into(),
-                players: Range::empty(),
-                length: Range::empty()
+                players: Range::default(),
+                length: Range::default()
             }
         }
     );
@@ -520,8 +520,8 @@ mod test {
                 title_sort_key: "b".into(),
                 publisher: "p".into(),
                 year: "2024".into(),
-                players: Range::empty(),
-                length: Range::empty()
+                players: Range::default(),
+                length: Range::default()
             }
         }
     );
@@ -541,8 +541,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: Range::empty(),
-                length: Range::empty()
+                players: Range::default(),
+                length: Range::default()
             },
             readme: "".into(),
             image: None,
@@ -1934,8 +1934,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: RangePost::empty(),
-                length: RangePost::empty()
+                players: RangePost::default(),
+                length: RangePost::default()
             },
             readme: "".into(),
             image: None
@@ -1975,8 +1975,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: RangePost::empty(),
-                length: RangePost::empty()
+                players: RangePost::default(),
+                length: RangePost::default()
             },
             readme: "".into(),
             image: None
