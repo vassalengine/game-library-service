@@ -21,7 +21,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+    model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -1109,7 +1109,7 @@ mod test {
     use tokio::io::AsyncRead;
 
     use crate::{
-        model::{GameDataPatch, GameDataPost},
+        model::{GameDataPatch, GameDataPost, RangePatch, RangePost},
         pagination::Direction,
         sqlite::{Pool, SqlxDatabaseClient},
         upload::UploadError
@@ -2275,8 +2275,8 @@ mod test {
                 title_sort_key: Some(new_data.game.title_sort_key.clone()),
                 publisher: Some(new_data.game.publisher.clone()),
                 year: Some(new_data.game.year.clone()),
-                players: None,
-                length: None
+                players: RangePatch::empty(),
+                length: RangePatch::empty()
             },
             readme: Some("".into()),
             image: None

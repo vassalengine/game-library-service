@@ -5,7 +5,7 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, ProjectRow, map_unique},
-    model::{Owner, Project, ProjectDataPatch, ProjectDataPost, RangePatch, RangePost, User},
+    model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
     sqlite::users::add_owner
 };
 
@@ -301,24 +301,20 @@ where
         qbs.push("game_year = ").push_bind_unseparated(game_year);
     }
 
-    if let Some(game_players) = &pd.game.players {
-        if let Some(pmin) = game_players.min {
-            qbs.push("game_players_min = ").push_bind_unseparated(pmin);
-        }
-
-        if let Some(pmax) = game_players.max {
-            qbs.push("game_players_max = ").push_bind_unseparated(pmax);
-        }
+    if let Some(pmin) = &pd.game.players.min {
+        qbs.push("game_players_min = ").push_bind_unseparated(pmin);
     }
 
-    if let Some(game_length) = &pd.game.length {
-        if let Some(lmin) = game_length.min {
-            qbs.push("game_length_min = ").push_bind_unseparated(lmin);
-        }
+    if let Some(pmax) = &pd.game.players.max {
+        qbs.push("game_players_max = ").push_bind_unseparated(pmax);
+    }
 
-        if let Some(lmax) = game_length.max {
-            qbs.push("game_length_max = ").push_bind_unseparated(lmax);
-        }
+    if let Some(lmin) = &pd.game.length.min {
+        qbs.push("game_length_min = ").push_bind_unseparated(lmin);
+    }
+
+    if let Some(lmax) = &pd.game.length.max {
+        qbs.push("game_length_max = ").push_bind_unseparated(lmax);
     }
 
     if let Some(readme) = &pd.readme {
@@ -359,14 +355,6 @@ where
     update_project_row(&mut *tx, owner, proj, revision, pd, now).await?;
 
     // create project revision
-    let RangePatch { min: pmin, max: pmax } = pd.game.players
-        .as_ref()
-        .unwrap_or(&RangePatch { min: None, max: None });
-
-    let RangePatch { min: lmin, max: lmax } = pd.game.length
-        .as_ref()
-        .unwrap_or(&RangePatch { min: None, max: None });
-
     let dr = ProjectDataRow {
         project_id: proj.0,
         description: pd.description.as_ref().unwrap_or(&row.description),
@@ -374,10 +362,10 @@ where
         game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
         game_publisher: pd.game.publisher.as_ref().unwrap_or(&row.game_publisher),
         game_year: pd.game.year.as_ref().unwrap_or(&row.game_year),
-        game_players_min: pmin.flatten(),
-        game_players_max: pmax.flatten(),
-        game_length_min: lmin.flatten(),
-        game_length_max: lmax.flatten(),
+        game_players_min: pd.game.players.min.unwrap_or(row.game_players_min.map(|p| p as u32)),
+        game_players_max: pd.game.players.max.unwrap_or(row.game_players_max.map(|p| p as u32)),
+        game_length_min: pd.game.length.min.unwrap_or(row.game_length_min.map(|l| l as u32)),
+        game_length_max: pd.game.length.max.unwrap_or(row.game_length_max.map(|l| l as u32)),
         readme: pd.readme.as_ref().unwrap_or(&row.readme),
         image: pd.image.as_ref().unwrap_or(&row.image).as_deref()
     };

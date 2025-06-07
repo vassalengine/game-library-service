@@ -160,8 +160,14 @@ pub struct RangePatch {
     pub max: Option<Option<u32>>
 }
 
+impl RangePatch {
+    pub fn empty() -> RangePatch {
+        RangePatch { min: None, max: None }
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GameDataPatch {
+pub struct MaybeGameDataPatch {
     pub title: Option<String>,
     pub title_sort_key: Option<String>,
     pub publisher: Option<String>,
@@ -171,10 +177,34 @@ pub struct GameDataPatch {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(from = "MaybeGameDataPatch")]
+pub struct GameDataPatch {
+    pub title: Option<String>,
+    pub title_sort_key: Option<String>,
+    pub publisher: Option<String>,
+    pub year: Option<String>,
+    pub players: RangePatch,
+    pub length: RangePatch
+}
+
+impl From<MaybeGameDataPatch> for GameDataPatch {
+    fn from(m: MaybeGameDataPatch) -> Self {
+        GameDataPatch {
+            title: m.title,
+            title_sort_key: m.title_sort_key,
+            publisher: m.publisher,
+            year: m.year,
+            players: m.players.unwrap_or_default(),
+            length: m.length.unwrap_or_default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeProjectDataPatch {
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub game: Option<GameDataPatch>,
+    pub game: Option<MaybeGameDataPatch>,
     pub readme: Option<String>,
     #[serde(default, deserialize_with = "double_option")]
     pub image: Option<Option<String>>
@@ -187,7 +217,7 @@ impl MaybeProjectDataPatch {
             MaybeProjectDataPatch {
                 description: None,
                 tags: None,
-                game: None | Some(GameDataPatch {
+                game: None | Some(MaybeGameDataPatch {
                     title: None,
                     title_sort_key: None,
                     publisher: None,
@@ -273,7 +303,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
                 ProjectDataPatch {
                     description: m.description,
                     tags: m.tags,
-                    game: m.game.unwrap_or_default(),
+                    game: m.game.unwrap_or_default().into(),
                     readme: m.readme,
                     image: m.image
                 }
@@ -649,7 +679,7 @@ mod test {
         assert_eq!(
             serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
             MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     title: Some("foo".into()),
                     ..Default::default()
                 }),
@@ -691,7 +721,7 @@ mod test {
     fn maybe_project_data_patch_default_and_game_empty() {
         assert!(
             MaybeProjectDataPatch {
-                game: Some(GameDataPatch::default()),
+                game: Some(MaybeGameDataPatch::default()),
                 ..Default::default()
             }.empty()
         );
@@ -741,7 +771,7 @@ mod test {
     fn maybe_project_data_patch_title_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     title: Some("title".into()),
                     ..Default::default()
                 }),
@@ -754,7 +784,7 @@ mod test {
     fn maybe_project_data_patch_title_sort_key_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     title_sort_key: Some("title_sort_key".into()),
                     ..Default::default()
                 }),
@@ -767,7 +797,7 @@ mod test {
     fn maybe_project_data_patch_publisher_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     publisher: Some("publisher".into()),
                     ..Default::default()
                 }),
@@ -780,7 +810,7 @@ mod test {
     fn maybe_project_data_patch_year_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     year: Some("1979".into()),
                     ..Default::default()
                 }),
@@ -793,7 +823,7 @@ mod test {
     fn maybe_project_data_patch_plyers_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
-                game: Some(GameDataPatch {
+                game: Some(MaybeGameDataPatch {
                     players: Some(RangePatch {
                         min: Some(Some(1)),
                         max: Some(Some(2))
@@ -862,7 +892,7 @@ mod test {
     #[test]
     fn try_from_project_data_patch_overlong_title() {
         let mpdp = MaybeProjectDataPatch {
-            game: Some(GameDataPatch {
+            game: Some(MaybeGameDataPatch {
                 title: Some("x".repeat(GAME_TITLE_MAX_LENGTH + 1)),
                 ..Default::default()
             }),
@@ -878,7 +908,7 @@ mod test {
     #[test]
     fn try_from_project_data_patch_overlong_title_sort_key() {
         let mpdp = MaybeProjectDataPatch {
-            game: Some(GameDataPatch {
+            game: Some(MaybeGameDataPatch {
                 title_sort_key: Some("x".repeat(GAME_TITLE_SORT_KEY_MAX_LENGTH + 1)),
                 ..Default::default()
             }),
@@ -894,7 +924,7 @@ mod test {
     #[test]
     fn try_from_project_data_patch_overlong_publisher() {
         let mpdp = MaybeProjectDataPatch {
-            game: Some(GameDataPatch {
+            game: Some(MaybeGameDataPatch {
                 publisher: Some("x".repeat(GAME_PUBLISHER_MAX_LENGTH + 1)),
                 ..Default::default()
             }),
@@ -910,7 +940,7 @@ mod test {
     #[test]
     fn try_from_project_data_patch_overlong_year() {
         let mpdp = MaybeProjectDataPatch {
-            game: Some(GameDataPatch {
+            game: Some(MaybeGameDataPatch {
                 year: Some("x".repeat(GAME_YEAR_MAX_LENGTH + 1)),
                 ..Default::default()
             }),
