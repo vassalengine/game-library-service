@@ -468,7 +468,7 @@ mod test {
     use crate::{
         core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreateProjectError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -1934,8 +1934,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: None,
-                length: None
+                players: RangePost::empty(),
+                length: RangePost::empty()
             },
             readme: "".into(),
             image: None
@@ -1975,8 +1975,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: None,
-                length: None
+                players: RangePost::empty(),
+                length: RangePost::empty()
             },
             readme: "".into(),
             image: None

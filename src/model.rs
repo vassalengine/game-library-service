@@ -295,6 +295,12 @@ pub struct RangePost {
     pub max: Option<u32>
 }
 
+impl RangePost {
+    pub fn empty() -> RangePost {
+        RangePost { min: None, max: None }
+    }
+}
+
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("min > max: {0:?}")]
 pub struct RangePostError(MaybeRangePost);
@@ -317,8 +323,8 @@ pub struct GameDataPost {
     pub title_sort_key: String,
     pub publisher: String,
     pub year: String,
-    pub players: Option<RangePost>,
-    pub length: Option<RangePost>
+    pub players: RangePost,
+    pub length: RangePost
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -510,8 +516,8 @@ mod test {
                         title_sort_key: "title, the".into(),
                         publisher: "publisher".into(),
                         year: "1979".into(),
-                        players: None,
-                        length: None
+                        players: RangePost::empty(),
+                        length: RangePost::empty()
                     },
                     readme: "readme".into(),
                     image: None
@@ -525,8 +531,8 @@ mod test {
                     title_sort_key: "title, the".into(),
                     publisher: "publisher".into(),
                     year: "1979".into(),
-                    players: None,
-                    length: None
+                    players: RangePost::empty(),
+                    length: RangePost::empty()
                 },
                 readme: "readme".into(),
                 image: None

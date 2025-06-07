@@ -49,14 +49,6 @@ where
 {
     let proj_norm = normalize_project_name(proj);
 
-    let RangePost { min: pmin, max: pmax } = proj_data.game.players
-        .as_ref()
-        .unwrap_or(&RangePost { min: None, max: None });
-
-    let RangePost { min: lmin, max: lmax } = proj_data.game.length
-        .as_ref()
-        .unwrap_or(&RangePost { min: None, max: None });
-
     sqlx::query_scalar!(
         "
 INSERT INTO projects (
@@ -89,10 +81,10 @@ RETURNING project_id
         proj_data.game.title_sort_key,
         proj_data.game.publisher,
         proj_data.game.year,
-        pmin,
-        pmax,
-        lmin,
-        lmax,
+        proj_data.game.players.min,
+        proj_data.game.players.max,
+        proj_data.game.length.min,
+        proj_data.game.length.max,
         "",
         None::<&str>,
         now,
@@ -230,14 +222,6 @@ where
     add_owner(&mut *tx, owner, proj).await?;
 
     // create project revision
-    let RangePost { min: pmin, max: pmax } = pd.game.players
-        .as_ref()
-        .unwrap_or(&RangePost { min: None, max: None });
-
-    let RangePost { min: lmin, max: lmax } = pd.game.length
-        .as_ref()
-        .unwrap_or(&RangePost { min: None, max: None });
-
     let dr = ProjectDataRow {
         project_id: proj.0,
         description: &pd.description,
@@ -245,10 +229,10 @@ where
         game_title_sort: &pd.game.title_sort_key,
         game_publisher:  &pd.game.publisher,
         game_year: &pd.game.year,
-        game_players_min: *pmin,
-        game_players_max: *pmax,
-        game_length_min: *lmin,
-        game_length_max: *lmax,
+        game_players_min: pd.game.players.min,
+        game_players_max: pd.game.players.max,
+        game_length_min: pd.game.players.min,
+        game_length_max: pd.game.players.max,
         readme: &pd.readme,
         image: pd.image.as_deref()
     };
@@ -631,18 +615,14 @@ mod test {
                 title_sort_key: CREATE_ROW.game_title_sort.clone(),
                 publisher: CREATE_ROW.game_publisher.clone(),
                 year: CREATE_ROW.game_year.clone(),
-                players: Some(
-                    RangePost {
-                        min: CREATE_ROW.game_players_min.map(|i| i as u32),
-                        max: CREATE_ROW.game_players_max.map(|i| i as u32)
-                    }
-                ),
-                length: Some(
-                    RangePost {
-                        min: CREATE_ROW.game_length_min.map(|i| i as u32),
-                        max: CREATE_ROW.game_length_max.map(|i| i as u32)
-                    }
-                )
+                players: RangePost {
+                    min: CREATE_ROW.game_players_min.map(|i| i as u32),
+                    max: CREATE_ROW.game_players_max.map(|i| i as u32)
+                },
+                length: RangePost {
+                    min: CREATE_ROW.game_length_min.map(|i| i as u32),
+                    max: CREATE_ROW.game_length_max.map(|i| i as u32)
+                }
             },
             readme: "".into(),
             image: None

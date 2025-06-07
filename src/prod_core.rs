@@ -21,7 +21,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -2179,8 +2179,8 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone(),
-                players: None,
-                length: None
+                players: RangePost::empty(),
+                length: RangePost::empty()
             },
             readme: "".into(),
             image: None
@@ -2227,8 +2227,8 @@ mod test {
                 title_sort_key: data.game.title_sort_key.clone(),
                 publisher: data.game.publisher.clone(),
                 year: data.game.year.clone(),
-                players: None,
-                length: None
+                players: RangePost::empty(),
+                length: RangePost::empty()
             },
             readme: "".into(),
             image: None
