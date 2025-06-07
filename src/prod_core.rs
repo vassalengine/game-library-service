@@ -496,15 +496,6 @@ where
     }
 }
 
-fn range_if_some(min: Option<i64>, max: Option<i64>) -> Option<Range> {
-    if min.is_some() || max.is_some() {
-        Some(Range { min, max })
-    }
-    else {
-        None
-    }
-}
-
 impl<C, U> ProdCore<C, U>
 where
     C: DatabaseClient + Send + Sync,
@@ -638,14 +629,14 @@ where
                     title_sort_key: proj_row.game_title_sort,
                     publisher: proj_row.game_publisher,
                     year: proj_row.game_year,
-                    players: range_if_some(
-                        proj_row.game_players_min,
-                        proj_row.game_players_max
-                    ),
-                    length: range_if_some(
-                        proj_row.game_length_min,
-                        proj_row.game_length_max
-                    )
+                    players: Range {
+                        min: proj_row.game_players_min,
+                        max: proj_row.game_players_max
+                    },
+                    length: Range {
+                        min: proj_row.game_length_min,
+                        max: proj_row.game_length_max
+                    }
                 },
                 readme: proj_row.readme,
                 image: proj_row.image,
@@ -1103,8 +1094,8 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                     title_sort_key: r.game_title_sort,
                     publisher: r.game_publisher,
                     year: r.game_year,
-                    players: None,
-                    length: None
+                    players: Range::empty(),
+                    length: Range::empty()
                 }
             }
         )
@@ -1182,8 +1173,8 @@ mod test {
                 title_sort_key: "".into(),
                 publisher: "".into(),
                 year: "".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty(),
             }
         }
     }
@@ -1961,8 +1952,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: None,
-                    length: None
+                    players: Range::empty(),
+                    length: Range::empty()
                 },
                 readme: "".into(),
                 image: None,
@@ -2053,8 +2044,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: None,
-                    length: None
+                    players: Range::empty(),
+                    length: Range::empty()
                 },
                 readme: "".into(),
                 image: None,
@@ -2129,8 +2120,8 @@ mod test {
                     title_sort_key: "Game of Tests, A".into(),
                     publisher: "Test Game Company".into(),
                     year: "1978".into(),
-                    players: None,
-                    length: None
+                    players: Range::empty(),
+                    length: Range::empty()
                 },
                 readme: "".into(),
                 image: None,
@@ -2170,8 +2161,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty()
             },
             readme: "".into(),
             image: None,
@@ -2218,8 +2209,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty()
             },
             readme: "".into(),
             image: None,
@@ -2266,8 +2257,8 @@ mod test {
                 title_sort_key: "Some New Game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: None,
-                length: None,
+                players: Range::empty(),
+                length: Range::empty(),
             },
             readme: "".into(),
             image: None,

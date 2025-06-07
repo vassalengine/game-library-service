@@ -468,7 +468,7 @@ mod test {
     use crate::{
         core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreateProjectError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Release, ReleaseData, User, Users},
+        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -501,8 +501,8 @@ mod test {
                 title_sort_key: "a".into(),
                 publisher: "p".into(),
                 year: "2024".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty()
             }
         }
     );
@@ -520,8 +520,8 @@ mod test {
                 title_sort_key: "b".into(),
                 publisher: "p".into(),
                 year: "2024".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty()
             }
         }
     );
@@ -541,8 +541,8 @@ mod test {
                 title_sort_key: "Empires in Arms".into(),
                 publisher: "Avalon Hill".into(),
                 year: "1983".into(),
-                players: None,
-                length: None
+                players: Range::empty(),
+                length: Range::empty()
             },
             readme: "".into(),
             image: None,

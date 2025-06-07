@@ -25,10 +25,16 @@ pub struct Owner(pub i64);
 #[derive(Debug, Eq, PartialEq)]
 pub struct Owned(pub Owner, pub Project);
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Range {
     pub min: Option<i64>,
     pub max: Option<i64>
+}
+
+impl Range {
+    pub fn empty() -> Range {
+        Range { min: None, max: None }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -37,8 +43,8 @@ pub struct GameData {
     pub title_sort_key: String,
     pub publisher: String,
     pub year: String,
-    pub players: Option<Range>,
-    pub length: Option<Range>
+    pub players: Range,
+    pub length: Range
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
