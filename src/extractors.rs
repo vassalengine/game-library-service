@@ -1,7 +1,7 @@
 use axum::{
     RequestPartsExt,
     extract::{
-        FromRequest, FromRequestParts, FromRef, Path, Request, State,
+        FromRef, FromRequest, FromRequestParts, Path, Request, State,
         rejection::{JsonRejection, QueryRejection}
     },
     http::request::Parts
