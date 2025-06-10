@@ -8,8 +8,8 @@ pub struct Error(#[from] jsonwebtoken::errors::Error);
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Claims {
     pub sub: i64,
-    pub exp: u64,
-    pub iat: u64
+    pub iat: u64,
+    pub exp: u64
 }
 
 #[derive(Clone)]
