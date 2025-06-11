@@ -1,4 +1,5 @@
 use axum::body::Bytes;
+use http::header::{HeaderMap, HeaderName, HeaderValue};
 use futures::Stream;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -154,7 +155,7 @@ impl BucketUploader {
         base_url: &str,
         base_dir: &str
     ) -> Result<BucketUploader, BucketUploaderError> {
-        let mut bucket = *Bucket::new(
+        let bucket = Bucket::new(
             name,
             Region::Custom {
                 region: region.into(),
@@ -167,8 +168,14 @@ impl BucketUploader {
                 None,
                 None
             )?
+        )?
+        .with_path_style()
+        .with_extra_headers(
+            HeaderMap::from_iter([(
+                HeaderName::from_static("x-amz-acl"),
+                HeaderValue::from_static("public-read")
+            )])
         )?;
-        bucket.set_path_style();
 
         Ok(
             BucketUploader {

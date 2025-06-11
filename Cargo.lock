@@ -952,6 +952,7 @@ dependencies = [
  "csv",
  "futures",
  "futures-util",
+ "http 0.2.12",
  "http-body-util",
  "infer",
  "itertools 0.14.0",
