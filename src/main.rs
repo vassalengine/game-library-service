@@ -261,11 +261,6 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
                 post(handlers::packages_post)
             )
             .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}",
-    // FIXME: release_version_post?
-                post(handlers::release_post)
-            )
-            .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
                 post(handlers::file_post)
             )
@@ -282,6 +277,13 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
                 "/projects/{proj}/flag",
                 post(handlers::flag_post)
             )
+            .layer(TimeoutLayer::new(Duration::from_secs(10)))
+            .route(
+                "/projects/{proj}/packages/{pkg_name}/{version}",
+    // FIXME: release_version_post?
+                post(handlers::release_post)
+                    .layer(TimeoutLayer::new(Duration::from_secs(60)))
+            )
     };
 
     // set up things wrapped around our routes
@@ -296,8 +298,6 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
             ServiceBuilder::new()
                 .layer(CorsLayer::very_permissive())
                 .layer(CompressionLayer::new())
-                // ensure requests don't block shutdown
-                .layer(TimeoutLayer::new(Duration::from_secs(10)))
         )
         .layer(
             TraceLayer::new_for_http()
