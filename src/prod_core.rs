@@ -338,6 +338,8 @@ where
             &sha256[1..2]
         );
 
+        info!("going to rewind temp file {}", file.file_path().display());
+
         file.rewind().await?;
 
         info!("starting to upload temp file {}", file.file_path().display());
