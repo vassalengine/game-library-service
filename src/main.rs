@@ -261,8 +261,9 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
                 post(handlers::packages_post)
             )
             .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
-                post(handlers::file_post)
+                "/projects/{proj}/packages/{pkg_name}/{version}",
+// FIXME: release_version_post?
+                post(handlers::release_post)
             )
             .route(
                 "/projects/{proj}/images/{img_name}",
@@ -279,9 +280,8 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
             )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
             .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}",
-    // FIXME: release_version_post?
-                post(handlers::release_post)
+                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+                post(handlers::file_post)
                     .layer(TimeoutLayer::new(Duration::from_secs(60)))
             )
     };
