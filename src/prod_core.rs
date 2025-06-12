@@ -16,6 +16,7 @@ use tokio::io::{
     AsyncReadExt,
     AsyncSeekExt
 };
+use tracing::info;
 
 use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
@@ -289,6 +290,7 @@ where
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), AddFileError>
     {
+        info!("starting add_file");
         let now = self.now_nanos()?;
 
         // ensure the filename is valid
@@ -300,10 +302,14 @@ where
             .await
             .map_err(io::Error::other)?;
 
+        info!("created temp file {}", file.file_path().display());
+
         let stream = Box::into_pin(stream);
 
         let (sha256, size) = stream_to_writer(stream, &mut file)
             .await?;
+
+        info!("wrote temp file {}", file.file_path().display());
 
         // check that the content length, if given, matches what was read
         if content_length.is_some_and(|cl| cl != size) {
@@ -323,6 +329,8 @@ where
             check_version(file.file_path()).await?;
         }
 
+        info!("checked version of temp file {}", file.file_path().display());
+
         // add hash prefix to file upload path
         let bucket_path = format!(
             "{0}/{1}/{filename}",
@@ -332,12 +340,16 @@ where
 
         file.rewind().await?;
 
+        info!("starting to upload temp file {}", file.file_path().display());
+
 // TODO: do we need to set content-type on upload?
         let url = self.uploader.upload(
             &bucket_path,
             &mut file
         )
         .await?;
+
+        info!("finished upload of temp file {}", file.file_path().display());
 
         // update record
         self.db.add_file_url(
