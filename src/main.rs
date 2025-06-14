@@ -172,7 +172,12 @@ impl MakeSpan<Body> for SpanMaker {
     }
 }
 
-fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
+fn routes(
+    api: &str,
+    read_only: bool,
+    log_headers: bool,
+    upload_timeout: u64
+) -> Router<AppState> {
     // set up our routes under api
     let api_router = if read_only {
         Router::new()
@@ -227,6 +232,7 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
                 "/projects/{proj}/flag",
                 post(handlers::forbidden)
             )
+            .layer(TimeoutLayer::new(Duration::from_secs(10)))
     }
     else {
         Router::new()
@@ -282,7 +288,9 @@ fn routes(api: &str, read_only: bool, log_headers: bool) -> Router<AppState> {
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
                 post(handlers::file_post)
-                    .layer(TimeoutLayer::new(Duration::from_secs(60)))
+                    .layer(TimeoutLayer::new(
+                        Duration::from_secs(upload_timeout))
+                    )
             )
     };
 
@@ -384,7 +392,8 @@ async fn run() -> Result<(), StartupError> {
     let app: Router = routes(
         &config.api_base_path,
         config.read_only,
-        config.log_headers
+        config.log_headers,
+        config.upload_timeout
     ).with_state(state);
 
     let ip: IpAddr = config.listen_ip.parse()?;
@@ -888,7 +897,7 @@ mod test {
     }
 
     async fn try_request(request: Request<Body>, rw: bool) -> Response {
-        routes(API_V1, !rw, false)
+        routes(API_V1, !rw, false, 10)
             .with_state(test_state())
             .oneshot(request)
             .await
