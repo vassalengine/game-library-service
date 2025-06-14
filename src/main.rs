@@ -347,8 +347,8 @@ async fn run() -> Result<(), StartupError> {
     info!("Reading config.toml");
     let config: Config = toml::from_str(&fs::read_to_string("config.toml")?)?;
 
-    let uploads_dir = PathBuf::from(config.uploads_dir);
-    if !uploads_dir.is_dir() {
+    let upload_dir = PathBuf::from(config.upload_dir);
+    if !upload_dir.is_dir() {
         return Err(StartupError::NoUploadsDirectory);
     }
 
@@ -373,7 +373,7 @@ async fn run() -> Result<(), StartupError> {
         now: Utc::now,
         max_image_size: config.max_image_size << 20, // MB to bytes
         max_file_size: config.max_file_size << 20,   // MB to bytes
-        uploads_dir
+        upload_dir
     };
 
     let state = AppState {

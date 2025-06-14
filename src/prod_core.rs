@@ -38,7 +38,7 @@ pub struct ProdCore<C: DatabaseClient, U: Uploader> {
     pub now: fn() -> DateTime<Utc>,
     pub max_file_size: usize,
     pub max_image_size: usize,
-    pub uploads_dir: PathBuf
+    pub upload_dir: PathBuf
 }
 
 #[async_trait]
@@ -298,7 +298,7 @@ where
             .or(Err(AddFileError::InvalidFilename))?;
 
         // write the stream to a file
-        let mut file = TempFile::new_in(&*self.uploads_dir)
+        let mut file = TempFile::new_in(&*self.upload_dir)
             .await
             .map_err(io::Error::other)?;
 
@@ -443,7 +443,7 @@ where
             .or(Err(AddImageError::InvalidFilename))?;
 
         // write the stream to a file
-        let mut file = TempFile::new_in(&*self.uploads_dir)
+        let mut file = TempFile::new_in(&*self.upload_dir)
             .await
             .map_err(io::Error::other)?;
 
@@ -1167,7 +1167,7 @@ mod test {
             now,
             max_file_size: 256,
             max_image_size: 256,
-            uploads_dir: "uploads".into()
+            upload_dir: "uploads".into()
         }
     }
 
