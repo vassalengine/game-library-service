@@ -657,7 +657,7 @@ mod test {
 
     #[test]
     fn maybe_project_data_patch_from_json_game_title() {
-        let json = "{\"game\":{\"title\":\"foo\"}}";
+        let json = r#"{"game":{"title":"foo"}}"#;
         assert_eq!(
             serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
             MaybeProjectDataPatch {
@@ -672,7 +672,7 @@ mod test {
 
     #[test]
     fn maybe_project_data_patch_from_json_image() {
-        let json = "{\"image\": \"foo.png\"}";
+        let json = r#"{"image": "foo.png"}"#;
         assert_eq!(
             serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
             MaybeProjectDataPatch {
@@ -684,7 +684,7 @@ mod test {
 
     #[test]
     fn maybe_project_data_patch_from_json_image_clear() {
-        let json = "{\"image\": null}";
+        let json = r#"{"image": null}"#;
         assert_eq!(
             serde_json::from_str::<MaybeProjectDataPatch>(json).unwrap(),
             MaybeProjectDataPatch {
