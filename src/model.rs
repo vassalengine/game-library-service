@@ -656,6 +656,41 @@ mod test {
     }
 
     #[test]
+    fn maybe_project_data_post_from_json_minimal() {
+    let json = r#"
+        {
+            "game": {
+                "title": "foo",
+                "title_sort_key": "foo",
+                "publisher": "",
+                "year": "",
+                "players": { "min": null, "max": null },
+                "length": { "min": null, "max": null }
+            },
+            "description": "",
+            "tags": [],
+            "readme": ""
+        }"#;
+
+        assert_eq!(
+            serde_json::from_str::<MaybeProjectDataPost>(json).unwrap(),
+            MaybeProjectDataPost {
+                description: "".into(),
+                tags: vec![],
+                game: GameDataPost {
+                    title: "foo".into(),
+                    title_sort_key: "foo".into(),
+                    publisher: "".into(),
+                    year: "".into(),
+                    ..Default::default()
+                },
+                readme: "".into(),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
     fn maybe_project_data_patch_from_json_game_title() {
         let json = r#"{"game":{"title":"foo"}}"#;
         assert_eq!(
