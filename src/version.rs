@@ -58,13 +58,7 @@ impl Version {
 
 impl From<&Version> for String {
     fn from(v: &Version) -> Self {
-        match &v.pre {
-            None => format!("{}.{}.{}", v.major, v.minor, v.patch),
-            Some(pre) => match &v.build {
-                None => format!("{}.{}.{}-{}", v.major, v.minor, v.patch, pre),
-                Some(build) => format!("{}.{}.{}-{}+{}", v.major, v.minor, v.patch, pre, build)
-            }
-        }
+        v.to_string()
     }
 }
 
@@ -90,7 +84,28 @@ impl FromStr for Version {
 
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        match &self.pre {
+            None => write!(f, "{}.{}.{}", self.major, self.minor, self.patch),
+            Some(pre) => match &self.build {
+                None => write!(
+                    f,
+                    "{}.{}.{}-{}",
+                    self.major,
+                    self.minor,
+                    self.patch,
+                    pre
+                ),
+                Some(build) => write!(
+                    f,
+                    "{}.{}.{}-{}+{}",
+                    self.major,
+                    self.minor,
+                    self.patch,
+                    pre,
+                    build
+                )
+            }
+        }
     }
 }
 
