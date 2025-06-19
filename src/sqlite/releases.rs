@@ -576,6 +576,14 @@ mod test {
         );
     }
 
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn get_release_version_ok(pool: Pool) {
+        assert_eq!(
+            get_release_version(&pool, Release(1)).await.unwrap(),
+            Version { major: 1, minor: 2, patch: 3, pre: None, build: None }
+        );
+    }
+
 // TODO: create_release tests
 // TODO: add_file_url tests
 }
