@@ -16,7 +16,7 @@ use crate::{
     pagination,
     time,
     upload,
-    version
+    version::{self, Version}
 };
 
 #[derive(Debug, Error, PartialEq)]
@@ -141,6 +141,8 @@ pub enum AddFileError {
     IOError(#[from] io::Error),
     #[error("{0}")]
     ModuleError(#[from] module::Error),
+    #[error("Module version {0} != release version {1}")]
+    ReleaseVersionMismatch(Version, Version),
     #[error("{0}")]
     TimeError(#[from] time::Error),
     #[error("File too large")]

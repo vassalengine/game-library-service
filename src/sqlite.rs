@@ -348,6 +348,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         releases::create_release(&self.0, owner, proj, pkg, version, now).await
     }
 
+    async fn get_release_version(
+        &self,
+        rel: Release
+    ) -> Result<Version, DatabaseError> {
+        releases::get_release_version(&self.0, rel).await
+    }
+
     async fn get_files(
         &self,
         rel: Release

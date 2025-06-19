@@ -8,6 +8,8 @@ use zip::{
     result::ZipError
 };
 
+use crate::version::{MalformedVersion, Version};
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
@@ -19,7 +21,7 @@ pub enum Error {
     #[error("{0}")]
     Xpath(#[from] sxd_xpath::Error),
     #[error("{0}")]
-    Version(#[from] semver::Error)
+    Version(#[from] MalformedVersion)
 }
 
 impl PartialEq for Error {
@@ -57,17 +59,18 @@ fn version_in_moduledata(md: &str) -> Result<String, Error> {
     Ok(value.string())
 }
 
-fn check_version_impl<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+fn check_version_impl<P: AsRef<Path>>(path: P) -> Result<Version, Error> {
     let md = dump_file(path, "moduledata")?;
-    version_in_moduledata(&md)?
-        .parse::<semver::Version>()?;
-    Ok(())
+    Ok(version_in_moduledata(&md)?.parse::<Version>()?)
 }
 
-pub async fn check_version<P: Into<PathBuf>>(path: P) -> Result<(), Error> {
+pub async fn check_version<P: Into<PathBuf>>(
+    path: P
+) -> Result<Version, Error>
+{
     let path = path.into();
     match tokio::task::spawn_blocking(move || check_version_impl(path)).await {
-        Ok(Ok(())) => Ok(()),
+        Ok(Ok(v)) => Ok(v),
         Ok(Err(e)) => Err(e),
         Err(e) => Err(Error::Io(io::Error::from(e)))
     }

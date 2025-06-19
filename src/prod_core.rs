@@ -325,7 +325,18 @@ where
 
         // check that vmod, vext files have semver-compliant versions
         let ext = Path::new(filename).extension().unwrap_or_default();
-        if ext == "vmod" || ext == "vext" {
+        if ext == "vmod" {
+            // modules must match the version of their release
+            let mod_version = check_version(file.file_path()).await?;
+            let rel_version = self.db.get_release_version(release).await?;
+            if mod_version != rel_version {
+                return Err(AddFileError::ReleaseVersionMismatch(
+                    mod_version, rel_version
+                ));
+            }
+        }
+        else if ext == "vext" {
+            // extensions must have valid version numbers
             check_version(file.file_path()).await?;
         }
 

@@ -316,6 +316,11 @@ pub trait DatabaseClient {
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
+    fn get_release_version(
+        &self,
+        _release: Release
+    ) -> impl Future<Output = Result<Version, DatabaseError>> + Send;
+
     fn get_files(
         &self,
         _release: Release

@@ -152,6 +152,7 @@ impl From<AddFileError> for AppError {
             AddFileError::InvalidFilename => AppError::MalformedQuery,
             AddFileError::IOError(e) => AppError::InternalError(e.to_string()),
             AddFileError::ModuleError(e) => AppError::ModuleError(e.to_string()),
+            AddFileError::ReleaseVersionMismatch(_, _) => AppError::ModuleError(err.to_string()),
             AddFileError::TimeError(e) => AppError::InternalError(e.to_string()),
             AddFileError::TooLarge => AppError::TooLarge,
             AddFileError::UploadError(e) => AppError::UploadError(e.to_string())

@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::{
     cmp::Ordering,
+    fmt,
     str::FromStr
 };
 use thiserror::Error;
@@ -84,6 +85,12 @@ impl FromStr for Version {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Version::try_from(s)
+    }
+}
+
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 
