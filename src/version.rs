@@ -8,7 +8,7 @@ use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
 #[error("{0} is malformed")]
-pub struct MalformedVersion(String);
+pub struct MalformedVersion(pub String);
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(try_from = "&str")]

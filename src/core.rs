@@ -125,7 +125,7 @@ pub enum CreatePackageError {
 pub enum CreateReleaseError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
-    #[error("{0}")]
+    #[error("{} is not a valid version", .0.0)]
     InvalidVersion(#[from] version::MalformedVersion),
     #[error("{0}")]
     TimeError(#[from] time::Error)
