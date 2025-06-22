@@ -1,30 +1,22 @@
 /* TODO: add indices */
 
-CREATE TABLE IF NOT EXISTS users(
+CREATE TABLE IF NOT EXISTS users (
   user_id INTEGER PRIMARY KEY NOT NULL,
   username TEXT NOT NULL,
   UNIQUE(username)
 );
 
-CREATE TABLE IF NOT EXISTS owners(
+CREATE TABLE IF NOT EXISTS owners (
   user_id INTEGER NOT NULL,
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(user_id),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(user_id, project_id)
 );
 
-CREATE TABLE IF NOT EXISTS authors(
+CREATE TABLE IF NOT EXISTS players (
   user_id INTEGER NOT NULL,
-  release_id INTEGER NOT NULL CHECK(release_id >= 0),
-  FOREIGN KEY(user_id) REFERENCES users(user_id),
-  FOREIGN KEY(release_id) REFERENCES releases(release_id),
-  UNIQUE(user_id, release_id)
-);
-
-CREATE TABLE IF NOT EXISTS players(
-  user_id INTEGER NOT NULL,
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(user_id),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(user_id, project_id)
@@ -32,7 +24,7 @@ CREATE TABLE IF NOT EXISTS players(
 
 CREATE TABLE IF NOT EXISTS packages (
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   created_by INTEGER NOT NULL,
@@ -41,9 +33,27 @@ CREATE TABLE IF NOT EXISTS packages (
   UNIQUE(project_id, name)
 );
 
+CREATE TABLE IF NOT EXISTS packages_history (
+  package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
+  project_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  created_by INTEGER NOT NULL,
+  deleted_at INTEGER,
+  deleted_by INTEGER,
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(created_by) REFERENCES users(user_id),
+  FOREIGN KEY(deleted_by) REFERENCES users(user_id),
+  CHECK(
+    (deleted_at IS NULL AND deleted_by IS NULL) OR
+    (deleted_at IS NOT NULL AND deleted_by IS NOT NULL)
+  ),
+  CHECK(deleted_at IS NULL OR created_at <= deleted_at)
+);
+
 CREATE TABLE IF NOT EXISTS releases (
   release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
-  package_id INTEGER NOT NULL CHECK(release_id >= 0),
+  package_id INTEGER NOT NULL,
   version TEXT NOT NULL,
   version_major INTEGER NOT NULL CHECK(version_major >= 0),
   version_minor INTEGER NOT NULL CHECK(version_minor >= 0),
@@ -59,7 +69,7 @@ CREATE TABLE IF NOT EXISTS releases (
 
 CREATE TABLE IF NOT EXISTS files (
   file_id INTEGER PRIMARY KEY NOT NULL CHECK(file_id >= 0),
-  release_id INTEGER NOT NULL CHECK(release_id >= 0),
+  release_id INTEGER NOT NULL,
   url TEXT NOT NULL,
   filename TEXT NOT NULL,
   size INTEGER NOT NULL CHECK(size >= 0),
@@ -73,7 +83,7 @@ CREATE TABLE IF NOT EXISTS files (
 );
 
 CREATE TABLE IF NOT EXISTS images (
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
   published_at INTEGER NOT NULL,
@@ -84,7 +94,7 @@ CREATE TABLE IF NOT EXISTS images (
 );
 
 CREATE TABLE IF NOT EXISTS image_revisions (
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
   published_at INTEGER NOT NULL,
@@ -95,13 +105,13 @@ CREATE TABLE IF NOT EXISTS image_revisions (
 );
 
 CREATE TABLE IF NOT EXISTS galleries (
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   filename TEXT NOT NULL,
   description TEXT NOT NULL,
   published_at INTEGER NOT NULL,
-  published_by INTEGER NOT NULL CHECK(published_by >= 0),
+  published_by INTEGER NOT NULL,
   removed_at INTEGER,
-  removed_by INTEGER CHECK(removed_by >= 0 OR project_id IS NULL),
+  removed_by INTEGER,
   position INTEGER NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(published_by) REFERENCES users(user_id),
@@ -116,7 +126,7 @@ CREATE TABLE IF NOT EXISTS galleries (
 );
 
 CREATE TABLE IF NOT EXISTS tags (
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   tag TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(project_id, tag)
@@ -150,13 +160,13 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 CREATE TABLE IF NOT EXISTS project_revisions (
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   modified_at INTEGER NOT NULL,
-  modified_by INTEGER NOT NULL CHECK(modified_by >= 0),
+  modified_by INTEGER NOT NULL,
   revision INTEGER NOT NULL CHECK(revision >= 0),
-  project_data_id INTEGER NOT NULL CHECK(project_data_id >= 0),
+  project_data_id INTEGER NOT NULL,
   UNIQUE(project_id, revision),
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(modified_by) REFERENCES users(user_id),
@@ -165,7 +175,7 @@ CREATE TABLE IF NOT EXISTS project_revisions (
 
 CREATE TABLE IF NOT EXISTS project_data (
   project_data_id INTEGER PRIMARY KEY NOT NULL CHECK(project_data_id >= 0),
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
@@ -183,10 +193,10 @@ CREATE TABLE IF NOT EXISTS project_data (
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
 
-CREATE TABLE IF NOT EXISTS flags(
+CREATE TABLE IF NOT EXISTS flags (
   flag_id INTEGER PRIMARY KEY NOT NULL CHECK(flag_id >= 0),
   user_id INTEGER NOT NULL,
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   flagged_at INTEGER NOT NULL,
   flag INTEGER NOT NULL CHECK(flag >= 0 AND flag <= 3),
   message TEXT,
