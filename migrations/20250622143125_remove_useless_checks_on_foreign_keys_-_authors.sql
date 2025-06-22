@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS tmp (
   user_id INTEGER NOT NULL,
@@ -12,4 +16,8 @@ INSERT INTO tmp SELECT * FROM authors;
 DROP TABLE authors;
 ALTER TABLE tmp RENAME TO authors;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;

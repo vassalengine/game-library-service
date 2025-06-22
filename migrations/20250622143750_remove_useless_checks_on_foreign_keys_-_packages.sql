@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS tmp(
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
@@ -15,4 +19,8 @@ INSERT INTO tmp SELECT * FROM packages;
 DROP TABLE packages;
 ALTER TABLE tmp RENAME TO packages;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;

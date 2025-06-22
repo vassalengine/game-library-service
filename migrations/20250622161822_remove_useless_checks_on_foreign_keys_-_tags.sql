@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE tmp (
   project_id INTEGER NOT NULL,
@@ -11,4 +15,8 @@ INSERT INTO tmp SELECT * FROM tags;
 DROP TABLE tags;
 ALTER TABLE tmp RENAME TO tags;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;

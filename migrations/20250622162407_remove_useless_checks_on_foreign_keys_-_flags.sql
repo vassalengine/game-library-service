@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE tmp (
   flag_id INTEGER PRIMARY KEY NOT NULL CHECK(flag_id >= 0),
@@ -16,4 +20,8 @@ INSERT INTO tmp SELECT * FROM flags;
 DROP TABLE flags;
 ALTER TABLE tmp RENAME TO flags;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;

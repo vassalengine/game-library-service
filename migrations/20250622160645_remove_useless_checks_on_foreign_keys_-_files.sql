@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE tmp (
   file_id INTEGER PRIMARY KEY NOT NULL CHECK(file_id >= 0),
@@ -19,4 +23,8 @@ INSERT INTO tmp SELECT * FROM files;
 DROP TABLE files;
 ALTER TABLE tmp RENAME TO files;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;

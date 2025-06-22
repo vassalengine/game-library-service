@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE tmp (
   project_id INTEGER NOT NULL,
@@ -18,4 +22,8 @@ INSERT INTO tmp SELECT * FROM project_revisions;
 DROP TABLE project_revisions;
 ALTER TABLE tmp RENAME TO project_revisions;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;
