@@ -1,12 +1,12 @@
 /* TODO: add indices */
 
-CREATE TABLE users(
+CREATE TABLE IF NOT EXISTS users(
   user_id INTEGER PRIMARY KEY NOT NULL,
   username TEXT NOT NULL,
   UNIQUE(username)
 );
 
-CREATE TABLE owners(
+CREATE TABLE IF NOT EXISTS owners(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -14,7 +14,7 @@ CREATE TABLE owners(
   UNIQUE(user_id, project_id)
 );
 
-CREATE TABLE authors(
+CREATE TABLE IF NOT EXISTS authors(
   user_id INTEGER NOT NULL,
   release_id INTEGER NOT NULL CHECK(release_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -22,7 +22,7 @@ CREATE TABLE authors(
   UNIQUE(user_id, release_id)
 );
 
-CREATE TABLE players(
+CREATE TABLE IF NOT EXISTS players(
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -30,7 +30,7 @@ CREATE TABLE players(
   UNIQUE(user_id, project_id)
 );
 
-CREATE TABLE packages (
+CREATE TABLE IF NOT EXISTS packages (
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   name TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE packages (
   UNIQUE(project_id, name)
 );
 
-CREATE TABLE releases (
+CREATE TABLE IF NOT EXISTS releases (
   release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
   package_id INTEGER NOT NULL CHECK(release_id >= 0),
   version TEXT NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE releases (
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
   file_id INTEGER PRIMARY KEY NOT NULL CHECK(file_id >= 0),
   release_id INTEGER NOT NULL CHECK(release_id >= 0),
   url TEXT NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE files (
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
-CREATE TABLE images (
+CREATE TABLE IF NOT EXISTS images (
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
@@ -83,7 +83,7 @@ CREATE TABLE images (
   UNIQUE(project_id, filename)
 );
 
-CREATE TABLE image_revisions (
+CREATE TABLE IF NOT EXISTS image_revisions (
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   filename TEXT NOT NULL,
   url TEXT NOT NULL,
@@ -94,7 +94,7 @@ CREATE TABLE image_revisions (
   UNIQUE(project_id, filename, published_at)
 );
 
-CREATE TABLE galleries (
+CREATE TABLE IF NOT EXISTS galleries (
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   filename TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -115,14 +115,14 @@ CREATE TABLE galleries (
   )
 );
 
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   tag TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   UNIQUE(project_id, tag)
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   project_id INTEGER PRIMARY KEY NOT NULL CHECK(project_id >= 0),
   name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE projects (
   FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );
 
-CREATE TABLE project_revisions (
+CREATE TABLE IF NOT EXISTS project_revisions (
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
@@ -163,7 +163,7 @@ CREATE TABLE project_revisions (
   FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id)
 );
 
-CREATE TABLE project_data (
+CREATE TABLE IF NOT EXISTS project_data (
   project_data_id INTEGER PRIMARY KEY NOT NULL CHECK(project_data_id >= 0),
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
   description TEXT NOT NULL,
@@ -183,7 +183,7 @@ CREATE TABLE project_data (
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
 );
 
-CREATE TABLE flags(
+CREATE TABLE IF NOT EXISTS flags(
   flag_id INTEGER PRIMARY KEY NOT NULL CHECK(flag_id >= 0),
   user_id INTEGER NOT NULL,
   project_id INTEGER NOT NULL CHECK(project_id >= 0),
@@ -197,7 +197,7 @@ CREATE TABLE flags(
 
 /* Full-text search */
 
-CREATE VIRTUAL TABLE projects_fts USING fts5(
+CREATE VIRTUAL TABLE IF NOT EXISTS projects_fts USING fts5(
   game_title,
   game_publisher,
   game_year,
@@ -216,7 +216,7 @@ INSERT INTO projects_fts(
   'bm25(100.0)'
 );
 
-CREATE TRIGGER projects_ai AFTER INSERT ON projects
+CREATE TRIGGER IF NOT EXISTS projects_ai AFTER INSERT ON projects
 BEGIN
   INSERT INTO projects_fts (
     rowid,
@@ -236,7 +236,7 @@ BEGIN
   );
 END;
 
-CREATE TRIGGER projects_ad AFTER DELETE ON projects
+CREATE TRIGGER IF NOT EXISTS projects_ad AFTER DELETE ON projects
 BEGIN
   INSERT INTO projects_fts (
     projects_fts,
@@ -258,7 +258,7 @@ BEGIN
   );
 END;
 
-CREATE TRIGGER projects_au AFTER UPDATE ON projects
+CREATE TRIGGER IF NOT EXISTS projects_au AFTER UPDATE ON projects
 BEGIN
   INSERT INTO projects_fts (
     projects_fts,
