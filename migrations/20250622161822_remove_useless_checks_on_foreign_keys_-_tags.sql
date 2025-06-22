@@ -1,6 +1,6 @@
 COMMIT TRANSACTION;
 
-PRAGMA defer_foreign_keys = ON;
+PRAGMA foreign_keys = OFF;
 
 BEGIN TRANSACTION;
 
@@ -17,6 +17,6 @@ ALTER TABLE tmp RENAME TO tags;
 
 COMMIT TRANSACTION;
 
-PRAGMA defer_foreign_keys = OFF;
+PRAGMA foreign_keys = ON;
 
 BEGIN TRANSACTION;
