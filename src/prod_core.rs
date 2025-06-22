@@ -537,10 +537,6 @@ where
         r: FileRow
     ) -> Result<FileData, GetProjectError>
     {
-        let authors = self.db.get_authors(r.id)
-            .await?
-            .users;
-
         Ok(
             FileData {
                 filename: r.filename,
@@ -550,7 +546,6 @@ where
                 published_at: nanos_to_rfc3339(r.published_at)?,
                 published_by: r.published_by,
                 requires: r.requires,
-                authors
             }
         )
     }
@@ -1960,7 +1955,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "projects", "two_owners", "packages", "authors"))]
+    #[sqlx::test(fixtures("users", "projects", "two_owners", "packages"))]
     async fn get_project_ok(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -1998,8 +1993,7 @@ mod test {
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                         published_at: "2023-12-10T15:56:29.180282477Z".into(),
                                         published_by: "alice".into(),
-                                        requires: Some(">= 3.7.12".into()),
-                                        authors: vec!["alice".into(), "bob".into()]
+                                        requires: Some(">= 3.7.12".into())
                                     },
                                 ],
                             },
@@ -2013,8 +2007,7 @@ mod test {
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                         published_at: "2023-12-09T15:56:29.180282477Z".into(),
                                         published_by: "bob".into(),
-                                        requires: Some(">= 3.2.17".into()),
-                                        authors: vec!["alice".into()]
+                                        requires: Some(">= 3.2.17".into())
                                     }
                                 ]
                             }
@@ -2039,8 +2032,7 @@ mod test {
                                         sha256: "a8f515e9e2de99919d1a987733296aaa951a4ba2aa0f7014c510bdbd60dc0efd".into(),
                                         published_at: "2023-12-15T15:56:29.180282477Z".into(),
                                         published_by: "chuck".into(),
-                                        requires: None,
-                                        authors: vec![]
+                                        requires: None
                                     }
                                 ]
                             }
@@ -2052,7 +2044,7 @@ mod test {
         );
     }
 
-    #[sqlx::test(fixtures("users", "projects", "two_owners", "packages", "authors"))]
+    #[sqlx::test(fixtures("users", "projects", "two_owners", "packages"))]
     async fn get_project_revision_ok_current(pool: Pool) {
         let core = make_core(pool, fake_now);
         assert_eq!(
@@ -2090,8 +2082,7 @@ mod test {
                                         sha256: "79fdd8fe3128f818e446e919cce5dcfb81815f8f4341c53f4d6b58ded48cebf2".into(),
                                         published_at: "2023-12-10T15:56:29.180282477Z".into(),
                                         published_by: "alice".into(),
-                                        requires: Some(">= 3.7.12".into()),
-                                        authors: vec!["alice".into(), "bob".into()]
+                                        requires: Some(">= 3.7.12".into())
                                     },
                                 ]
                             },
@@ -2105,8 +2096,7 @@ mod test {
                                         sha256: "c0e0fa7373a12b45a91e4f4d4e2e186442fc6ee9b346caa2fdc1c09026a2144a".into(),
                                         published_at: "2023-12-09T15:56:29.180282477Z".into(),
                                         published_by: "bob".into(),
-                                        requires: Some(">= 3.2.17".into()),
-                                        authors: vec!["alice".into()]
+                                        requires: Some(">= 3.2.17".into())
                                     }
                                 ]
                             }

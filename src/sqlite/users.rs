@@ -209,32 +209,6 @@ LIMIT 1
     )
 }
 
-pub async fn get_authors<'e, E>(
-    ex: E,
-    pkg_ver_id: i64
-) -> Result<Users, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        Users {
-            users: sqlx::query_scalar!(
-                "
-SELECT users.username
-FROM users
-JOIN authors
-ON users.user_id = authors.user_id
-WHERE authors.release_id = ?
-ORDER BY users.username
-                ",
-                pkg_ver_id
-            )
-            .fetch_all(ex)
-            .await?
-        }
-    )
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -377,26 +351,5 @@ mod test {
         // This should not happen; the Project passed in should be good.
         // However, it's not an error if it does.
         assert!(!has_owner(&pool, Project(0)).await.unwrap());
-    }
-
-    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
-    async fn get_authors_ok(pool: Pool) {
-        assert_eq!(
-            get_authors(&pool, 2).await.unwrap(),
-            Users {
-                users: vec![
-                    "alice".into(),
-                    "bob".into()
-                ]
-            }
-        );
-    }
-
-    #[sqlx::test(fixtures("users", "projects", "packages", "authors"))]
-    async fn get_authors_not_a_release(pool: Pool) {
-        assert_eq!(
-            get_authors(&pool, 0).await.unwrap(),
-            Users { users: vec![] }
-        );
     }
 }

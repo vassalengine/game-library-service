@@ -372,14 +372,6 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         releases::get_files_at(&self.0, rel, date).await
     }
 
-    async fn get_authors(
-        &self,
-        pkg_ver_id: i64
-    ) -> Result<Users, DatabaseError>
-    {
-        users::get_authors(&self.0, pkg_ver_id).await
-    }
-
     async fn add_file_url(
         &self,
         owner: Owner,

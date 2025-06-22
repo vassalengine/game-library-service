@@ -332,11 +332,6 @@ pub trait DatabaseClient {
         _date: i64
     ) -> impl Future<Output = Result<Vec<FileRow>, DatabaseError>> + Send;
 
-    fn get_authors(
-        &self,
-        _pkg_ver_id: i64
-    ) -> impl Future<Output = Result<Users, DatabaseError>> + Send;
-
     #[allow(clippy::too_many_arguments)]
     fn add_file_url(
         &self,

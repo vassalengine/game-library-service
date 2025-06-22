@@ -49,8 +49,7 @@ pub struct FileData {
     pub sha256: String,
     pub published_at: String,
     pub published_by: String,
-    pub requires: Option<String>,
-    pub authors: Vec<String>
+    pub requires: Option<String>
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

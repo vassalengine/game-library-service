@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE tmp (
   release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
@@ -20,4 +24,8 @@ INSERT INTO tmp SELECT * FROM releases;
 DROP TABLE releases;
 ALTER TABLE tmp RENAME TO releases;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA defer_foreign_keys = OFF;
+
+BEGIN TRANSACTION;
