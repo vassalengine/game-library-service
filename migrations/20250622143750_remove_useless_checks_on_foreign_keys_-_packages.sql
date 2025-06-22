@@ -2,7 +2,7 @@ PRAGMA foreign_keys = OFF;
 
 CREATE TABLE IF NOT EXISTS tmp(
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
-  project_id INTEGER NOT NULL CHECK(project_id >= 0),
+  project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   created_by INTEGER NOT NULL,

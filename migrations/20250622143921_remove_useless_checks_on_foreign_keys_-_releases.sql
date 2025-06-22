@@ -2,7 +2,7 @@ PRAGMA foreign_keys = OFF;
 
 CREATE TABLE tmp (
   release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
-  package_id INTEGER NOT NULL CHECK(release_id >= 0),
+  package_id INTEGER NOT NULL,
   version TEXT NOT NULL,
   version_major INTEGER NOT NULL CHECK(version_major >= 0),
   version_minor INTEGER NOT NULL CHECK(version_minor >= 0),
