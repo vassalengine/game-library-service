@@ -1,6 +1,6 @@
 COMMIT TRANSACTION;
 
-PRAGMA delay_foreign_keys = ON;
+PRAGMA defer_foreign_keys = ON;
 
 BEGIN TRANSACTION;
 
@@ -18,6 +18,6 @@ ALTER TABLE tmp RENAME TO owners;
 
 COMMIT TRANSACTION;
 
-PRAGMA delay_foreign_keys = OFF;
+PRAGMA defer_foreign_keys = OFF;
 
 BEGIN TRANSACTION;
