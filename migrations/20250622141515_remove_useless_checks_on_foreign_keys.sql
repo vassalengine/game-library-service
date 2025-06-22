@@ -1,4 +1,8 @@
-PRAGMA foreign_keys = OFF;
+COMMIT TRANSACTION;
+
+PRAGMA delay_foreign_keys = ON;
+
+BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS tmp(
   user_id INTEGER NOT NULL,
@@ -12,4 +16,8 @@ INSERT INTO tmp SELECT * FROM owners;
 DROP TABLE owners;
 ALTER TABLE tmp RENAME TO owners;
 
-PRAGMA foreign_keys = ON;
+COMMIT TRANSACTION;
+
+PRAGMA delay_foreign_keys = OFF;
+
+BEGIN TRANSACTION;
