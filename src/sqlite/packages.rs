@@ -51,12 +51,14 @@ SELECT
     package_id,
     name,
     created_at
-FROM packages
+FROM packages_history
 WHERE project_id = ?
     AND created_at <= ?
+    AND (? < deleted_at OR deleted_at IS NULL)
 ORDER BY name COLLATE NOCASE ASC
             ",
             proj.0,
+            date,
             date
         )
        .fetch_all(ex)
@@ -121,7 +123,8 @@ async fn create_package_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
-    pkg: &str,
+    pkg: Package,
+    pkgname: &str,
     now: i64
 ) -> Result<(), DatabaseError>
 where
@@ -130,15 +133,17 @@ where
     sqlx::query!(
         "
 INSERT INTO packages (
+    package_id,
     project_id,
     name,
     created_at,
     created_by
 )
-VALUES (?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
         ",
+        pkg.0,
         proj.0,
-        pkg,
+        pkgname,
         now,
         owner.0
     )
@@ -149,11 +154,43 @@ VALUES (?, ?, ?, ?)
     Ok(())
 }
 
+async fn create_package_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    pkg: &str,
+    now: i64
+) -> Result<Package, DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+INSERT INTO packages_history (
+    project_id,
+    name,
+    created_at,
+    created_by
+)
+VALUES (?, ?, ?, ?)
+RETURNING package_id
+        ",
+        proj.0,
+        pkg,
+        now,
+        owner.0
+    )
+    .fetch_one(ex)
+    .await
+    .map(Package)
+    .map_err(map_unique)
+}
+
 pub async fn create_package<'a, A>(
     conn: A,
     owner: Owner,
     proj: Project,
-    pkg: &str,
+    pkgname: &str,
     pkg_data: &PackageDataPost,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -163,7 +200,86 @@ where
     let mut tx = conn.begin().await?;
 
     // insert package row
-    create_package_row(&mut *tx, owner, proj, pkg, now).await?;
+    let pkg = create_package_history_row(
+        &mut *tx,
+        owner,
+        proj,
+        pkgname,
+        now
+    ).await?;
+
+    create_package_row(&mut *tx, owner, proj, pkg, pkgname, now).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
+async fn delete_package_row<'e, E>(
+    ex: E,
+    pkg: Package,
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+DELETE FROM packages
+WHERE package_id = ?
+        ",
+        pkg.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+async fn retire_package_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    pkg: Package,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE packages_history
+SET
+    deleted_by = ?,
+    deleted_at = ?
+WHERE package_id = ?
+        ",
+        owner.0,
+        now,
+        pkg.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn delete_package<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    pkg: Package,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // delete package row
+    delete_package_row(&mut *tx, pkg).await?;
+    retire_package_history_row(&mut *tx, owner, pkg, now).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -279,7 +395,7 @@ mod test {
             get_packages(&pool, proj).await.unwrap(),
             [
                 PackageRow {
-                    package_id: 4,
+                    package_id: 5,
                     name: "newpkg".into(),
                     created_at: 1699804206419538067
                 }
@@ -325,6 +441,124 @@ mod test {
                 1699804206419538067
             ).await.unwrap_err(),
             DatabaseError::AlreadyExists
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_package_ok(pool: Pool) {
+        let proj = Project(42);
+
+        assert_eq!(
+            get_packages(&pool, proj).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 1,
+                    name: "a_package".into(),
+                    created_at: 1702137389180282477
+                },
+                PackageRow {
+                    package_id: 2,
+                    name: "b_package".into(),
+                    created_at: 1667750189180282477
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: 1699286189180282477
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 1,
+                    name: "a_package".into(),
+                    created_at: 1702137389180282477
+                },
+                PackageRow {
+                    package_id: 2,
+                    name: "b_package".into(),
+                    created_at: 1667750189180282477
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: 1699286189180282477
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            3
+        );
+
+        delete_package(
+            &pool,
+            Owner(1),
+            Project(42),
+            Package(2),
+            1702137389180282478
+        ).await.unwrap();
+
+        assert_eq!(
+            get_packages(&pool, proj).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 1,
+                    name: "a_package".into(),
+                    created_at: 1702137389180282477
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: 1699286189180282477
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 1,
+                    name: "a_package".into(),
+                    created_at: 1702137389180282477
+                },
+                PackageRow {
+                    package_id: 2,
+                    name: "b_package".into(),
+                    created_at: 1667750189180282477
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: 1699286189180282477
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282478).await.unwrap(),
+            [
+                PackageRow {
+                    package_id: 1,
+                    name: "a_package".into(),
+                    created_at: 1702137389180282477
+                },
+                PackageRow {
+                    package_id: 3,
+                    name: "c_package".into(),
+                    created_at: 1699286189180282477
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            4
         );
     }
 }

@@ -1,3 +1,19 @@
+INSERT INTO packages_history (
+  package_id,
+  project_id,
+  name,
+  created_at,
+  created_by,
+  deleted_at,
+  deleted_by
+)
+VALUES
+  (1, 42, "a_package", 1702137389180282477, 1, NULL, NULL),
+  (2, 42, "b_package", 1667750189180282477, 1, NULL, NULL),
+  (3, 42, "c_package", 1699286189180282477, 1, NULL, NULL),
+  (4, 42, "d_package", 1699286189180282477, 1, 1699286189180282480, 1)
+;
+
 INSERT INTO packages (
   package_id,
   project_id,
