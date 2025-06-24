@@ -295,6 +295,17 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         packages::create_package(&self.0, owner, proj, pkg, pkg_data, now).await
     }
 
+    async fn delete_package(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        now: i64
+    ) -> Result<(), DatabaseError>
+    {
+        packages::delete_package(&self.0, owner, proj, pkg, now).await
+    }
+
     async fn get_releases(
         &self,
         pkg: Package

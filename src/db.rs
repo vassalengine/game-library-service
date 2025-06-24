@@ -280,6 +280,14 @@ pub trait DatabaseClient {
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
+    fn delete_package(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _now: i64
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
     fn get_releases(
         &self,
         _pkg: Package
