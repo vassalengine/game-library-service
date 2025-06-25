@@ -659,6 +659,11 @@ mod test {
         );
 
         assert_eq!(
+            get_releases_at(&pool, pkg, 1699804206419538067).await.unwrap(),
+            []
+        );
+
+        assert_eq!(
             get_project_row(&pool, proj).await.unwrap().revision,
             3
         );
@@ -680,21 +685,26 @@ mod test {
             1699804206419538067
         ).await.unwrap();
 
+        let rr = ReleaseRow {
+            release_id: 4,
+            version: "1.2.3".into(),
+            version_major: 1,
+            version_minor: 2,
+            version_patch: 3,
+            version_pre: "".into(),
+            version_build: "".into(),
+            published_at: 1699804206419538067,
+            published_by: "bob".into()
+        };
+
         assert_eq!(
             get_releases(&pool, pkg).await.unwrap(),
-            [
-                ReleaseRow {
-                    release_id: 4,
-                    version: "1.2.3".into(),
-                    version_major: 1,
-                    version_minor: 2,
-                    version_patch: 3,
-                    version_pre: "".into(),
-                    version_build: "".into(),
-                    published_at: 1699804206419538067,
-                    published_by: "bob".into()
-                }
-            ]
+            [ rr.clone() ]
+        );
+
+        assert_eq!(
+            get_releases_at(&pool, pkg, 1699804206419538067).await.unwrap(),
+            [ rr ]
         );
 
         assert_eq!(
