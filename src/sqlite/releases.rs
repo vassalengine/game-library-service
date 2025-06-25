@@ -475,6 +475,99 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     Ok(())
 }
 
+async fn check_release_row_exists<'e, E>(
+    ex: E,
+    rel: Release,
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT 1 FROM releases
+WHERE release_id = ?
+        ",
+        rel.0
+    )
+    .fetch_optional(ex)
+    .await?
+    .and(Some(()))
+    .ok_or(DatabaseError::NotFound)
+}
+
+async fn delete_release_row<'e, E>(
+    ex: E,
+    rel: Release,
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+DELETE FROM releases
+WHERE release_id = ?
+        ",
+        rel.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+async fn retire_release_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    rel: Release,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE releases_history
+SET
+    deleted_by = ?,
+    deleted_at = ?
+WHERE release_id = ?
+        ",
+        owner.0,
+        now,
+        rel.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn delete_release<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    rel: Release,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    check_release_row_exists(&mut *tx, rel).await?;
+
+    // delete release row
+    delete_release_row(&mut *tx, rel).await?;
+    retire_release_history_row(&mut *tx, owner, rel, now).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn add_file_url<'a, A>(
     conn: A,
@@ -565,6 +658,20 @@ mod test {
         }
     );
 
+    static RR_1_2_5: Lazy<ReleaseRow> = Lazy::new(||
+        ReleaseRow {
+            release_id: 4,
+            version: "1.2.5".into(),
+            version_major: 1,
+            version_minor: 2,
+            version_patch: 5,
+            version_pre: "".into(),
+            version_build: "".into(),
+            published_at: 1702223789180282477,
+            published_by: "alice".into()
+        }
+    );
+
 /*
         FileRow {
             id: 2,
@@ -588,7 +695,7 @@ mod test {
     async fn get_releases_ok(pool: Pool) {
         assert_eq!(
             get_releases(&pool, Package(1)).await.unwrap(),
-            [ RR_1_2_4.clone(), RR_1_2_3.clone() ]
+            [ RR_1_2_5.clone(), RR_1_2_4.clone(), RR_1_2_3.clone() ]
         );
     }
 
@@ -608,7 +715,7 @@ mod test {
             get_releases_at(&pool, Package(1), 1705223789180282477)
                 .await
                 .unwrap(),
-            [ RR_1_2_4.clone(), RR_1_2_3.clone() ]
+            [ RR_1_2_5.clone(), RR_1_2_4.clone(), RR_1_2_3.clone() ]
         );
     }
 
@@ -686,7 +793,7 @@ mod test {
         ).await.unwrap();
 
         let rr = ReleaseRow {
-            release_id: 4,
+            release_id: 5,
             version: "1.2.3".into(),
             version_major: 1,
             version_minor: 2,
@@ -783,6 +890,162 @@ mod test {
                 1699804206419538067
             ).await.unwrap_err(),
             DatabaseError::AlreadyExists
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_release_ok(pool: Pool) {
+        let proj = Project(42);
+        let pkg = Package(1);
+
+        let rels_before = [
+            ReleaseRow {
+                release_id: 4,
+                version: "1.2.5".into(),
+                version_major: 1,
+                version_minor: 2,
+                version_patch: 5,
+                version_pre: "".into(),
+                version_build: "".into(),
+                published_at: 1702223789180282477,
+                published_by: "alice".into()
+            },
+            ReleaseRow {
+                release_id: 2,
+                version: "1.2.4".into(),
+                version_major: 1,
+                version_minor: 2,
+                version_patch: 4,
+                version_pre: "".into(),
+                version_build: "".into(),
+                published_at: 1702223789180282477,
+                published_by: "alice".into()
+            },
+            ReleaseRow {
+                release_id: 1,
+                version: "1.2.3".into(),
+                version_major: 1,
+                version_minor: 2,
+                version_patch: 3,
+                version_pre: "".into(),
+                version_build: "".into(),
+                published_at: 1702137389180282477,
+                published_by: "bob".into()
+            }
+        ];
+
+        assert_eq!(
+            get_releases(&pool, pkg).await.unwrap(),
+            rels_before
+        );
+
+        assert_eq!(
+            get_releases_at(&pool, pkg, 1702237389180282477).await.unwrap(),
+            rels_before
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            3
+        );
+
+        delete_release(
+            &pool,
+            Owner(1),
+            Project(42),
+            Release(4),
+            1702223789180282478
+        ).await.unwrap();
+
+        let rels_after = [
+            ReleaseRow {
+                release_id: 2,
+                version: "1.2.4".into(),
+                version_major: 1,
+                version_minor: 2,
+                version_patch: 4,
+                version_pre: "".into(),
+                version_build: "".into(),
+                published_at: 1702223789180282477,
+                published_by: "alice".into()
+            },
+            ReleaseRow {
+                release_id: 1,
+                version: "1.2.3".into(),
+                version_major: 1,
+                version_minor: 2,
+                version_patch: 3,
+                version_pre: "".into(),
+                version_build: "".into(),
+                published_at: 1702137389180282477,
+                published_by: "bob".into()
+            }
+        ];
+
+        assert_eq!(
+            get_releases(&pool, pkg).await.unwrap(),
+            rels_after
+        );
+
+        assert_eq!(
+            get_releases_at(&pool, pkg, 1702223789180282477).await.unwrap(),
+            rels_before
+        );
+
+        assert_eq!(
+            get_releases_at(&pool, pkg, 1702223789180282478).await.unwrap(),
+            rels_after
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            4
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_release_not_project(pool: Pool) {
+        assert!(
+            matches!(
+                delete_release(
+                    &pool,
+                    Owner(1),
+                    Project(0),
+                    Release(2),
+                    1702137389180282478
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_release_not_release(pool: Pool) {
+        assert_eq!(
+            delete_release(
+                &pool,
+                Owner(1),
+                Project(42),
+                Release(5),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_release_not_empty(pool: Pool) {
+        assert!(
+            matches!(
+                delete_release(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    Release(1),
+                    1702137389180282478
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
         );
     }
 
