@@ -520,6 +520,8 @@ mod test {
 
     use once_cell::sync::Lazy;
 
+    use crate::sqlite::project::get_project_row;
+
     type Pool = sqlx::Pool<Sqlite>;
 
     static RR_1_2_3: Lazy<ReleaseRow> = Lazy::new(||
@@ -646,6 +648,133 @@ mod test {
         );
     }
 
-// TODO: create_release tests
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_release_ok(pool: Pool) {
+        let proj = Project(42);
+        let pkg = Package(2);
+
+        assert_eq!(
+            get_releases(&pool, pkg).await.unwrap(),
+            []
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            3
+        );
+
+        let ver = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+
+        create_release(
+            &pool,
+            Owner(1),
+            proj,
+            pkg,
+            &ver,
+            1699804206419538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_releases(&pool, pkg).await.unwrap(),
+            [
+                ReleaseRow {
+                    release_id: 4,
+                    version: "1.2.3".into(),
+                    version_major: 1,
+                    version_minor: 2,
+                    version_patch: 3,
+                    version_pre: "".into(),
+                    version_build: "".into(),
+                    published_at: 1699804206419538067,
+                    published_by: "bob".into()
+                }
+            ]
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            4
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_release_not_a_project(pool: Pool) {
+        let ver = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+
+        assert!(
+            matches!(
+                create_release(
+                    &pool,
+                    Owner(1),
+                    Project(0),
+                    Package(6),
+                    &ver,
+                    1699804206419538067
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_release_not_a_package(pool: Pool) {
+        let ver = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+
+        assert!(
+            matches!(
+                create_release(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    Package(6),
+                    &ver,
+                    1699804206419538067
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_release_already_exists(pool: Pool) {
+        let ver = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: None,
+            build: None
+        };
+
+        assert_eq!(
+            create_release(
+                &pool,
+                Owner(1),
+                Project(42),
+                Package(1),
+                &ver,
+                1699804206419538067
+            ).await.unwrap_err(),
+            DatabaseError::AlreadyExists
+        );
+    }
+
 // TODO: add_file_url tests
 }
