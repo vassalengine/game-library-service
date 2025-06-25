@@ -27,6 +27,64 @@ VALUES
   (3, 42, "c_package", 1699286189180282477, 1)
 ;
 
+INSERT INTO releases_history (
+  release_id,
+  package_id,
+  version,
+  version_major,
+  version_minor,
+  version_patch,
+  version_pre,
+  version_build,
+  published_at,
+  published_by,
+  deleted_at,
+  deleted_by
+)
+VALUES
+  (
+    1,
+    1,
+    "1.2.3",
+    1,
+    2,
+    3,
+    "",
+    "",
+    1702137389180282477,
+    1,
+    NULL,
+    NULL
+  ),
+  (
+    2,
+    1,
+    "1.2.4",
+    1,
+    2,
+    4,
+    "",
+    "",
+    1702223789180282477,
+    2,
+    NULL,
+    NULL
+  ),
+  (
+    3,
+    3,
+    "0.1.0",
+    1,
+    2,
+    4,
+    "",
+    "",
+    1702655789180282477,
+    3,
+    NULL,
+    NULL
+  );
+
 INSERT INTO releases (
   release_id,
   package_id,

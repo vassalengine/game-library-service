@@ -104,28 +104,33 @@ where
         ReleaseRow,
         "
 SELECT
-    releases.release_id,
-    releases.version,
-    releases.version_major,
-    releases.version_minor,
-    releases.version_patch,
-    releases.version_pre,
-    releases.version_build,
-    releases.published_at,
+    releases_history.release_id,
+    releases_history.version,
+    releases_history.version_major,
+    releases_history.version_minor,
+    releases_history.version_patch,
+    releases_history.version_pre,
+    releases_history.version_build,
+    releases_history.published_at,
     users.username AS published_by
-FROM releases
+FROM releases_history
 JOIN users
-ON releases.published_by = users.user_id
-WHERE releases.package_id = ?
-    AND releases.published_at <= ?
+ON releases_history.published_by = users.user_id
+WHERE releases_history.package_id = ?
+    AND releases_history.published_at <= ?
+    AND (
+        ? < releases_history.deleted_at OR
+        releases_history.deleted_at IS NULL
+    )
 ORDER BY
-    releases.version_major DESC,
-    releases.version_minor DESC,
-    releases.version_patch DESC,
-    releases.version_pre ASC,
-    releases.version_build ASC
+    releases_history.version_major DESC,
+    releases_history.version_minor DESC,
+    releases_history.version_patch DESC,
+    releases_history.version_pre ASC,
+    releases_history.version_build ASC
         ",
         pkg.0,
+        date,
         date
     )
     .fetch_all(ex)
@@ -199,6 +204,101 @@ WHERE projects.name = ?
     )
 }
 
+async fn create_release_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    pkg: Package,
+    rel: Release,
+    version: &Version,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let vstr = String::from(version);
+    let pre = version.pre.as_deref().unwrap_or("");
+    let build = version.build.as_deref().unwrap_or("");
+
+    sqlx::query!(
+        "
+INSERT INTO releases (
+    release_id,
+    package_id,
+    version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ",
+        rel.0,
+        pkg.0,
+        vstr,
+        version.major,
+        version.minor,
+        version.patch,
+        pre,
+        build,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await
+    .map_err(map_unique)?;
+
+    Ok(())
+}
+
+async fn create_release_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    pkg: Package,
+    version: &Version,
+    now: i64
+) -> Result<Release, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let vstr = String::from(version);
+    let pre = version.pre.as_deref().unwrap_or("");
+    let build = version.build.as_deref().unwrap_or("");
+
+    sqlx::query_scalar!(
+        "
+INSERT INTO releases_history (
+    package_id,
+    version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING release_id
+        ",
+        pkg.0,
+        vstr,
+        version.major,
+        version.minor,
+        version.patch,
+        pre,
+        build,
+        now,
+        owner.0
+    )
+    .fetch_one(ex)
+    .await
+    .map(Release)
+    .map_err(map_unique)
+}
+
 pub async fn create_release<'a, A>(
     conn: A,
     owner: Owner,
@@ -213,7 +313,15 @@ where
     let mut tx = conn.begin().await?;
 
     // insert release row
-    create_release_row(&mut *tx, owner, pkg, version, now).await?;
+    let rel = create_release_history_row(
+        &mut *tx,
+        owner,
+        pkg,
+        version,
+        now
+    ).await?;
+
+    create_release_row(&mut *tx, owner, pkg, rel, version, now).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -320,52 +428,6 @@ ORDER BY
         .fetch_all(ex)
         .await?
     )
-}
-
-async fn create_release_row<'e, E>(
-    ex: E,
-    owner: Owner,
-    pkg: Package,
-    version: &Version,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    let vstr = String::from(version);
-    let pre = version.pre.as_deref().unwrap_or("");
-    let build = version.build.as_deref().unwrap_or("");
-
-    sqlx::query!(
-        "
-INSERT INTO releases (
-    package_id,
-    version,
-    version_major,
-    version_minor,
-    version_patch,
-    version_pre,
-    version_build,
-    published_at,
-    published_by
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ",
-        pkg.0,
-        vstr,
-        version.major,
-        version.minor,
-        version.patch,
-        pre,
-        build,
-        now,
-        owner.0
-    )
-    .execute(ex)
-    .await
-    .map_err(map_unique)?;
-
-    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
