@@ -480,46 +480,32 @@ mod test {
     async fn delete_package_ok(pool: Pool) {
         let proj = Project(42);
 
+        let prs_before = [
+            PackageRow {
+                package_id: 1,
+                name: "a_package".into(),
+                created_at: 1702137389180282477
+            },
+            PackageRow {
+                package_id: 2,
+                name: "b_package".into(),
+                created_at: 1667750189180282477
+            },
+            PackageRow {
+                package_id: 3,
+                name: "c_package".into(),
+                created_at: 1699286189180282477
+            }
+        ];
+
         assert_eq!(
             get_packages(&pool, proj).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 1,
-                    name: "a_package".into(),
-                    created_at: 1702137389180282477
-                },
-                PackageRow {
-                    package_id: 2,
-                    name: "b_package".into(),
-                    created_at: 1667750189180282477
-                },
-                PackageRow {
-                    package_id: 3,
-                    name: "c_package".into(),
-                    created_at: 1699286189180282477
-                }
-            ]
+            prs_before
         );
 
         assert_eq!(
             get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 1,
-                    name: "a_package".into(),
-                    created_at: 1702137389180282477
-                },
-                PackageRow {
-                    package_id: 2,
-                    name: "b_package".into(),
-                    created_at: 1667750189180282477
-                },
-                PackageRow {
-                    package_id: 3,
-                    name: "c_package".into(),
-                    created_at: 1699286189180282477
-                }
-            ]
+            prs_before
         );
 
         assert_eq!(
@@ -535,57 +521,32 @@ mod test {
             1702137389180282478
         ).await.unwrap();
 
+        let prs_after = [
+            PackageRow {
+                package_id: 1,
+                name: "a_package".into(),
+                created_at: 1702137389180282477
+            },
+            PackageRow {
+                package_id: 3,
+                name: "c_package".into(),
+                created_at: 1699286189180282477
+            }
+        ]; 
+
         assert_eq!(
             get_packages(&pool, proj).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 1,
-                    name: "a_package".into(),
-                    created_at: 1702137389180282477
-                },
-                PackageRow {
-                    package_id: 3,
-                    name: "c_package".into(),
-                    created_at: 1699286189180282477
-                }
-            ]
+            prs_after
         );
 
         assert_eq!(
             get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 1,
-                    name: "a_package".into(),
-                    created_at: 1702137389180282477
-                },
-                PackageRow {
-                    package_id: 2,
-                    name: "b_package".into(),
-                    created_at: 1667750189180282477
-                },
-                PackageRow {
-                    package_id: 3,
-                    name: "c_package".into(),
-                    created_at: 1699286189180282477
-                }
-            ]
+            prs_before
         );
 
         assert_eq!(
             get_packages_at(&pool, proj, 1702137389180282478).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 1,
-                    name: "a_package".into(),
-                    created_at: 1702137389180282477
-                },
-                PackageRow {
-                    package_id: 3,
-                    name: "c_package".into(),
-                    created_at: 1699286189180282477
-                }
-            ]
+            prs_after
         );
 
         assert_eq!(
