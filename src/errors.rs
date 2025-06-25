@@ -25,8 +25,8 @@ pub enum AppError {
     JsonError,
     #[error("Bad request")]
     LimitOutOfRange,
-    #[error("Project already exists")]
-    ProjectExists,
+    #[error("Bad request")]
+    AlreadyExists,
     #[error("Invalid project name")]
     InvalidProjectName,
     #[error("Bad request")]
@@ -39,6 +39,8 @@ pub enum AppError {
     NotAUser,
     #[error("Not found")]
     NotFound,
+    #[error("Bad request")]
+    NotEmpty,
     #[error("Unauthorized")]
     Unauthorized
 }
@@ -109,7 +111,7 @@ impl From<GetProjectError> for AppError {
 impl From<CreateProjectError> for AppError {
     fn from(err: CreateProjectError) -> Self {
         match err {
-            CreateProjectError::AlreadyExists => AppError::ProjectExists,
+            CreateProjectError::AlreadyExists => AppError::AlreadyExists,
             CreateProjectError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreateProjectError::InvalidProjectName => AppError::InvalidProjectName,
             CreateProjectError::TimeError(e) => AppError::InternalError(e.to_string())
@@ -129,6 +131,7 @@ impl From<UpdateProjectError> for AppError {
 impl From<CreatePackageError> for AppError {
     fn from(err: CreatePackageError) -> Self {
         match err {
+            CreatePackageError::AlreadyExists => AppError::AlreadyExists,
             CreatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
@@ -139,6 +142,7 @@ impl From<DeletePackageError> for AppError {
     fn from(err: DeletePackageError) -> Self {
         match err {
             DeletePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            DeletePackageError::NotEmpty => AppError::NotEmpty,
             DeletePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }

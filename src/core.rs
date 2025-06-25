@@ -115,18 +115,40 @@ pub enum UpdateProjectError {
 
 #[derive(Debug, Error, PartialEq)]
 pub enum CreatePackageError {
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError),
+    DatabaseError(db::DatabaseError),
     #[error("{0}")]
     TimeError(#[from] time::Error)
+}
+
+impl From<db::DatabaseError> for CreatePackageError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::AlreadyExists => CreatePackageError::AlreadyExists,
+            e => CreatePackageError::DatabaseError(e)
+        }
+    }
 }
 
 #[derive(Debug, Error, PartialEq)]
 pub enum DeletePackageError {
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError),
+    DatabaseError(db::DatabaseError),
+    #[error("Not empty")]
+    NotEmpty,
     #[error("{0}")]
     TimeError(#[from] time::Error)
+}
+
+impl From<db::DatabaseError> for DeletePackageError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::NotEmpty => DeletePackageError::NotEmpty,
+            e => DeletePackageError::DatabaseError(e)
+        }
+    }
 }
 
 #[derive(Debug, Error, PartialEq)]

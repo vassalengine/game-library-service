@@ -20,6 +20,8 @@ pub enum DatabaseError {
     AlreadyExists,
     #[error("Not found")]
     NotFound,
+    #[error("Not empty")]
+    NotEmpty,
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error)
 }

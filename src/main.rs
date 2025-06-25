@@ -79,12 +79,13 @@ impl From<&AppError> for StatusCode {
             AppError::JsonError => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
             AppError::InvalidProjectName => StatusCode::BAD_REQUEST,
-            AppError::ProjectExists => StatusCode::BAD_REQUEST,
+            AppError::AlreadyExists => StatusCode::BAD_REQUEST,
             AppError::MalformedQuery => StatusCode::BAD_REQUEST,
             AppError::MalformedUpload => StatusCode::BAD_REQUEST,
             AppError::MalformedVersion => StatusCode::BAD_REQUEST,
             AppError::NotAUser => StatusCode::NOT_FOUND,
             AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::NotEmpty => StatusCode::BAD_REQUEST,
             AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED
         }
@@ -477,9 +478,9 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreateProjectError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, DeletePackageError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, GameDataPost, Owner, FileData, PackageData, Package, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -628,6 +629,7 @@ mod test {
         {
             match pkg {
                 "a_package" => Ok(Package(1)),
+                "nonempty" => Ok(Package(2)),
                 _ => Err(GetIdError::NotFound)
             }
         }
@@ -640,6 +642,7 @@ mod test {
         {
             match (proj, pkg) {
                 ("a_project", "a_package") => Ok((Project(1), Package(1))),
+                ("a_project", "nonempty") => Ok((Project(1), Package(2))),
                 _ => Err(GetIdError::NotFound)
             }
         }
@@ -789,6 +792,33 @@ mod test {
             match revision {
                 1 => self.get_project(proj).await,
                 _ => Err(GetProjectError::NotFound)
+            }
+        }
+
+        async fn create_package(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            pkg: &str,
+            _pkg_data: &PackageDataPost
+        ) -> Result<(), CreatePackageError>
+        {
+            match pkg {
+                "newpkg" => Ok(()),
+                _ => Err(CreatePackageError::AlreadyExists)
+            }
+        }
+
+        async fn delete_package(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            pkg: Package,
+        ) -> Result<(), DeletePackageError>
+        {
+            match pkg {
+                Package(1) => Ok(()),
+                _ => Err(DeletePackageError::NotEmpty)
             }
         }
 
@@ -3681,6 +3711,249 @@ mod test {
     #[tokio::test]
     async fn post_file_payload_exceeds_content_length_ro() {
         let response = post_file_payload_exceeds_content_length(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_package_ok(rw: bool) -> Response {
+        let pd = PackageDataPost {
+            description: "".into()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/newpkg"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_package_ok_rw() {
+        let response = post_package_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_package_ok_ro() {
+        let response = post_package_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_package_not_a_project(rw: bool) -> Response {
+        let pd = PackageDataPost {
+            description: "".into()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_package_not_a_project_rw() {
+        let response = post_package_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_package_not_a_project_ro() {
+        let response = post_package_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_package_unauth(rw: bool) -> Response {
+        let pd = PackageDataPost {
+            description: "".into()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_package_unauth_rw() {
+        let response = post_package_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_package_unauth_ro() {
+        let response = post_package_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_package_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    async fn post_package_already_exists(rw: bool) -> Response {
+        let pd = PackageDataPost {
+            description: "".into()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_package_already_exists_rw() {
+        let response = post_package_already_exists(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_package_already_exists_ro() {
+        let response = post_package_already_exists(false).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_ok_rw() {
+        let response = delete_package_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_ok_ro() {
+        let response = delete_package_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_package_not_a_project(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_project_rw() {
+        let response = delete_package_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_project_ro() {
+        let response = delete_package_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_package_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_unauth_rw() {
+        let response = delete_package_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_unauth_ro() {
+        let response = delete_package_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_package_not_a_package(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/not_a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_package_rw() {
+        let response = delete_package_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_packaget_ro() {
+        let response = delete_package_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_package_not_empty(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/nonempty"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_empty_rw() {
+        let response = delete_package_not_empty(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_empty_ro() {
+        let response = delete_package_not_empty(false).await;
         assert_forbidden(response).await;
     }
 }
