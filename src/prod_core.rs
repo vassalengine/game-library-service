@@ -19,7 +19,7 @@ use tokio::io::{
 use tracing::info;
 
 use crate::{
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
     model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
@@ -240,6 +240,17 @@ where
     {
         let now = self.now_nanos()?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
+    }
+
+   async fn delete_package(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+    ) -> Result<(), DeletePackageError>
+    {
+        let now = self.now_nanos()?;
+        Ok(self.db.delete_package(owner, proj, pkg, now).await?)
     }
 
     async fn get_release_id(

@@ -122,6 +122,14 @@ pub enum CreatePackageError {
 }
 
 #[derive(Debug, Error, PartialEq)]
+pub enum DeletePackageError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error, PartialEq)]
 pub enum CreateReleaseError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -384,6 +392,16 @@ pub trait Core {
         _pkg: &str,
         _pkg_data: &PackageDataPost
     ) -> Result<(), CreatePackageError>
+    {
+        unimplemented!();
+    }
+
+    async fn delete_package(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+    ) -> Result<(), DeletePackageError>
     {
         unimplemented!();
     }

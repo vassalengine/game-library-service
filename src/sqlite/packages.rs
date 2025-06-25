@@ -218,6 +218,26 @@ where
     Ok(())
 }
 
+async fn check_package_row_exists<'e, E>(
+    ex: E,
+    pkg: Package,
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+SELECT 1 FROM packages
+WHERE package_id = ?
+        ",
+        pkg.0
+    )
+    .fetch_optional(ex)
+    .await?
+    .and(Some(()))
+    .ok_or(DatabaseError::NotFound)
+}
+
 async fn delete_package_row<'e, E>(
     ex: E,
     pkg: Package,
@@ -276,6 +296,8 @@ where
     A: Acquire<'a, Database = Sqlite>
 {
     let mut tx = conn.begin().await?;
+
+    check_package_row_exists(&mut *tx, pkg).await?;
 
     // delete package row
     delete_package_row(&mut *tx, pkg).await?;
@@ -559,6 +581,50 @@ mod test {
         assert_eq!(
             get_project_row(&pool, proj).await.unwrap().revision,
             4
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_package_not_project(pool: Pool) {
+        assert_eq!(
+            delete_package(
+                &pool,
+                Owner(1),
+                Project(0),
+                Package(2),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_package_not_package(pool: Pool) {
+        assert_eq!(
+            delete_package(
+                &pool,
+                Owner(1),
+                Project(42),
+                Package(5),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn delete_package_not_empty(pool: Pool) {
+        assert!(
+            matches!(
+                delete_package(
+                    &pool,
+                    Owner(1),
+                    Project(42),
+                    Package(1),
+                    1702137389180282478
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
         );
     }
 }

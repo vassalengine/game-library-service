@@ -142,6 +142,15 @@ pub async fn packages_post(
     Ok(core.create_package(owner, proj, &pkg, &pkg_data).await?)
 }
 
+pub async fn packages_delete(
+    Owned(owner, proj): Owned,
+    ProjectPackage(_, pkg): ProjectPackage,
+    State(core): State<CoreArc>
+) -> Result<(), AppError>
+{
+    Ok(core.delete_package(owner, proj, pkg).await?)
+}
+
 // TODO
 //pub async fn packages_patch(
 

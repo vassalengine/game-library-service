@@ -210,6 +210,7 @@ fn routes(
             .route(
                 "/projects/{proj}/packages/{pkg_name}",
                 post(handlers::forbidden)
+                .delete(handlers::forbidden)
             )
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}",
@@ -265,6 +266,7 @@ fn routes(
             .route(
                 "/projects/{proj}/packages/{pkg_name}",
                 post(handlers::packages_post)
+                .delete(handlers::packages_delete)
             )
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}",
