@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -154,6 +154,16 @@ impl From<CreateReleaseError> for AppError {
             CreateReleaseError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreateReleaseError::InvalidVersion(_) => AppError::MalformedVersion,
             CreateReleaseError::TimeError(e) => AppError::InternalError(e.to_string())
+        }
+    }
+}
+
+impl From<DeleteReleaseError> for AppError {
+    fn from(err: DeleteReleaseError) -> Self {
+        match err {
+            DeleteReleaseError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            DeleteReleaseError::NotEmpty => AppError::NotEmpty,
+            DeleteReleaseError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }

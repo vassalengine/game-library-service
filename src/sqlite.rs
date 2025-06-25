@@ -359,6 +359,17 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         releases::create_release(&self.0, owner, proj, pkg, version, now).await
     }
 
+    async fn delete_release(
+        &self,
+        owner: Owner,
+        proj: Project,
+        rel: Release,
+        now: i64
+    ) -> Result<(), DatabaseError>
+    {
+        releases::delete_release(&self.0, owner, proj, rel, now).await
+    }
+
     async fn get_release_version(
         &self,
         rel: Release

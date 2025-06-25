@@ -326,6 +326,14 @@ pub trait DatabaseClient {
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
+    fn delete_release(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _rel: Release,
+        _now: i64
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
     fn get_release_version(
         &self,
         _release: Release

@@ -164,6 +164,15 @@ pub async fn release_post(
     Ok(core.create_release(owner, proj, pkg, &version).await?)
 }
 
+pub async fn release_delete(
+    Owned(owner, proj): Owned,
+    ProjectPackageRelease(_, _, release): ProjectPackageRelease,
+    State(core): State<CoreArc>
+) -> Result<(), AppError>
+{
+    Ok(core.delete_release(owner, proj, release).await?)
+}
+
 fn unpack_limited_error(e: Box<dyn Error + Sync + Send>) -> io::Error {
     // turn boxed error back into io::Error
     match e.downcast::<io::Error>() {

@@ -161,6 +161,25 @@ pub enum CreateReleaseError {
     TimeError(#[from] time::Error)
 }
 
+#[derive(Debug, Error, PartialEq)]
+pub enum DeleteReleaseError {
+    #[error("{0}")]
+    DatabaseError(db::DatabaseError),
+    #[error("Not empty")]
+    NotEmpty,
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+impl From<db::DatabaseError> for DeleteReleaseError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::NotEmpty => DeleteReleaseError::NotEmpty,
+            e => DeleteReleaseError::DatabaseError(e)
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum AddFileError {
     #[error("{0}")]
@@ -435,6 +454,16 @@ pub trait Core {
         _pkg: Package,
         _version: &str
     ) -> Result<(), CreateReleaseError>
+    {
+        unimplemented!();
+    }
+
+    async fn delete_release(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _rel: Release
+    ) -> Result<(), DeleteReleaseError>
     {
         unimplemented!();
     }

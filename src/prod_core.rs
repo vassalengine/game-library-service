@@ -19,7 +19,7 @@ use tokio::io::{
 use tracing::info;
 
 use crate::{
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
     model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
@@ -288,6 +288,17 @@ where
         let now = self.now_nanos()?;
         let version = version.parse::<Version>()?;
         Ok(self.db.create_release(owner, proj, pkg, &version, now).await?)
+    }
+
+    async fn delete_release(
+        &self,
+        owner: Owner,
+        proj: Project,
+        rel: Release
+    ) -> Result<(), DeleteReleaseError>
+    {
+        let now = self.now_nanos()?;
+        Ok(self.db.delete_release(owner, proj, rel, now).await?)
     }
 
     async fn add_file(

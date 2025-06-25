@@ -216,6 +216,7 @@ fn routes(
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}",
                 post(handlers::forbidden)
+                .delete(handlers::forbidden)
             )
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
@@ -273,6 +274,7 @@ fn routes(
                 "/projects/{proj}/packages/{pkg_name}/{version}",
 // FIXME: release_version_post?
                 post(handlers::release_post)
+                .delete(handlers::release_delete)
             )
             .route(
                 "/projects/{proj}/images/{img_name}",
