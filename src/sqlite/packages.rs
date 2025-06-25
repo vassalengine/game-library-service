@@ -398,6 +398,11 @@ mod test {
         );
 
         assert_eq!(
+            get_packages_at(&pool, proj, 1699804206419538067).await.unwrap(),
+            []
+        );
+
+        assert_eq!(
             get_project_row(&pool, proj).await.unwrap().revision,
             1
         );
@@ -413,15 +418,20 @@ mod test {
             1699804206419538067
         ).await.unwrap();
 
+        let pr = PackageRow {
+            package_id: 5,
+            name: "newpkg".into(),
+            created_at: 1699804206419538067
+        };
+
         assert_eq!(
             get_packages(&pool, proj).await.unwrap(),
-            [
-                PackageRow {
-                    package_id: 5,
-                    name: "newpkg".into(),
-                    created_at: 1699804206419538067
-                }
-            ]
+            [ pr.clone() ]
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1699804206419538067).await.unwrap(),
+            [ pr.clone() ]
         );
 
         assert_eq!(

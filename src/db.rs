@@ -85,7 +85,7 @@ pub struct ProjectRow {
     pub readme: String
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
