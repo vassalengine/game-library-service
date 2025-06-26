@@ -480,7 +480,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -658,6 +658,7 @@ mod test {
         {
             match release {
                 "1.2.3" => Ok(Release(1)),
+                "1.2.4" => Ok(Release(2)),
                 _ => Err(GetIdError::NotFound)
             }
         }
@@ -670,9 +671,10 @@ mod test {
         ) -> Result<(Project, Package, Release), GetIdError>
         {
             match (proj, pkg, release) {
-                ("a_project", "a_package", "1.2.3") => Ok(
-                    (Project(1), Package(1), Release(1))
-                ),
+                ("a_project", "a_package", "1.2.3") =>
+                    Ok((Project(1), Package(1), Release(1))),
+                ("a_project", "a_package", "1.2.4") =>
+                    Ok((Project(1), Package(1), Release(2))),
                 _ => Err(GetIdError::NotFound)
             }
         }
@@ -835,6 +837,19 @@ mod test {
             match (proj, pkg, version) {
                 (Project(1), Package(1), "1.2.4") => Ok(()),
                 _ => Err(CreateReleaseError::AlreadyExists)
+            }
+        }
+
+        async fn delete_release(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            rel: Release
+        ) -> Result<(), DeleteReleaseError>
+        {
+            match rel {
+                Release(1) => Ok(()),
+                _ => Err(DeleteReleaseError::NotEmpty)
             }
         }
 
@@ -4100,12 +4115,11 @@ mod test {
         assert_forbidden(response).await;
     }
 
-/*
-    async fn delete_package_ok(rw: bool) -> Response {
+    async fn delete_release_ok(rw: bool) -> Response {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4115,18 +4129,16 @@ mod test {
     }
 
     #[tokio::test]
-    async fn delete_package_ok_rw() {
-        let response = delete_package_ok(true).await;
+    async fn delete_release_ok_rw() {
+        let response = delete_release_ok(true).await;
         assert_ok(response).await;
     }
 
     #[tokio::test]
-    async fn delete_package_ok_ro() {
-        let response = delete_package_ok(false).await;
+    async fn delete_release_ok_ro() {
+        let response = delete_release_ok(false).await;
         assert_forbidden(response).await;
     }
-
-*/
 
     async fn delete_release_not_a_project(rw: bool) -> Response {
         try_request(
@@ -4202,12 +4214,11 @@ mod test {
         assert_forbidden(response).await;
     }
 
-/*
-    async fn delete_package_not_empty(rw: bool) -> Response {
+    async fn delete_release_not_empty(rw: bool) -> Response {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/nonempty"))
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4217,15 +4228,14 @@ mod test {
     }
 
     #[tokio::test]
-    async fn delete_package_not_empty_rw() {
-        let response = delete_package_not_empty(true).await;
+    async fn delete_release_not_empty_rw() {
+        let response = delete_release_not_empty(true).await;
         assert_malformed_query(response).await;
     }
 
     #[tokio::test]
-    async fn delete_package_not_empty_ro() {
-        let response = delete_package_not_empty(false).await;
+    async fn delete_release_not_empty_ro() {
+        let response = delete_release_not_empty(false).await;
         assert_forbidden(response).await;
     }
-*/
 }
