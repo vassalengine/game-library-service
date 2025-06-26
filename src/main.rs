@@ -3899,6 +3899,31 @@ mod test {
         assert_forbidden(response).await;
     }
 
+    async fn delete_package_not_a_package(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_package_rw() {
+        let response = delete_package_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_a_packaget_ro() {
+        let response = delete_package_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
     async fn delete_package_unauth(rw: bool) -> Response {
         try_request(
             Request::builder()
@@ -3923,30 +3948,6 @@ mod test {
         assert_forbidden(response).await;
     }
 
-    async fn delete_package_not_a_package(rw: bool) -> Response {
-        try_request(
-            Request::builder()
-                .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/not_a_package"))
-                .header(AUTHORIZATION, token(BOB_UID))
-                .body(Body::empty())
-                .unwrap(),
-            rw
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn delete_package_not_a_package_rw() {
-        let response = delete_package_not_a_package(true).await;
-        assert_not_found(response).await;
-    }
-
-    #[tokio::test]
-    async fn delete_package_not_a_packaget_ro() {
-        let response = delete_package_not_a_package(false).await;
-        assert_forbidden(response).await;
-    }
 
     async fn delete_package_not_empty(rw: bool) -> Response {
         try_request(
@@ -4099,5 +4100,132 @@ mod test {
         assert_forbidden(response).await;
     }
 
+/*
+    async fn delete_package_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
 
+    #[tokio::test]
+    async fn delete_package_ok_rw() {
+        let response = delete_package_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_ok_ro() {
+        let response = delete_package_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+*/
+
+    async fn delete_release_not_a_project(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_release_not_a_project_rw() {
+        let response = delete_release_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_release_not_a_project_ro() {
+        let response = delete_release_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_release_not_a_package(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_release_not_a_package_rw() {
+        let response = delete_release_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_release_not_a_packaget_ro() {
+        let response = delete_release_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn delete_release_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_release_unauth_rw() {
+        let response = delete_release_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_release_unauth_ro() {
+        let response = delete_release_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+/*
+    async fn delete_package_not_empty(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/nonempty"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_empty_rw() {
+        let response = delete_package_not_empty(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn delete_package_not_empty_ro() {
+        let response = delete_package_not_empty(false).await;
+        assert_forbidden(response).await;
+    }
+*/
 }
