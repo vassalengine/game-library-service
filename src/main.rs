@@ -480,7 +480,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, DeletePackageError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -821,6 +821,20 @@ mod test {
             match pkg {
                 Package(1) => Ok(()),
                 _ => Err(DeletePackageError::NotEmpty)
+            }
+        }
+
+        async fn create_release(
+            &self,
+            _owner: Owner,
+            proj: Project,
+            pkg: Package,
+            version: &str,
+        ) -> Result<(), CreateReleaseError>
+        {
+            match (proj, pkg, version) {
+                (Project(1), Package(1), "1.2.4") => Ok(()),
+                _ => Err(CreateReleaseError::AlreadyExists)
             }
         }
 
@@ -3805,19 +3819,6 @@ mod test {
         assert_forbidden(response).await;
     }
 
-    async fn delete_package_ok(rw: bool) -> Response {
-        try_request(
-            Request::builder()
-                .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
-                .header(AUTHORIZATION, token(BOB_UID))
-                .body(Body::empty())
-                .unwrap(),
-            rw
-        )
-        .await
-    }
-
     async fn post_package_already_exists(rw: bool) -> Response {
         let pd = PackageDataPost {
             description: "".into()
@@ -3846,6 +3847,19 @@ mod test {
     async fn post_package_already_exists_ro() {
         let response = post_package_already_exists(false).await;
         assert_forbidden(response).await;
+    }
+
+    async fn delete_package_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::DELETE)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
     }
 
     #[tokio::test]
@@ -3958,4 +3972,132 @@ mod test {
         let response = delete_package_not_empty(false).await;
         assert_forbidden(response).await;
     }
+
+// TODO: post_release, delete_release tests
+
+    async fn post_release_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_release_ok_rw() {
+        let response = post_release_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_release_ok_ro() {
+        let response = post_release_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_release_not_a_project(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.4"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_release_not_a_project_rw() {
+        let response = post_release_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_release_not_a_project_ro() {
+        let response = post_release_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_release_not_a_package(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.4"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_release_not_a_package_rw() {
+        let response = post_release_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_release_not_a_package_ro() {
+        let response = post_release_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_release_already_exists(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_release_already_exists_rw() {
+        let response = post_release_already_exists(true).await;
+        assert_malformed_query(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_release_already_exists_ro() {
+        let response = post_release_already_exists(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_release_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_release_unauth_rw() {
+        let response = post_release_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_release_unauth_ro() {
+        let response = post_release_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+
 }

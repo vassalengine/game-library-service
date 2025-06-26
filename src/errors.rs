@@ -151,6 +151,7 @@ impl From<DeletePackageError> for AppError {
 impl From<CreateReleaseError> for AppError {
     fn from(err: CreateReleaseError) -> Self {
         match err {
+            CreateReleaseError::AlreadyExists => AppError::AlreadyExists,
             CreateReleaseError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreateReleaseError::InvalidVersion(_) => AppError::MalformedVersion,
             CreateReleaseError::TimeError(e) => AppError::InternalError(e.to_string())

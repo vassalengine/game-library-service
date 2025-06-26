@@ -153,12 +153,23 @@ impl From<db::DatabaseError> for DeletePackageError {
 
 #[derive(Debug, Error, PartialEq)]
 pub enum CreateReleaseError {
+    #[error("Already exists")]
+    AlreadyExists,
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError),
+    DatabaseError(db::DatabaseError),
     #[error("{} is not a valid version", .0.0)]
     InvalidVersion(#[from] version::MalformedVersion),
     #[error("{0}")]
     TimeError(#[from] time::Error)
+}
+
+impl From<db::DatabaseError> for CreateReleaseError {
+    fn from(err: db::DatabaseError) -> Self {
+        match err {
+            db::DatabaseError::AlreadyExists => CreateReleaseError::AlreadyExists,
+            e => CreateReleaseError::DatabaseError(e)
+        }
+    }
 }
 
 #[derive(Debug, Error, PartialEq)]
