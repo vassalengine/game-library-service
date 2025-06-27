@@ -139,7 +139,6 @@ where
 // maximum field lengths
 const DESCRIPTION_MAX_LENGTH: usize = 1024;
 const GAME_TITLE_MAX_LENGTH: usize = 256;
-const GAME_TITLE_SORT_KEY_MAX_LENGTH: usize = 256;
 const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
 const GAME_YEAR_MAX_LENGTH: usize = 32;
 const README_MAX_LENGTH: usize = 65536;
@@ -156,7 +155,6 @@ pub struct RangePatch {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeGameDataPatch {
     pub title: Option<String>,
-    pub title_sort_key: Option<String>,
     pub publisher: Option<String>,
     pub year: Option<String>,
     pub players: Option<RangePatch>,
@@ -178,7 +176,7 @@ impl From<MaybeGameDataPatch> for GameDataPatch {
     fn from(m: MaybeGameDataPatch) -> Self {
         GameDataPatch {
             title: m.title,
-            title_sort_key: m.title_sort_key,
+            title_sort_key: None,
             publisher: m.publisher,
             year: m.year,
             players: m.players.unwrap_or_default(),
@@ -206,7 +204,6 @@ impl MaybeProjectDataPatch {
                 tags: None,
                 game: None | Some(MaybeGameDataPatch {
                     title: None,
-                    title_sort_key: None,
                     publisher: None,
                     year: None,
                     players: None | Some(RangePatch {
@@ -241,10 +238,6 @@ impl MaybeProjectDataPatch {
             matches!(
                 &game.title,
                 Some(s) if s.len() > GAME_TITLE_MAX_LENGTH
-            ) ||
-            matches!(
-                &game.title_sort_key,
-                Some(s) if s.len() > GAME_TITLE_SORT_KEY_MAX_LENGTH
             ) ||
             matches!(
                 &game.publisher,
@@ -331,6 +324,7 @@ impl TryFrom<MaybeRangePost> for RangePost {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GameDataPost {
     pub title: String,
+    #[serde(skip)]
     pub title_sort_key: String,
     pub publisher: String,
     pub year: String,
@@ -351,7 +345,6 @@ impl MaybeProjectDataPost {
     fn overlong(&self) -> bool {
         self.description.len() > DESCRIPTION_MAX_LENGTH ||
         self.game.title.len() > GAME_TITLE_MAX_LENGTH ||
-        self.game.title_sort_key.len() > GAME_TITLE_SORT_KEY_MAX_LENGTH ||
         self.game.publisher.len() > GAME_PUBLISHER_MAX_LENGTH ||
         self.game.year.len() > GAME_YEAR_MAX_LENGTH ||
         self.readme.len() > README_MAX_LENGTH ||
@@ -581,22 +574,6 @@ mod test {
     }
 
     #[test]
-    fn try_from_project_data_post_overlong_title_sort_key() {
-        let mpdp = MaybeProjectDataPost {
-            game: GameDataPost {
-                title_sort_key: "x".repeat(GAME_TITLE_SORT_KEY_MAX_LENGTH + 1),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        assert_eq!(
-            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
-            ProjectDataPostError(mpdp)
-        );
-    }
-
-    #[test]
     fn try_from_project_data_post_overlong_publisher() {
         let mpdp = MaybeProjectDataPost {
             game: GameDataPost {
@@ -660,7 +637,6 @@ mod test {
         {
             "game": {
                 "title": "foo",
-                "title_sort_key": "foo",
                 "publisher": "",
                 "year": "",
                 "players": { "min": null, "max": null },
@@ -678,7 +654,7 @@ mod test {
                 tags: vec![],
                 game: GameDataPost {
                     title: "foo".into(),
-                    title_sort_key: "foo".into(),
+                    title_sort_key: "".into(),
                     publisher: "".into(),
                     year: "".into(),
                     ..Default::default()
@@ -797,19 +773,6 @@ mod test {
     }
 
     #[test]
-    fn maybe_project_data_patch_title_sort_key_not_empty() {
-        assert!(
-            !MaybeProjectDataPatch {
-                game: Some(MaybeGameDataPatch {
-                    title_sort_key: Some("title_sort_key".into()),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }.empty()
-        );
-    }
-
-    #[test]
     fn maybe_project_data_patch_publisher_not_empty() {
         assert!(
             !MaybeProjectDataPatch {
@@ -910,22 +873,6 @@ mod test {
         let mpdp = MaybeProjectDataPatch {
             game: Some(MaybeGameDataPatch {
                 title: Some("x".repeat(GAME_TITLE_MAX_LENGTH + 1)),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        assert_eq!(
-            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
-            ProjectDataPatchError(mpdp)
-        );
-    }
-
-    #[test]
-    fn try_from_project_data_patch_overlong_title_sort_key() {
-        let mpdp = MaybeProjectDataPatch {
-            game: Some(MaybeGameDataPatch {
-                title_sort_key: Some("x".repeat(GAME_TITLE_SORT_KEY_MAX_LENGTH + 1)),
                 ..Default::default()
             }),
             ..Default::default()

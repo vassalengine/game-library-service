@@ -22,7 +22,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, Flag, GalleryImage, GameData, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{FileData, Flag, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -169,7 +169,16 @@ where
     {
         let now = self.now_nanos()?;
         let proj = check_new_project_name(proj)?;
-        Ok(self.db.create_project(user, proj, proj_data, now).await?)
+
+        let proj_data = ProjectDataPost {
+            game: GameDataPost{
+                title_sort_key: title_sort_key(&proj_data.game.title_sort_key),
+                ..proj_data.game.clone()
+            },
+            ..proj_data.clone()
+        };
+
+        Ok(self.db.create_project(user, proj, &proj_data, now).await?)
     }
 
     async fn update_project(
@@ -180,7 +189,21 @@ where
     ) -> Result<(), UpdateProjectError>
     {
         let now = self.now_nanos()?;
-        Ok(self.db.update_project(owner, proj, proj_data, now).await?)
+
+        let proj_data = if let Some(title) = &proj_data.game.title {
+            &ProjectDataPatch {
+                game: GameDataPatch {
+                    title_sort_key: Some(title_sort_key(title)),
+                    ..proj_data.game.clone()
+                },
+                ..proj_data.clone()
+            }
+        }
+        else {
+            proj_data
+        };
+
+        Ok(self.db.update_project(owner, proj, &proj_data, now).await?)
     }
 
     async fn get_project_revision(
@@ -1105,6 +1128,26 @@ fn get_links(
     }
 }
 
+fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
+    match title.split_once(' ') {
+        // Probably Spanish or French, "a" is not an article
+        Some(("a", rest)) if rest.starts_with("la") => (title, None),
+        // Put leading article at end
+        Some((art, rest)) if ["a", "an", "the"].contains(&art)
+            => (rest, Some(art)),
+        // Doesn't start with an article
+        Some(_) | None => (title, None)
+    }
+}
+
+fn title_sort_key(title: &str) -> String {
+    let sort_key = title.to_lowercase();
+    match split_title_sort_key(&sort_key) {
+        (_, None) => sort_key,
+        (rest, Some(art)) => format!("{rest}, {art}")
+    }
+}
+
 impl ProjectSummaryRow {
     fn sort_field(&self, sort_by: SortBy) -> Result<String, time::Error> {
         Ok(
@@ -1991,7 +2034,7 @@ mod test {
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
-                    title_sort_key: "Game of Tests, A".into(),
+                    title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
                     players: Range::default(),
@@ -2080,7 +2123,7 @@ mod test {
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
-                    title_sort_key: "Game of Tests, A".into(),
+                    title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
                     players: Range::default(),
@@ -2154,7 +2197,7 @@ mod test {
                 tags: vec![],
                 game: GameData {
                     title: "A Game of Tests".into(),
-                    title_sort_key: "Game of Tests, A".into(),
+                    title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1978".into(),
                     players: Range::default(),
@@ -2195,7 +2238,7 @@ mod test {
             tags: vec![],
             game: GameData {
                 title: "Some New Game".into(),
-                title_sort_key: "Some New Game".into(),
+                title_sort_key: "some new game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
                 players: Range::default(),
@@ -2243,7 +2286,7 @@ mod test {
             tags: vec![],
             game: GameData {
                 title: "Some New Game".into(),
-                title_sort_key: "Some New Game".into(),
+                title_sort_key: "some new game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
                 players: Range::default(),
@@ -2291,7 +2334,7 @@ mod test {
             tags: vec![],
             game: GameData {
                 title: "Some New Game".into(),
-                title_sort_key: "Some New Game".into(),
+                title_sort_key: "some new game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
                 players: Range::default(),
@@ -2455,4 +2498,25 @@ mod test {
             GetImageError::NotFound
         );
     }
+
+    #[test]
+    fn test_split_title_sort_key() {
+        assert_eq!(split_title_sort_key(""), ("", None));
+        assert_eq!(split_title_sort_key("a game"), ("game", Some("a")));
+        assert_eq!(split_title_sort_key("an apron"), ("apron", Some("an")));
+        assert_eq!(split_title_sort_key("the game"), ("game", Some("the")));
+        assert_eq!(split_title_sort_key("some game"), ("some game", None));
+        assert_eq!(split_title_sort_key("a la jeu"), ("a la jeu", None));
+    }
+
+    #[test]
+    fn test_title_sort_key() {
+        assert_eq!(title_sort_key(""), "");
+        assert_eq!(title_sort_key("A Game"), "game, a");
+        assert_eq!(title_sort_key("An Apron"), "apron, an");
+        assert_eq!(title_sort_key("The Game"), "game, the");
+        assert_eq!(title_sort_key("Some Game"), "some game");
+        assert_eq!(title_sort_key("A la Jeu"), "a la jeu");
+    }
+
 }
