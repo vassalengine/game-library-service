@@ -17,6 +17,9 @@ use tokio::io::{
     AsyncSeekExt
 };
 use tracing::info;
+use unicode_ccc::{CanonicalCombiningClass, get_canonical_combining_class};
+use unicode_normalization::UnicodeNormalization;
+use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
@@ -1131,7 +1134,8 @@ fn get_links(
 fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
     match title.split_once(' ') {
         // Probably Spanish or French, "a" is not an article
-        Some(("a", rest)) if rest.starts_with("la") => (title, None),
+        Some(("a", rest)) if rest.starts_with("la ")
+            || rest.starts_with("las ") => (title, None),
         // Put leading article at end
         Some((art, rest)) if ["a", "an", "the"].contains(&art)
             => (rest, Some(art)),
@@ -1140,8 +1144,21 @@ fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
     }
 }
 
+fn normalize_title_sort_key(s: &str) -> String {
+    s.nfkd()
+        .flat_map(char::to_lowercase)
+        .filter(|c| get_canonical_combining_class(*c) == CanonicalCombiningClass::NotReordered)
+        .skip_while(
+            |c| ![
+                GeneralCategoryGroup::Letter,
+                GeneralCategoryGroup::Number
+            ].contains(&c.general_category_group())
+        )
+        .collect()
+}
+
 fn title_sort_key(title: &str) -> String {
-    let sort_key = title.to_lowercase();
+    let sort_key = normalize_title_sort_key(title);
     match split_title_sort_key(&sort_key) {
         (_, None) => sort_key,
         (rest, Some(art)) => format!("{rest}, {art}")
@@ -2507,6 +2524,15 @@ mod test {
         assert_eq!(split_title_sort_key("the game"), ("game", Some("the")));
         assert_eq!(split_title_sort_key("some game"), ("some game", None));
         assert_eq!(split_title_sort_key("a la jeu"), ("a la jeu", None));
+        assert_eq!(split_title_sort_key("a las una"), ("a las una", None));
+        assert_eq!(split_title_sort_key("a last"), ("last", Some("a")));
+    }
+
+    #[test]
+    fn test_normalize_title_sort_key() {
+        assert_eq!(normalize_title_sort_key("no accents"), "no accents");
+        assert_eq!(normalize_title_sort_key("Fureur à l'Est"), "fureur a l'est");
+        assert_eq!(normalize_title_sort_key("'!(34!"), "34!");
     }
 
     #[test]
@@ -2517,6 +2543,7 @@ mod test {
         assert_eq!(title_sort_key("The Game"), "game, the");
         assert_eq!(title_sort_key("Some Game"), "some game");
         assert_eq!(title_sort_key("A la Jeu"), "a la jeu");
+        assert_eq!(title_sort_key("A las Una"), "a las una");
+        assert_eq!(title_sort_key("A Last"), "last, a");
     }
-
 }

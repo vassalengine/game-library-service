@@ -980,6 +980,9 @@ dependencies = [
  "tracing-appender",
  "tracing-panic",
  "tracing-subscriber",
+ "unicode-ccc",
+ "unicode-normalization",
+ "unicode-properties",
  "unwrap-infallible",
  "zip",
 ]
@@ -3397,6 +3400,12 @@ name = "unicode-bidi"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c1cb5db39152898a79168971543b1cb5020dff7fe43c8dc468b0885f5e29df5"
+
+[[package]]
+name = "unicode-ccc"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce61d488bcdc9bc8b5d1772c404828b17fc481c0a582b5581e95fb233aef503e"
 
 [[package]]
 name = "unicode-ident"
