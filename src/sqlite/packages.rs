@@ -23,10 +23,11 @@ where
 SELECT
     package_id,
     name,
+    sort_key,
     created_at
 FROM packages
 WHERE project_id = ?
-ORDER BY name COLLATE NOCASE ASC
+ORDER BY sort_key ASC
             ",
             proj.0
         )
@@ -50,12 +51,13 @@ where
 SELECT
     package_id,
     name,
+    sort_key,
     created_at
 FROM packages_history
 WHERE project_id = ?
     AND created_at <= ?
     AND (? < deleted_at OR deleted_at IS NULL)
-ORDER BY name COLLATE NOCASE ASC
+ORDER BY sort_key ASC
             ",
             proj.0,
             date,
@@ -125,6 +127,7 @@ async fn create_package_row<'e, E>(
     proj: Project,
     pkg: Package,
     pkgname: &str,
+    sort_key: i64,
     now: i64
 ) -> Result<(), DatabaseError>
 where
@@ -136,14 +139,16 @@ INSERT INTO packages (
     package_id,
     project_id,
     name,
+    sort_key,
     created_at,
     created_by
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
         ",
         pkg.0,
         proj.0,
         pkgname,
+        sort_key,
         now,
         owner.0
     )
@@ -159,6 +164,7 @@ async fn create_package_history_row<'e, E>(
     owner: Owner,
     proj: Project,
     pkg: &str,
+    sort_key: i64,
     now: i64
 ) -> Result<Package, DatabaseError>
 where
@@ -169,14 +175,16 @@ where
 INSERT INTO packages_history (
     project_id,
     name,
+    sort_key,
     created_at,
     created_by
 )
-VALUES (?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
 RETURNING package_id
         ",
         proj.0,
         pkg,
+        sort_key,
         now,
         owner.0
     )
@@ -199,16 +207,27 @@ where
 {
     let mut tx = conn.begin().await?;
 
+    let sort_key = pkg_data.sort_key;
+
     // insert package row
     let pkg = create_package_history_row(
         &mut *tx,
         owner,
         proj,
         pkgname,
+        sort_key,
         now
     ).await?;
 
-    create_package_row(&mut *tx, owner, proj, pkg, pkgname, now).await?;
+    create_package_row(
+        &mut *tx,
+        owner,
+        proj,
+        pkg,
+        pkgname,
+        sort_key,
+        now
+    ).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -327,16 +346,19 @@ mod test {
                 PackageRow {
                     package_id: 1,
                     name: "a_package".into(),
+                    sort_key: 0,
                     created_at: 1702137389180282477
                 },
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
+                    sort_key: 1,
                     created_at: 1667750189180282477
                 },
                 PackageRow {
                     package_id: 3,
                     name: "c_package".into(),
+                    sort_key: 2,
                     created_at: 1699286189180282477
                 }
             ]
@@ -371,6 +393,7 @@ mod test {
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
+                    sort_key: 1,
                     created_at: 1667750189180282477
                 }
             ]
@@ -413,6 +436,7 @@ mod test {
             proj,
             "newpkg",
             &PackageDataPost {
+                sort_key: 4,
                 description: "".into()
             },
             1699804206419538067
@@ -421,6 +445,7 @@ mod test {
         let pr = PackageRow {
             package_id: 5,
             name: "newpkg".into(),
+            sort_key: 4,
             created_at: 1699804206419538067
         };
 
@@ -450,6 +475,7 @@ mod test {
                     Project(0),
                     "newpkg",
                     &PackageDataPost {
+                        sort_key: 4,
                         description: "".into()
                     },
                     1699804206419538067
@@ -468,6 +494,7 @@ mod test {
                 Project(42),
                 "a_package",
                 &PackageDataPost {
+                    sort_key: 4,
                     description: "".into()
                 },
                 1699804206419538067
@@ -484,16 +511,19 @@ mod test {
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                sort_key: 0,
                 created_at: 1702137389180282477
             },
             PackageRow {
                 package_id: 2,
                 name: "b_package".into(),
+                sort_key: 1,
                 created_at: 1667750189180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                sort_key: 2,
                 created_at: 1699286189180282477
             }
         ];
@@ -525,14 +555,16 @@ mod test {
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                sort_key: 0,
                 created_at: 1702137389180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                sort_key: 2,
                 created_at: 1699286189180282477
             }
-        ]; 
+        ];
 
         assert_eq!(
             get_packages(&pool, proj).await.unwrap(),

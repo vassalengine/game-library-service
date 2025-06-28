@@ -647,6 +647,7 @@ where
         Ok(
             PackageData {
                 name: pr.name,
+                sort_key: pr.sort_key,
                 description: "".into(),
                 releases
             }
@@ -2063,6 +2064,7 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "a_package".into(),
+                        sort_key: 0,
                         description: "".into(),
                         releases: vec![
                             ReleaseData {
@@ -2097,11 +2099,13 @@ mod test {
                     },
                     PackageData {
                         name: "b_package".into(),
+                        sort_key: 1,
                         description: "".into(),
                         releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
+                        sort_key: 2,
                         description: "".into(),
                         releases: vec![
                             ReleaseData {
@@ -2152,6 +2156,7 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "a_package".into(),
+                        sort_key: 0,
                         description: "".into(),
                         releases: vec![
                             ReleaseData {
@@ -2186,11 +2191,13 @@ mod test {
                     },
                     PackageData {
                         name: "b_package".into(),
+                        sort_key: 1,
                         description: "".into(),
                         releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
+                        sort_key: 2,
                         description: "".into(),
                         releases: vec![]
                     }
@@ -2226,11 +2233,13 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "b_package".into(),
+                        sort_key: 1,
                         description: "".into(),
                         releases: vec![],
                     },
                     PackageData {
                         name: "c_package".into(),
+                        sort_key: 2,
                         description: "".into(),
                         releases: vec![],
                     }

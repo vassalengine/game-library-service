@@ -89,6 +89,7 @@ pub struct ProjectRow {
 pub struct PackageRow {
     pub package_id: i64,
     pub name: String,
+    pub sort_key: i64,
     pub created_at: i64
 //    description: String
 }

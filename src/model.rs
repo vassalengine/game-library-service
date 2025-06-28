@@ -61,12 +61,14 @@ pub struct ReleaseData {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,
+    pub sort_key: i64,
     pub description: String,
     pub releases: Vec<ReleaseData>
 }
 
 #[derive(Clone, Debug, Deserialize, Default, Eq, PartialEq, Serialize)]
 pub struct MaybePackageDataPost {
+    pub sort_key: i64,
     pub description: String
 }
 
@@ -81,6 +83,7 @@ impl MaybePackageDataPost {
 pub struct PackageDataPost {
 // TODO: display name?
 //    pub name: String,
+    pub sort_key: i64,
     pub description: String
 }
 
@@ -98,6 +101,7 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
         else {
             Ok(
                 PackageDataPost {
+                    sort_key: m.sort_key,
                     description: m.description
                 }
             )
@@ -486,10 +490,12 @@ mod test {
         assert_eq!(
             PackageDataPost::try_from(
                 MaybePackageDataPost {
+                    sort_key: 3,
                     description: "desc".into()
                 }
             ).unwrap(),
             PackageDataPost {
+                sort_key: 3,
                 description: "desc".into()
             }
         );
