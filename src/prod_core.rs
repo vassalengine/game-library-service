@@ -175,7 +175,7 @@ where
 
         let proj_data = ProjectDataPost {
             game: GameDataPost{
-                title_sort_key: title_sort_key(&proj_data.game.title_sort_key),
+                title_sort_key: title_sort_key(&proj_data.game.title),
                 ..proj_data.game.clone()
             },
             ..proj_data.clone()
