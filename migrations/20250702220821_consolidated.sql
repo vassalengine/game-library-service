@@ -1,4 +1,4 @@
-/* TODO: add indices */
+/* TODO: check queries for what indices we need */
 
 CREATE TABLE IF NOT EXISTS users (
   user_id INTEGER PRIMARY KEY NOT NULL,
@@ -22,21 +22,66 @@ CREATE TABLE IF NOT EXISTS players (
   UNIQUE(user_id, project_id)
 );
 
-CREATE TABLE IF NOT EXISTS packages (
-  package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
-  project_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  created_by INTEGER NOT NULL,
-  FOREIGN KEY(project_id) REFERENCES projects(project_id),
-  FOREIGN KEY(created_by) REFERENCES users(user_id),
-  UNIQUE(project_id, name)
+CREATE TABLE IF NOT EXISTS files (
+  file_id INTEGER PRIMARY KEY NOT NULL CHECK(file_id >= 0),
+  release_id INTEGER NOT NULL,
+  url TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  size INTEGER NOT NULL CHECK(size >= 0),
+  sha256 TEXT NOT NULL,
+  requires TEXT,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  UNIQUE(release_id, filename),
+  FOREIGN KEY(release_id) REFERENCES releases(release_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS releases_history (
+  release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
+  package_id INTEGER NOT NULL,
+  version TEXT NOT NULL,
+  version_major INTEGER NOT NULL CHECK(version_major >= 0),
+  version_minor INTEGER NOT NULL CHECK(version_minor >= 0),
+  version_patch INTEGER NOT NULL CHECK(version_patch >= 0),
+  version_pre TEXT NOT NULL,
+  version_build TEXT NOT NULL,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  deleted_at INTEGER,
+  deleted_by INTEGER,
+  FOREIGN KEY(package_id) REFERENCES packages_history(package_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id),
+  FOREIGN KEY(deleted_by) REFERENCES users(user_id)
+  CHECK(
+    (deleted_at IS NULL AND deleted_by IS NULL) OR
+    (deleted_at IS NOT NULL AND deleted_by IS NOT NULL)
+  ),
+  CHECK(deleted_at IS NULL OR published_at <= deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS releases (
+  release_id INTEGER PRIMARY KEY NOT NULL,
+  package_id INTEGER NOT NULL,
+  version TEXT NOT NULL,
+  version_major INTEGER NOT NULL CHECK(version_major >= 0),
+  version_minor INTEGER NOT NULL CHECK(version_minor >= 0),
+  version_patch INTEGER NOT NULL CHECK(version_patch >= 0),
+  version_pre TEXT NOT NULL,
+  version_build TEXT NOT NULL,
+  published_at INTEGER NOT NULL,
+  published_by INTEGER NOT NULL,
+  UNIQUE(package_id, version_major, version_minor, version_patch, version_pre, version_build),
+  FOREIGN KEY(release_id) REFERENCES releases_history(release_id),
+  FOREIGN KEY(package_id) REFERENCES packages(package_id),
+  FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE IF NOT EXISTS packages_history (
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
+  sort_key INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
   created_by INTEGER NOT NULL,
   deleted_at INTEGER,
@@ -51,35 +96,18 @@ CREATE TABLE IF NOT EXISTS packages_history (
   CHECK(deleted_at IS NULL OR created_at <= deleted_at)
 );
 
-CREATE TABLE IF NOT EXISTS releases (
-  release_id INTEGER PRIMARY KEY NOT NULL CHECK(release_id >= 0),
-  package_id INTEGER NOT NULL,
-  version TEXT NOT NULL,
-  version_major INTEGER NOT NULL CHECK(version_major >= 0),
-  version_minor INTEGER NOT NULL CHECK(version_minor >= 0),
-  version_patch INTEGER NOT NULL CHECK(version_patch >= 0),
-  version_pre TEXT NOT NULL,
-  version_build TEXT NOT NULL,
-  published_at INTEGER NOT NULL,
-  published_by INTEGER NOT NULL,
-  UNIQUE(package_id, version_major, version_minor, version_patch, version_pre, version_build),
-  FOREIGN KEY(package_id) REFERENCES packages(package_id),
-  FOREIGN KEY(published_by) REFERENCES users(user_id)
-);
-
-CREATE TABLE IF NOT EXISTS files (
-  file_id INTEGER PRIMARY KEY NOT NULL CHECK(file_id >= 0),
-  release_id INTEGER NOT NULL,
-  url TEXT NOT NULL,
-  filename TEXT NOT NULL,
-  size INTEGER NOT NULL CHECK(size >= 0),
-  sha256 TEXT NOT NULL,
-  requires TEXT,
-  published_at INTEGER NOT NULL,
-  published_by INTEGER NOT NULL,
-  UNIQUE(release_id, filename),
-  FOREIGN KEY(release_id) REFERENCES releases(release_id),
-  FOREIGN KEY(published_by) REFERENCES users(user_id)
+CREATE TABLE IF NOT EXISTS packages (
+  package_id INTEGER PRIMARY KEY NOT NULL, 
+  project_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  sort_key INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  created_by INTEGER NOT NULL,
+  FOREIGN KEY(package_id) REFERENCES packages_history(package_id),
+  FOREIGN KEY(project_id) REFERENCES projects(project_id),
+  FOREIGN KEY(created_by) REFERENCES users(user_id),
+  UNIQUE(project_id, name),
+  UNIQUE(project_id, sort_key)
 );
 
 CREATE TABLE IF NOT EXISTS images (
