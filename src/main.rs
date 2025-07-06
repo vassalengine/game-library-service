@@ -211,6 +211,7 @@ fn routes(
             .route(
                 "/projects/{proj}/packages/{pkg_name}",
                 post(handlers::forbidden)
+                .patch(handlers::forbidden)
                 .delete(handlers::forbidden)
             )
             .route(
@@ -268,6 +269,7 @@ fn routes(
             .route(
                 "/projects/{proj}/packages/{pkg_name}",
                 post(handlers::package_post)
+                .patch(handlers::package_patch)
                 .delete(handlers::package_delete)
             )
             .route(

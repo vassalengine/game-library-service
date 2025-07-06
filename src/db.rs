@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::{
-    model::{Flag, GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    model::{Flag, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -288,6 +288,15 @@ pub trait DatabaseClient {
         _owner: Owner,
         _proj: Project,
         _pkg: Package,
+        _now: i64
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
+    fn update_package(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _pkg_data: &PackageDataPatch,
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 

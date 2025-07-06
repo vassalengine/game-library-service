@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
-    model::{Flag, Owned, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    model::{Flag, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 
@@ -142,6 +142,16 @@ pub async fn package_post(
     Ok(core.create_package(owner, proj, &pkg, &pkg_data).await?)
 }
 
+pub async fn package_patch(
+    Owned(owner, proj): Owned,
+    ProjectPackage(_, pkg): ProjectPackage,
+    State(core): State<CoreArc>,
+    Wrapper(Json(pkg_data)): Wrapper<Json<PackageDataPatch>>
+) -> Result<(), AppError>
+{
+    Ok(core.update_package(owner, proj, pkg, &pkg_data).await?)
+}
+
 pub async fn package_delete(
     Owned(owner, proj): Owned,
     ProjectPackage(_, pkg): ProjectPackage,
@@ -150,9 +160,6 @@ pub async fn package_delete(
 {
     Ok(core.delete_package(owner, proj, pkg).await?)
 }
-
-// TODO
-//pub async fn package_patch(
 
 pub async fn release_post(
     Owned(owner, proj): Owned,

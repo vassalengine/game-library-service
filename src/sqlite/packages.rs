@@ -5,7 +5,7 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, PackageRow, map_unique},
-    model::{Owner, Package, PackageDataPost, Project},
+    model::{Owner, Package, PackageDataPatch, PackageDataPost, Project},
     sqlite::project::update_project_non_project_data
 };
 
@@ -231,6 +231,55 @@ where
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
+pub async fn update_package<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    pkg: Package,
+    pkg_data: &PackageDataPatch,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+/*
+    let sort_key = pkg_data.sort_key;
+
+    // insert package row
+ 
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+
+
+    check_package_row_exists(&mut *tx, pkg).await?;
+
+    // update package row
+    create_package_history_row(
+        &mut *tx,
+        owner,
+        proj,
+        pkgname,
+        sort_key,
+        now
+    ).await?;
+
+    update_package_row(&mut *tx, owner, proj, pkg, pkg_data, now).await?;
+
+    retire_package_history_row(&mut *tx, owner, pkg, now).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+*/
 
     tx.commit().await?;
 

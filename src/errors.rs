@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -134,6 +134,15 @@ impl From<CreatePackageError> for AppError {
             CreatePackageError::AlreadyExists => AppError::AlreadyExists,
             CreatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             CreatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
+        }
+    }
+}
+
+impl From<UpdatePackageError> for AppError {
+    fn from(err: UpdatePackageError) -> Self {
+        match err {
+            UpdatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            UpdatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }

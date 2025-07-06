@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     db,
-    model::{Flag, Owner, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
+    model::{Flag, Owner, PackageDataPatch, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
     module,
     params::ProjectsParams,
     pagination,
@@ -130,6 +130,14 @@ impl From<db::DatabaseError> for CreatePackageError {
             e => CreatePackageError::DatabaseError(e)
         }
     }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum UpdatePackageError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -444,6 +452,17 @@ pub trait Core {
         _pkg: &str,
         _pkg_data: &PackageDataPost
     ) -> Result<(), CreatePackageError>
+    {
+        unimplemented!();
+    }
+
+    async fn update_package(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _pkg: Package,
+        _pkg_data: &PackageDataPatch
+    ) -> Result<(), UpdatePackageError>
     {
         unimplemented!();
     }

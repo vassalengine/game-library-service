@@ -109,6 +109,66 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
     }
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MaybePackageDataPatch {
+    pub name: Option<String>,
+    pub sort_key: Option<i64>,
+    pub description: Option<String>
+}
+
+impl MaybePackageDataPatch {
+    fn empty(&self) -> bool {
+        matches!(
+            self,
+            MaybePackageDataPatch {
+                name: None,
+                sort_key: None,
+                ..
+            }
+        )
+    }
+
+    fn overlong(&self) -> bool {
+        matches!(
+            &self.description,
+            Some(d) if d.len() > DESCRIPTION_MAX_LENGTH
+        )
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybePackageDataPatch")]
+pub struct PackageDataPatch {
+    pub name: Option<String>,
+    pub sort_key: Option<i64>,
+    pub description: Option<String>
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct PackageDataPatchError(MaybePackageDataPatch);
+
+impl TryFrom<MaybePackageDataPatch> for PackageDataPatch {
+    type Error = PackageDataPatchError;
+
+    fn try_from(m: MaybePackageDataPatch) -> Result<Self, Self::Error> {
+        // at least one element must be present to be a valid request
+        // and field lengths must be within bounds
+        if m.empty() || m.overlong() {
+            Err(PackageDataPatchError(m))
+        }
+        else {
+            Ok(
+                PackageDataPatch {
+                    name: m.name,
+                    sort_key: m.sort_key,
+                    description: m.description
+                }
+            )
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GalleryImage {
     pub filename: String,
@@ -511,6 +571,47 @@ mod test {
         assert_eq!(
             PackageDataPost::try_from(mpdp.clone()).unwrap_err(),
             PackageDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_package_data_patch_ok() {
+        assert_eq!(
+            PackageDataPatch::try_from(
+                MaybePackageDataPatch {
+                    name: Some("foo".into()),
+                    sort_key: Some(3),
+                    description: Some("desc".into())
+                }
+            ).unwrap(),
+            PackageDataPatch {
+                name: Some("foo".into()),
+                sort_key: Some(3),
+                description: Some("desc".into())
+            }
+        );
+    }
+
+    #[test]
+    fn try_from_package_data_patch_overlong_description() {
+        let mpdp = MaybePackageDataPatch {
+            description: Some("x".repeat(DESCRIPTION_MAX_LENGTH + 1)),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            PackageDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            PackageDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_package_data_patch_empty() {
+        let mpdp = MaybePackageDataPatch::default();
+
+        assert_eq!(
+            PackageDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            PackageDataPatchError(mpdp)
         );
     }
 

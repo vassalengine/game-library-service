@@ -22,10 +22,10 @@ use unicode_normalization::UnicodeNormalization;
 use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, Flag, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{FileData, Flag, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -266,6 +266,18 @@ where
     {
         let now = self.now_nanos()?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
+    }
+
+    async fn update_package(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        pkg_data: &PackageDataPatch
+    ) -> Result<(), UpdatePackageError>
+    {
+        let now = self.now_nanos()?;
+        Ok(self.db.update_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
    async fn delete_package(

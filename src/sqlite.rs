@@ -15,7 +15,7 @@ mod users;
 
 use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
-    model::{Flag, GalleryImage, Owner, Package, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    model::{Flag, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -293,6 +293,18 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<(), DatabaseError>
     {
         packages::create_package(&self.0, owner, proj, pkg, pkg_data, now).await
+    }
+
+    async fn update_package(
+        &self,
+        owner: Owner,
+        proj: Project,
+        pkg: Package,
+        pkg_data: &PackageDataPatch,
+        now: i64
+    ) -> Result<(), DatabaseError>
+    {
+        packages::update_package(&self.0, owner, proj, pkg, pkg_data, now).await
     }
 
     async fn delete_package(
