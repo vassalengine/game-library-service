@@ -4130,8 +4130,6 @@ mod test {
         assert_forbidden(response).await;
     }
 
-// TODO: post_release, delete_release tests
-
     async fn post_release_ok(rw: bool) -> Response {
         try_request(
             Request::builder()
