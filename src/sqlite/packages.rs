@@ -1,5 +1,5 @@
 use sqlx::{
-    Acquire, Executor,
+    Acquire, Executor, QueryBuilder,
     sqlite::Sqlite
 };
 
@@ -44,22 +44,30 @@ pub async fn get_packages_at<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+    // NB: sqlx can't figure out that all the columns here are NOT NULL,
+    // so we have to annotate them in the result
     Ok(
         sqlx::query_as!(
             PackageRow,
-            "
+            r#"
 SELECT
-    package_id,
-    name,
-    sort_key,
-    created_at
+    packages_history.package_id AS "package_id!",
+    packages_revisions.name AS "name!",
+    packages_revisions.sort_key AS "sort_key!",
+    packages_history.created_at AS "created_at!"
 FROM packages_history
-WHERE project_id = ?
-    AND created_at <= ?
-    AND (? < deleted_at OR deleted_at IS NULL)
+JOIN packages_revisions
+ON packages_history.package_id = packages_revisions.package_id
+WHERE packages_history.project_id = ?
+    AND packages_history.created_at <= ?
+    AND (? < packages_history.deleted_at OR packages_history.deleted_at IS NULL)
+    AND packages_revisions.modified_at <= ?
+GROUP BY packages_history.package_id
+HAVING MAX(packages_revisions.modified_at)
 ORDER BY sort_key ASC
-            ",
+            "#,
             proj.0,
+            date,
             date,
             date
         )
@@ -163,8 +171,6 @@ async fn create_package_history_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
-    pkg: &str,
-    sort_key: i64,
     now: i64
 ) -> Result<Package, DatabaseError>
 where
@@ -174,17 +180,13 @@ where
         "
 INSERT INTO packages_history (
     project_id,
-    name,
-    sort_key,
     created_at,
     created_by
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?)
 RETURNING package_id
         ",
         proj.0,
-        pkg,
-        sort_key,
         now,
         owner.0
     )
@@ -192,6 +194,40 @@ RETURNING package_id
     .await
     .map(Package)
     .map_err(map_unique)
+}
+
+async fn create_package_revision_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    pkg: Package,
+    pkg_name: &str,
+    sort_key: i64,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO packages_revisions (
+    package_id,
+    name,
+    sort_key,
+    modified_at,
+    modified_by
+)
+VALUES (?, ?, ?, ?, ?)
+        ",
+        pkg.0,
+        pkg_name,
+        sort_key,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn create_package<'a, A>(
@@ -209,11 +245,12 @@ where
 
     let sort_key = pkg_data.sort_key;
 
-    // insert package row
-    let pkg = create_package_history_row(
+    let pkg = create_package_history_row(&mut *tx, owner, proj, now).await?;
+
+    create_package_revision_row(
         &mut *tx,
         owner,
-        proj,
+        pkg,
         pkgname,
         sort_key,
         now
@@ -229,10 +266,83 @@ where
         now
     ).await?;
 
-    // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
 
     tx.commit().await?;
+
+    Ok(())
+}
+
+async fn update_package_row<'e, E>(
+    ex: E,
+    pkg: Package,
+    pd: &PackageDataPatch,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    let mut qb: QueryBuilder<E::Database> = QueryBuilder::new(
+        "UPDATE packages SET "
+    );
+
+    let mut qbs = qb.separated(", ");
+
+    if let Some(name) = &pd.name {
+        qbs.push("name = ").push_bind_unseparated(name);
+    }
+
+    if let Some(sort_key) = &pd.sort_key {
+        qbs.push("sort_key = ").push_bind_unseparated(sort_key);
+    }
+
+    if let Some(description) = &pd.description {
+        qbs.push("description = ").push_bind_unseparated(description);
+    }
+
+    qb
+        .push(" WHERE package_id = ")
+        .push_bind(pkg.0)
+        .build()
+        .execute(ex)
+        .await?;
+
+    Ok(())
+}
+
+async fn update_package_revision_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    pkg: Package,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+ E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO packages_revisions (
+    package_id,
+    name,
+    sort_key,
+    modified_at,
+    modified_by
+)
+SELECT
+    package_id,
+    name,
+    sort_key,
+    ? AS modified_at,
+    ? AS modified_by
+FROM packages
+WHERE package_id = ?
+        ",
+        now,
+        owner.0,
+        pkg.0
+    )
+    .execute(ex)
+    .await?;
 
     Ok(())
 }
@@ -250,36 +360,9 @@ where
 {
     let mut tx = conn.begin().await?;
 
-/*
-    let sort_key = pkg_data.sort_key;
-
-    // insert package row
- 
-
-    // update project to reflect the change
+    update_package_row(&mut *tx, pkg, pkg_data, now).await?;
+    update_package_revision_row(&mut *tx, owner, pkg, now).await?;
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
-
-
-
-    check_package_row_exists(&mut *tx, pkg).await?;
-
-    // update package row
-    create_package_history_row(
-        &mut *tx,
-        owner,
-        proj,
-        pkgname,
-        sort_key,
-        now
-    ).await?;
-
-    update_package_row(&mut *tx, owner, proj, pkg, pkg_data, now).await?;
-
-    retire_package_history_row(&mut *tx, owner, pkg, now).await?;
-
-    // update project to reflect the change
-    update_project_non_project_data(&mut tx, owner, proj, now).await?;
-*/
 
     tx.commit().await?;
 
@@ -367,11 +450,8 @@ where
 
     check_package_row_exists(&mut *tx, pkg).await?;
 
-    // delete package row
     delete_package_row(&mut *tx, pkg).await?;
     retire_package_history_row(&mut *tx, owner, pkg, now).await?;
-
-    // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
 
     tx.commit().await?;
@@ -549,6 +629,100 @@ mod test {
                 1699804206419538067
             ).await.unwrap_err(),
             DatabaseError::AlreadyExists
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn update_package_ok(pool: Pool) {
+        let proj = Project(42);
+
+        let prs_before = [
+            PackageRow {
+                package_id: 1,
+                name: "a_package".into(),
+                sort_key: 0,
+                created_at: 1702137389180282477
+            },
+            PackageRow {
+                package_id: 2,
+                name: "b_package".into(),
+                sort_key: 1,
+                created_at: 1667750189180282477
+            },
+            PackageRow {
+                package_id: 3,
+                name: "c_package".into(),
+                sort_key: 2,
+                created_at: 1699286189180282477
+            }
+        ];
+
+        assert_eq!(
+            get_packages(&pool, proj).await.unwrap(),
+            prs_before
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
+            prs_before
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            3
+        );
+
+        update_package(
+            &pool,
+            Owner(1),
+            Project(42),
+            Package(1),
+            &PackageDataPatch {
+                sort_key: Some(4),
+                ..Default::default()
+            },
+            1702137389180282478
+        ).await.unwrap();
+
+        let prs_after = [
+            PackageRow {
+                package_id: 2,
+                name: "b_package".into(),
+                sort_key: 1,
+                created_at: 1667750189180282477
+            },
+            PackageRow {
+                package_id: 3,
+                name: "c_package".into(),
+                sort_key: 2,
+                created_at: 1699286189180282477
+            },
+            PackageRow {
+                package_id: 1,
+                name: "a_package".into(),
+                sort_key: 4,
+                created_at: 1702137389180282477
+            }
+        ];
+
+        assert_eq!(
+            get_packages(&pool, proj).await.unwrap(),
+            prs_after
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282477).await.unwrap(),
+            prs_before
+        );
+
+        assert_eq!(
+            get_packages_at(&pool, proj, 1702137389180282478).await.unwrap(),
+            prs_after
+        );
+
+        assert_eq!(
+            get_project_row(&pool, proj).await.unwrap().revision,
+            4
         );
     }
 
