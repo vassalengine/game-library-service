@@ -484,7 +484,7 @@ mod test {
     use crate::{
         core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -3868,6 +3868,66 @@ mod test {
     #[tokio::test]
     async fn post_package_already_exists_ro() {
         let response = post_package_already_exists(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn update_package_not_a_project(rw: bool) -> Response {
+        let pd = PackageDataPatch {
+            sort_key: Some(4),
+            ..Default::default()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn update_package_not_a_project_rw() {
+        let response = update_package_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn update_package_not_a_project_ro() {
+        let response = update_package_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn update_package_not_a_package(rw: bool) -> Response {
+        let pd = PackageDataPatch {
+            sort_key: Some(4),
+            ..Default::default()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn update_package_not_a_package_rw() {
+        let response = update_package_not_a_package(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn update_package_not_a_packaget_ro() {
+        let response = update_package_not_a_package(false).await;
         assert_forbidden(response).await;
     }
 
