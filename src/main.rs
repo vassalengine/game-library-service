@@ -24,7 +24,6 @@ use tower::ServiceBuilder;
 use tower_http::{
     compression::CompressionLayer,
     cors::CorsLayer,
-    services::ServeDir,
     timeout::TimeoutLayer,
     trace::{DefaultOnFailure, DefaultOnResponse, MakeSpan, TraceLayer}
 };
