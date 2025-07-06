@@ -132,7 +132,7 @@ pub async fn players_remove(
     Ok(core.remove_player(requester, proj).await?)
 }
 
-pub async fn packages_post(
+pub async fn package_post(
     Owned(owner, proj): Owned,
     Path((_, pkg)): Path<(String, String)>,
     State(core): State<CoreArc>,
@@ -142,7 +142,7 @@ pub async fn packages_post(
     Ok(core.create_package(owner, proj, &pkg, &pkg_data).await?)
 }
 
-pub async fn packages_delete(
+pub async fn package_delete(
     Owned(owner, proj): Owned,
     ProjectPackage(_, pkg): ProjectPackage,
     State(core): State<CoreArc>
@@ -152,7 +152,7 @@ pub async fn packages_delete(
 }
 
 // TODO
-//pub async fn packages_patch(
+//pub async fn package_patch(
 
 pub async fn release_post(
     Owned(owner, proj): Owned,

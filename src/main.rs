@@ -267,8 +267,8 @@ fn routes(
             )
             .route(
                 "/projects/{proj}/packages/{pkg_name}",
-                post(handlers::packages_post)
-                .delete(handlers::packages_delete)
+                post(handlers::package_post)
+                .delete(handlers::package_delete)
             )
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}",
