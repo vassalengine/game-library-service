@@ -482,7 +482,7 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateProjectError, UserIsOwnerError},
+        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
         model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -814,6 +814,17 @@ mod test {
                 "newpkg" => Ok(()),
                 _ => Err(CreatePackageError::AlreadyExists)
             }
+        }
+
+        async fn update_package(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            _pkg: Package,
+            _pkg_data: &PackageDataPatch
+        ) -> Result<(), UpdatePackageError>
+        {
+            Ok(())
         }
 
         async fn delete_package(
@@ -3871,6 +3882,37 @@ mod test {
         assert_forbidden(response).await;
     }
 
+    async fn update_package_ok(rw: bool) -> Response {
+        let pd = PackageDataPatch {
+            sort_key: Some(4),
+            ..Default::default()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn update_package_ok_rw() {
+        let response = update_package_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn update_package_ok_ro() {
+        let response = update_package_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
     async fn update_package_not_a_project(rw: bool) -> Response {
         let pd = PackageDataPatch {
             sort_key: Some(4),
@@ -3882,6 +3924,7 @@ mod test {
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
                 .unwrap(),
             rw
@@ -3912,6 +3955,7 @@ mod test {
                 .method(Method::PATCH)
                 .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
                 .unwrap(),
             rw
@@ -3928,6 +3972,36 @@ mod test {
     #[tokio::test]
     async fn update_package_not_a_packaget_ro() {
         let response = update_package_not_a_package(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn update_package_unauth(rw: bool) -> Response {
+        let pd = PackageDataPatch {
+            sort_key: Some(4),
+            ..Default::default()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&pd).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn update_package_unauth_rw() {
+        let response = update_package_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn update_package_unauth_ro() {
+        let response = update_package_unauth(false).await;
         assert_forbidden(response).await;
     }
 
