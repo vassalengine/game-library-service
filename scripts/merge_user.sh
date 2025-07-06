@@ -11,6 +11,7 @@ UPDATE OR IGNORE players SET user_id = $dst WHERE user_id = $src;
 UPDATE packages SET created_by = $dst WHERE created_by = $src;
 UPDATE packages_history SET created_by = $dst WHERE created_by = $src;
 UPDATE packages_history SET deleted_by = $dst WHERE deleted_by = $src;
+UPDATE packages_revisions SET modified_by = $dst WHERE modified_by = $src;
 UPDATE releases SET published_by = $dst WHERE published_by = $src;
 UPDATE releases_history SET published_by = $dst WHERE published_by = $src;
 UPDATE releases_history SET deleted_by = $dst WHERE deleted_by = $src;
