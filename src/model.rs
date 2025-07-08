@@ -474,7 +474,7 @@ pub struct Projects {
 pub struct FlagTagError(String);
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(try_from = "&str")]
+#[serde(try_from = "&str", rename_all = "lowercase")]
 pub enum FlagTag {
     Inappropriate,
     Spam,
@@ -498,8 +498,8 @@ impl TryFrom<&str> for FlagTag {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FlagData {
-    flag: FlagTag,
-    message: Option<String>
+    pub flag: FlagTag,
+    pub message: Option<String>
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]

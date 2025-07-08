@@ -483,7 +483,7 @@ mod test {
     use crate::{
         core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{Flag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{Flag, FlagData, FlagTag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -4388,7 +4388,7 @@ mod test {
     }
 
     async fn post_flag_ok(rw: bool) -> Response {
-        let flag = Flag::Spam;
+        let fd = FlagData { flag: FlagTag::Spam, message: None };
 
         try_request(
             Request::builder()
@@ -4396,7 +4396,7 @@ mod test {
                 .uri(&format!("{API_V1}/projects/a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
                 .unwrap(),
             rw
         )
@@ -4416,7 +4416,7 @@ mod test {
     }
 
     async fn post_flag_not_a_project(rw: bool) -> Response {
-        let flag = Flag::Spam;
+        let fd = FlagData { flag: FlagTag::Spam, message: None };
 
         try_request(
             Request::builder()
@@ -4424,7 +4424,7 @@ mod test {
                 .uri(&format!("{API_V1}/projects/not_a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
                 .unwrap(),
             rw
         )
@@ -4444,14 +4444,14 @@ mod test {
     }
 
     async fn post_flag_unauth(rw: bool) -> Response {
-        let flag = Flag::Spam;
+        let fd = FlagData { flag: FlagTag::Spam, message: None };
 
         try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/flag"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
                 .unwrap(),
             rw
         )
