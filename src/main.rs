@@ -237,7 +237,7 @@ fn routes(
             )
             .route(
                 "/admin/flags",
-                get(handlers::forbidden)
+                get(handlers::admin_flags_get)
             )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
     }
@@ -4534,5 +4534,54 @@ mod test {
     async fn post_flag_no_mime_type_ro() {
         let response = post_flag_no_mime_type(false).await;
         assert_forbidden(response).await;
+    }
+
+    async fn get_admin_flags_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/admin/flags"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_admin_flags_ok_rw() {
+        let response = get_image_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_admin_flags_ok_ro() {
+        let response = get_admin_flags_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    async fn get_admin_flags_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::GET)
+                .uri(&format!("{API_V1}/admin/flags"))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn get_admin_flags_unauth_rw() {
+        let response = get_admin_flags_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn get_admin_flags_unauth_ro() {
+        let response = get_admin_flags_unauth(false).await;
+        assert_unauthorized(response).await;
     }
 }
