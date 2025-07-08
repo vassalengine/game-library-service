@@ -4469,4 +4469,55 @@ mod test {
         let response = post_flag_unauth(false).await;
         assert_forbidden(response).await;
     }
+
+    async fn post_flag_wrong_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from("stuff"))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_flag_wrong_mime_type_rw() {
+        let response = post_flag_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_flag_wrong_mime_type_ro() {
+        let response = post_flag_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_flag_no_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from("stuff"))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_flag_no_mime_type_rw() {
+        let response = post_flag_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_flag_no_mime_type_ro() {
+        let response = post_flag_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
 }
