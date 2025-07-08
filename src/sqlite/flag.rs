@@ -5,16 +5,16 @@ use sqlx::{
 
 use crate::{
     db::DatabaseError,
-    model::{Flag, Project, User}
+    model::{FlagPost, Project, User}
 };
 
-impl<'a> From<&'a Flag> for (u32, Option<&'a str>) {
-    fn from(f: &Flag) -> (u32, Option<&str>) {
+impl<'a> From<&'a FlagPost> for (u32, Option<&'a str>) {
+    fn from(f: &FlagPost) -> (u32, Option<&str>) {
         match f {
-            Flag::Inappropriate => (0, None),
-            Flag::Spam => (1, None),
-            Flag::Illegal(msg) => (2, Some(msg)),
-            Flag::Other(msg) => (3, Some(msg))
+            FlagPost::Inappropriate => (0, None),
+            FlagPost::Spam => (1, None),
+            FlagPost::Illegal(msg) => (2, Some(msg)),
+            FlagPost::Other(msg) => (3, Some(msg))
         }
     }
 }
@@ -23,7 +23,7 @@ pub async fn add_flag<'e, E>(
     ex: E,
     reporter: User,
     proj: Project,
-    flag: &Flag,
+    flag: &FlagPost,
     now: i64
 ) -> Result<(), DatabaseError>
 where
@@ -59,27 +59,27 @@ mod test {
     use super::*;
 
     #[test]
-    fn tuple_from_flag_inappropriate() {
-        let (t, m): (u32, Option<&str>) = (&Flag::Inappropriate).into();
+    fn tuple_from_flag_post_inappropriate() {
+        let (t, m): (u32, Option<&str>) = (&FlagPost::Inappropriate).into();
         assert_eq!((t, m), (0, None));
     }
 
     #[test]
-    fn tuple_from_flag_spam() {
-        let (t, m): (u32, Option<&str>) = (&Flag::Spam).into();
+    fn tuple_from_flag_post_spam() {
+        let (t, m): (u32, Option<&str>) = (&FlagPost::Spam).into();
         assert_eq!((t, m), (1, None));
     }
 
     #[test]
-    fn tuple_from_flag_illegal() {
-        let f = Flag::Illegal("x".into());
+    fn tuple_from_flag_post_illegal() {
+        let f = FlagPost::Illegal("x".into());
         let (t, m): (u32, Option<&str>) = (&f).into();
         assert_eq!((t, m), (2, Some("x")));
     }
 
     #[test]
-    fn tuple_from_flag_other() {
-        let f = Flag::Other("x".into());
+    fn tuple_from_flag_post_other() {
+        let f = FlagPost::Other("x".into());
         let (t, m): (u32, Option<&str>) = (&f).into();
         assert_eq!((t, m), (3, Some("x")));
     }

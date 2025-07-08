@@ -497,14 +497,37 @@ impl TryFrom<&str> for FlagTag {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct FlagData {
+pub struct MaybeFlagPost {
     pub flag: FlagTag,
     pub message: Option<String>
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(try_from = "FlagData")]
-pub enum Flag {
+impl From<FlagPost> for MaybeFlagPost {
+    fn from(fp: FlagPost) -> MaybeFlagPost {
+        match fp {
+            FlagPost::Inappropriate => MaybeFlagPost {
+                flag: FlagTag::Inappropriate,
+                message: None
+            },
+            FlagPost::Spam => MaybeFlagPost {
+                flag: FlagTag::Spam,
+                message: None
+            },
+            FlagPost::Illegal(msg) => MaybeFlagPost {
+                flag: FlagTag::Illegal,
+                message: Some(msg)
+            },
+            FlagPost::Other(msg) => MaybeFlagPost {
+                flag: FlagTag::Other,
+                message: Some(msg)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybeFlagPost", into = "MaybeFlagPost")]
+pub enum FlagPost {
     Inappropriate,
     Spam,
     Illegal(String),
@@ -513,32 +536,37 @@ pub enum Flag {
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("flag {0:?} invalid")]
-pub struct FlagError(FlagData);
+pub struct FlagPostError(MaybeFlagPost);
 
-impl TryFrom<FlagData> for Flag {
-    type Error = FlagError;
+impl TryFrom<MaybeFlagPost> for FlagPost {
+    type Error = FlagPostError;
 
-    fn try_from(fd: FlagData) -> Result<Self, Self::Error> {
+    fn try_from(fd: MaybeFlagPost) -> Result<Self, Self::Error> {
         match fd {
-            FlagData {
+            MaybeFlagPost {
                 flag: FlagTag::Inappropriate,
                 message: None
-            } => Ok(Flag::Inappropriate),
-            FlagData {
+            } => Ok(FlagPost::Inappropriate),
+            MaybeFlagPost {
                 flag: FlagTag::Spam,
                 message: None
-            } => Ok(Flag::Spam),
-            FlagData {
+            } => Ok(FlagPost::Spam),
+            MaybeFlagPost {
                 flag: FlagTag::Illegal,
                 message: Some(msg)
-            } => Ok(Flag::Illegal(msg)),
-            FlagData {
+            } => Ok(FlagPost::Illegal(msg)),
+            MaybeFlagPost {
                 flag: FlagTag::Other,
                 message: Some(msg)
-            } => Ok(Flag::Other(msg)),
-            _ => Err(FlagError(fd))
+            } => Ok(FlagPost::Other(msg)),
+            _ => Err(FlagPostError(fd))
         }
     }
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Flags {
+    pub flags: Vec<String>
 }
 
 #[cfg(test)]
@@ -1059,98 +1087,98 @@ mod test {
     }
 
     #[test]
-    fn try_from_flag_data_flag_inappropriate() {
+    fn try_from_maybe_flag_post_flag_post_inappropriate() {
         assert_eq!(
-            Flag::try_from(FlagData {
+            FlagPost::try_from(MaybeFlagPost {
                 flag: FlagTag::Inappropriate,
                 message: None
             }),
-            Ok(Flag::Inappropriate)
+            Ok(FlagPost::Inappropriate)
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_inappropriate_msg() {
-        let fd = FlagData {
+    fn try_from_maybe_flag_post_flag_post_inappropriate_msg() {
+        let fd = MaybeFlagPost {
             flag: FlagTag::Inappropriate,
             message: Some("bad".into())
         };
 
         assert_eq!(
-            Flag::try_from(fd.clone()),
-            Err(FlagError(fd))
+            FlagPost::try_from(fd.clone()),
+            Err(FlagPostError(fd))
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_spam() {
+    fn try_from_maybe_flag_post_flag_post_spam() {
         assert_eq!(
-            Flag::try_from(FlagData {
+            FlagPost::try_from(MaybeFlagPost {
                 flag: FlagTag::Spam,
                 message: None
             }),
-            Ok(Flag::Spam)
+            Ok(FlagPost::Spam)
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_spam_msg() {
-        let fd = FlagData {
+    fn try_from_maybe_flag_post_flag_post_spam_msg() {
+        let fd = MaybeFlagPost {
             flag: FlagTag::Spam,
             message: Some("bad".into())
         };
 
         assert_eq!(
-            Flag::try_from(fd.clone()),
-            Err(FlagError(fd))
+            FlagPost::try_from(fd.clone()),
+            Err(FlagPostError(fd))
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_illegal() {
-        let fd = FlagData {
+    fn try_from_maybe_flag_post_flag_post_illegal() {
+        let fd = MaybeFlagPost {
             flag: FlagTag::Illegal,
             message: None
         };
 
         assert_eq!(
-            Flag::try_from(fd.clone()),
-            Err(FlagError(fd))
+            FlagPost::try_from(fd.clone()),
+            Err(FlagPostError(fd))
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_illegal_msg() {
+    fn try_from_maybe_flag_post_flag_post_illegal_msg() {
         assert_eq!(
-            Flag::try_from(FlagData {
+            FlagPost::try_from(MaybeFlagPost {
                 flag: FlagTag::Illegal,
                 message: Some("ok".into())
             }),
-            Ok(Flag::Illegal("ok".into()))
+            Ok(FlagPost::Illegal("ok".into()))
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_other() {
-        let fd = FlagData {
+    fn try_from_maybe_flag_post_flag_post_other() {
+        let fd = MaybeFlagPost {
             flag: FlagTag::Other,
             message: None
         };
 
         assert_eq!(
-            Flag::try_from(fd.clone()),
-            Err(FlagError(fd))
+            FlagPost::try_from(fd.clone()),
+            Err(FlagPostError(fd))
         );
     }
 
     #[test]
-    fn try_from_flag_data_flag_other_msg() {
+    fn try_from_maybe_flag_post_flag_pos_other_msg() {
         assert_eq!(
-            Flag::try_from(FlagData {
+            FlagPost::try_from(MaybeFlagPost {
                 flag: FlagTag::Other,
                 message: Some("ok".into())
             }),
-            Ok(Flag::Other("ok".into()))
+            Ok(FlagPost::Other("ok".into()))
         );
     }
 

@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
-    model::{Flag, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    model::{FlagPost, Flags, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 
@@ -299,10 +299,18 @@ pub async fn flag_post(
     requester: User,
     proj: Project,
     State(core): State<CoreArc>,
-    Wrapper(Json(flag)): Wrapper<Json<Flag>>,
+    Wrapper(Json(flag)): Wrapper<Json<FlagPost>>,
 ) -> Result<(), AppError>
 {
-    Ok(core.add_flag(requester, proj, flag).await?)
+    Ok(core.add_flag(requester, proj, &flag).await?)
+}
+
+pub async fn admin_flags_get(
+    requester: User,
+    State(core): State<CoreArc>
+) -> Result<Json<Flags>, AppError>
+{
+    Ok(Json(core.get_flags().await?))
 }
 
 #[cfg(test)]

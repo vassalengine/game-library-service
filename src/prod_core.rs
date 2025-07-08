@@ -25,7 +25,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, Flag, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{FileData, FlagPost, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -573,11 +573,11 @@ where
         &self,
         reporter: User,
         proj: Project,
-        flag: Flag
+        flag: &FlagPost
     ) -> Result<(), AddFlagError>
     {
         let now = self.now_nanos()?;
-        Ok(self.db.add_flag(reporter, proj, &flag, now).await?)
+        Ok(self.db.add_flag(reporter, proj, flag, now).await?)
     }
 }
 

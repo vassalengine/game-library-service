@@ -235,6 +235,10 @@ fn routes(
                 "/projects/{proj}/flag",
                 post(handlers::forbidden)
             )
+            .route(
+                "/admin/flags",
+                get(handlers::forbidden)
+            )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
     }
     else {
@@ -289,6 +293,10 @@ fn routes(
             .route(
                 "/projects/{proj}/flag",
                 post(handlers::flag_post)
+            )
+            .route(
+                "/admin/flags",
+                get(handlers::admin_flags_get)
             )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
             .route(
@@ -481,9 +489,9 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{Flag, FlagData, FlagTag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{FlagPost, Flags, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -961,10 +969,17 @@ mod test {
             &self,
             _reporter: User,
             _proj: Project,
-            _flag: Flag
+            _flag: &FlagPost
         ) -> Result<(), AddFlagError>
         {
             Ok(())
+        }
+
+        async fn get_flags(
+            &self
+        ) -> Result<Flags, GetFlagsError>
+        {
+            unimplemented!();
         }
     }
 
@@ -4388,7 +4403,7 @@ mod test {
     }
 
     async fn post_flag_ok(rw: bool) -> Response {
-        let fd = FlagData { flag: FlagTag::Spam, message: None };
+        let fp = FlagPost::Spam;
 
         try_request(
             Request::builder()
@@ -4396,7 +4411,7 @@ mod test {
                 .uri(&format!("{API_V1}/projects/a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fp).unwrap()))
                 .unwrap(),
             rw
         )
@@ -4416,7 +4431,7 @@ mod test {
     }
 
     async fn post_flag_not_a_project(rw: bool) -> Response {
-        let fd = FlagData { flag: FlagTag::Spam, message: None };
+        let fp = FlagPost::Spam;
 
         try_request(
             Request::builder()
@@ -4424,7 +4439,7 @@ mod test {
                 .uri(&format!("{API_V1}/projects/not_a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fp).unwrap()))
                 .unwrap(),
             rw
         )
@@ -4444,14 +4459,14 @@ mod test {
     }
 
     async fn post_flag_unauth(rw: bool) -> Response {
-        let fd = FlagData { flag: FlagTag::Spam, message: None };
+        let fp = FlagPost::Spam;
 
         try_request(
             Request::builder()
                 .method(Method::POST)
                 .uri(&format!("{API_V1}/projects/a_project/flag"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
-                .body(Body::from(serde_json::to_vec(&fd).unwrap()))
+                .body(Body::from(serde_json::to_vec(&fp).unwrap()))
                 .unwrap(),
             rw
         )

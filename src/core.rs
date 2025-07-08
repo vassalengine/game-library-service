@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     db,
-    model::{Flag, Owner, PackageDataPatch, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
+    model::{FlagPost, Flags, Owner, PackageDataPatch, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
     module,
     params::ProjectsParams,
     pagination,
@@ -301,6 +301,14 @@ pub enum AddFlagError {
     TimeError(#[from] time::Error)
 }
 
+#[derive(Debug, Error, PartialEq)]
+pub enum GetFlagsError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
 #[async_trait]
 pub trait Core {
     fn max_file_size(&self) -> usize {
@@ -575,8 +583,15 @@ pub trait Core {
         &self,
         _reporter: User,
         _proj: Project,
-        _flag: Flag
+        _flag: &FlagPost
     ) -> Result<(), AddFlagError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_flags(
+        &self
+    ) -> Result<Flags, GetFlagsError>
     {
         unimplemented!();
     }
