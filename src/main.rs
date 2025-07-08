@@ -481,9 +481,9 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddImageError, AddFileError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{Flag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -955,6 +955,16 @@ mod test {
                     _ => Err(AddFileError::IOError(e))
                 }
             }
+        }
+
+        async fn add_flag(
+            &self,
+            _reporter: User,
+            _proj: Project,
+            _flag: Flag
+        ) -> Result<(), AddFlagError>
+        {
+            Ok(())
         }
     }
 
@@ -4374,6 +4384,89 @@ mod test {
     #[tokio::test]
     async fn delete_release_not_empty_ro() {
         let response = delete_release_not_empty(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_flag_ok(rw: bool) -> Response {
+        let flag = Flag::Spam;
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_flag_ok_rw() {
+        let response = post_flag_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_flag_ok_ro() {
+        let response = post_flag_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_flag_not_a_project(rw: bool) -> Response {
+        let flag = Flag::Spam;
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/not_a_project/flag"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_flag_not_a_project_rw() {
+        let response = post_flag_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_flag_not_a_project_ro() {
+        let response = post_flag_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_flag_unauth(rw: bool) -> Response {
+        let flag = Flag::Spam;
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&flag).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_flag_unauth_rw() {
+        let response = post_flag_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_flag_unauth_ro() {
+        let response = post_flag_unauth(false).await;
         assert_forbidden(response).await;
     }
 }
