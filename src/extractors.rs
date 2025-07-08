@@ -21,7 +21,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Owned, Owner, Package, Project, Release, User},
+    model::{Admin, Owned, Owner, Package, Project, Release, User}
 };
 
 impl<S> FromRequestParts<S> for Claims
@@ -68,6 +68,25 @@ where
         // extract the user id
         Ok(User(claims.sub))
 // TODO: insert missing users into users table
+    }
+}
+
+impl<S> FromRequestParts<S> for Admin
+where
+    S: Send + Sync,
+    DecodingKey: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
+        // check that the requester is authorized
+        let user = User::from_request_parts(parts, state).await?;
+
+        Ok(Admin(user.0))
     }
 }
 

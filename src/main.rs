@@ -491,7 +491,7 @@ mod test {
     use crate::{
         core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         jwt::{self, EncodingKey},
-        model::{FlagPost, Flags, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{FlagPost, Flag, Flags, FlagTag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -979,7 +979,19 @@ mod test {
             &self
         ) -> Result<Flags, GetFlagsError>
         {
-            unimplemented!();
+            Ok(
+                Flags {
+                    flags: vec![
+                        Flag {
+                            user: "bob".into(),
+                            project: "a_project".into(),
+                            flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
+                            flag: FlagTag::Spam,
+                            message: None
+                        }
+                    ]
+                }
+            )
         }
     }
 
@@ -4549,16 +4561,35 @@ mod test {
         .await
     }
 
+    #[track_caller]
+    async fn assert_flags_ok(response: Response) {
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_as::<Flags>(response).await,
+            Flags {
+                flags: vec![
+                    Flag {
+                        user: "bob".into(),
+                        project: "a_project".into(),
+                        flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
+                        flag: FlagTag::Spam,
+                        message: None
+                    }
+                ]
+            }
+        );
+    }
+
     #[tokio::test]
     async fn get_admin_flags_ok_rw() {
-        let response = get_image_ok(true).await;
-        assert_ok(response).await;
+        let response = get_admin_flags_ok(true).await;
+        assert_flags_ok(response).await;
     }
 
     #[tokio::test]
     async fn get_admin_flags_ok_ro() {
-        let response = get_admin_flags_ok(true).await;
-        assert_ok(response).await;
+        let response = get_admin_flags_ok(false).await;
+        assert_flags_ok(response).await;
     }
 
     async fn get_admin_flags_unauth(rw: bool) -> Response {

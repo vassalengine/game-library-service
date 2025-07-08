@@ -11,6 +11,9 @@ pub struct Users {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Admin(pub i64);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Release(pub i64);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -565,8 +568,17 @@ impl TryFrom<MaybeFlagPost> for FlagPost {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Flag {
+    pub user: String,
+    pub project: String,
+    pub flagged_at: String,
+    pub flag: FlagTag,
+    pub message: Option<String>
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Flags {
-    pub flags: Vec<String>
+    pub flags: Vec<Flag>
 }
 
 #[cfg(test)]

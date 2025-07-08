@@ -18,7 +18,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
-    model::{FlagPost, Flags, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    model::{Admin, FlagPost, Flags, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 
@@ -306,7 +306,7 @@ pub async fn flag_post(
 }
 
 pub async fn admin_flags_get(
-    requester: User,
+    admin: Admin,
     State(core): State<CoreArc>
 ) -> Result<Json<Flags>, AppError>
 {
