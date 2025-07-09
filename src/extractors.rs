@@ -86,7 +86,11 @@ where
         // check that the requester is authorized
         let user = User::from_request_parts(parts, state).await?;
 
-        Ok(Admin(user.0))
+// TODO
+        match user.0 {
+            5 => Ok(Admin(user.0)),
+            _ => Err(AppError::Unauthorized)
+        }
     }
 }
 

@@ -14,7 +14,7 @@ mod tags;
 mod users;
 
 use crate::{
-    db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     model::{FlagPost, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
@@ -530,5 +530,11 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), DatabaseError> {
         flag::add_flag(&self.0, reporter, proj, flag, now).await
+    }
+
+    async fn get_flags(
+        &self
+    ) -> Result<Vec<FlagRow>, DatabaseError> {
+        flag::get_flags(&self.0).await
     }
 }

@@ -22,10 +22,10 @@ use unicode_normalization::UnicodeNormalization;
 use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
-    db::{DatabaseClient, DatabaseError, FileRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, FlagPost, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{FileData, FlagPost, Flag, Flags, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::check_version,
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -578,6 +578,21 @@ where
     {
         let now = self.now_nanos()?;
         Ok(self.db.add_flag(reporter, proj, flag, now).await?)
+    }
+
+    async fn get_flags(
+        &self
+    ) -> Result<Flags, GetFlagsError>
+    {
+        Ok(
+            Flags {
+                flags: self.db.get_flags()
+                    .await?
+                    .into_iter()
+                    .map(Flag::try_from)
+                    .collect::<Result<Vec<_>, _>>()?
+            }
+        )
     }
 }
 
@@ -1212,6 +1227,22 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                     players: Range::default(),
                     length: Range::default()
                 }
+            }
+        )
+    }
+}
+
+impl TryFrom<FlagRow> for Flag {
+    type Error = GetFlagsError;
+
+    fn try_from(r: FlagRow) -> Result<Self, Self::Error> {
+        Ok(
+            Flag {
+                project: r.project,
+                flag: r.flag,
+                flagged_by: r.flagged_by,
+                flagged_at: nanos_to_rfc3339(r.flagged_at)?,
+                message: r.message
             }
         )
     }

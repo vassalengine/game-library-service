@@ -4,8 +4,8 @@ use sqlx::{
 };
 
 use crate::{
-    db::DatabaseError,
-    model::{FlagPost, Project, User}
+    db::{DatabaseError, FlagRow},
+    model::{FlagTag, FlagPost, Project, User}
 };
 
 impl<'a> From<&'a FlagPost> for (u32, Option<&'a str>) {
@@ -15,6 +15,17 @@ impl<'a> From<&'a FlagPost> for (u32, Option<&'a str>) {
             FlagPost::Spam => (1, None),
             FlagPost::Illegal(msg) => (2, Some(msg)),
             FlagPost::Other(msg) => (3, Some(msg))
+        }
+    }
+}
+
+impl From<i64> for FlagTag {
+    fn from(f: i64) -> Self {
+        match f {
+            0 => FlagTag::Inappropriate,
+            1 => FlagTag::Spam,
+            2 => FlagTag::Illegal,
+            _ => FlagTag::Other
         }
     }
 }
@@ -52,6 +63,35 @@ VALUES (?, ?, ?, ?, ?)
     .await?;
 
     Ok(())
+}
+
+pub async fn get_flags<'e, E>(
+    ex: E
+) -> Result<Vec<FlagRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_as!(
+            FlagRow,
+            "
+SELECT
+    projects.name AS project,
+    flags.flag,
+    flags.flagged_at,
+    users.username AS flagged_by,
+    flags.message
+FROM flags
+JOIN users
+ON flags.user_id = users.user_id
+JOIN projects
+ON flags.project_id = projects.project_id
+ORDER BY flags.flag_id
+            "
+        )
+        .fetch_all(ex)
+        .await?
+    )
 }
 
 #[cfg(test)]

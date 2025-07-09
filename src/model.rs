@@ -569,10 +569,10 @@ impl TryFrom<MaybeFlagPost> for FlagPost {
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Flag {
-    pub user: String,
     pub project: String,
-    pub flagged_at: String,
     pub flag: FlagTag,
+    pub flagged_at: String,
+    pub flagged_by: String,
     pub message: Option<String>
 }
 

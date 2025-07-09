@@ -983,8 +983,8 @@ mod test {
                 Flags {
                     flags: vec![
                         Flag {
-                            user: "bob".into(),
                             project: "a_project".into(),
+                            flagged_by: "bob".into(),
                             flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
                             flag: FlagTag::Spam,
                             message: None
@@ -4553,7 +4553,7 @@ mod test {
             Request::builder()
                 .method(Method::GET)
                 .uri(&format!("{API_V1}/admin/flags"))
-                .header(AUTHORIZATION, token(BOB_UID))
+                .header(AUTHORIZATION, token(5))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -4569,8 +4569,8 @@ mod test {
             Flags {
                 flags: vec![
                     Flag {
-                        user: "bob".into(),
                         project: "a_project".into(),
+                        flagged_by: "bob".into(),
                         flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
                         flag: FlagTag::Spam,
                         message: None

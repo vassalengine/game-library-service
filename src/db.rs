@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::{
-    model::{FlagPost, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    model::{FlagPost, FlagTag, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };
@@ -117,6 +117,15 @@ pub struct FileRow {
     pub requires: Option<String>,
     pub published_at: i64,
     pub published_by: String
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+pub struct FlagRow {
+    pub project: String,
+    pub flag: FlagTag,
+    pub flagged_at: i64,
+    pub flagged_by: String,
+    pub message: Option<String>
 }
 
 pub enum MidField<'a> {
@@ -442,4 +451,8 @@ pub trait DatabaseClient {
         _flag: &FlagPost,
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
+    fn get_flags(
+        &self
+    ) -> impl Future<Output = Result<Vec<FlagRow>, DatabaseError>> + Send;
 }
