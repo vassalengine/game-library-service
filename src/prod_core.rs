@@ -206,7 +206,7 @@ where
             proj_data
         };
 
-        Ok(self.db.update_project(owner, proj, &proj_data, now).await?)
+        Ok(self.db.update_project(owner, proj, proj_data, now).await?)
     }
 
     async fn get_project_revision(
@@ -382,42 +382,14 @@ where
             )?;
         }
 
-        let mut requires = "".into();
-
-        // check that vmod, vext files have semver-compliant versions
-        let ext = Path::new(filename).extension().unwrap_or_default();
-        if ext == "vmod" {
-            let md = dump_moduledata(file.file_path()).await?;
-            let (mod_vstr, v_vstr) = versions_in_moduledata(&md)?;
-
-            let mod_version = mod_vstr.unwrap_or("".into())
-                .parse::<Version>()?;
-
-            // modules must match the version of their release
-            let rel_version = self.db.get_release_version(release).await?;
-            if mod_version != rel_version {
-                return Err(AddFileError::ReleaseVersionMismatch(
-                    mod_version, rel_version
-                ));
-            }
-
-            // set minimum required Vassal version to version module used
-            if let Some(v_vstr) = v_vstr {
-                if v_vstr.parse::<Version>().is_ok() {
-                    requires = format!(">= {v_vstr}");
-                }
-            }
-        }
-        else if ext == "vext" {
-            // extensions must have valid version numbers
-            let md = dump_moduledata(file.file_path()).await?;
-            let (ext_vstr, _) = versions_in_moduledata(&md)?;
-            ext_vstr.unwrap_or("".into()).parse::<Version>()?;
-        }
+        // check uploaded file for moduledata
+        let requires = self.check_version_and_get_requires(
+            file.file_path(),
+            filename,
+            release
+        ).await?;
 
         info!("checked version of temp file {}", file.file_path().display());
-
-        let requires = None;
 
         // add hash prefix to file upload path
         let bucket_path = format!(
@@ -449,7 +421,7 @@ where
             filename,
             size as i64,
             &sha256,
-            requires,
+            requires.as_deref(),
             &url,
             now
         ).await?;
@@ -949,19 +921,75 @@ where
 
         Ok((prev, next, psums, total))
     }
-}
 
-fn check_new_project_name(projname: &str) -> Result<&str, CreateProjectError> {
-    static PAT: Lazy<Regex> = Lazy::new(||
-        Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
-            .expect("bad regex")
-    );
+    async fn check_version_and_get_requires<P: AsRef<Path>>(
+        &self,
+        tempfile: P,
+        filename: &str,
+        release: Release
+    ) -> Result<Option<String>, AddFileError>
+    {
+        let ext = Path::new(filename).extension().unwrap_or_default();
 
-    if !PAT.is_match(projname) {
-        Err(CreateProjectError::InvalidProjectName)
-    }
-    else {
-        Ok(projname)
+        match dump_moduledata(tempfile).await {
+            Ok(md) => {
+                // we got moduledata
+                let (vstr, v_vstr) = versions_in_moduledata(&md)?;
+
+                if ext != "vext" {
+                    // not an extension; it must be a module
+
+                    // modules must have a .vmod extension
+                    if ext != "vmod" {
+                        return Err(AddFileError::InvalidFilename);
+                    }
+
+                    let mod_version = vstr
+                        .unwrap_or("".into())
+                        .parse::<Version>()?;
+
+                    // modules must match the version of their release
+                    let rel_version = self.db.get_release_version(release)
+                        .await?;
+
+                    if mod_version != rel_version {
+                        return Err(AddFileError::ReleaseVersionMismatch(
+                            mod_version, rel_version
+                        ));
+                    }
+
+                    // set minimum required Vassal version
+                    match v_vstr {
+                        Some(v_vstr) => match v_vstr.parse::<Version>() {
+                            Ok(v) => Ok(
+                                Some(
+                                    format!(
+                                        ">= {}.{}.{}",
+                                        v.major,
+                                        v.minor,
+                                        v.patch
+                                    )
+                                )
+                            ),
+                            _ => Ok(None)
+                        },
+                        _ => Ok(None)
+                    }
+                }
+                else {
+                    // extensions must have valid version numbers
+                    vstr.unwrap_or("".into()).parse::<Version>()?;
+                    Ok(None)
+                }
+            },
+            Err(e) => {
+                // modules and extensions must have moduledata
+                if ext == "vmod" || ext == "vext" {
+                    return Err(AddFileError::ModuleError(e));
+                }
+                Ok(None)
+            }
+        }
     }
 }
 
@@ -1173,6 +1201,20 @@ fn get_links(
 
             Ok((prev, next))
         }
+    }
+}
+
+fn check_new_project_name(projname: &str) -> Result<&str, CreateProjectError> {
+    static PAT: Lazy<Regex> = Lazy::new(||
+        Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+            .expect("bad regex")
+    );
+
+    if !PAT.is_match(projname) {
+        Err(CreateProjectError::InvalidProjectName)
+    }
+    else {
+        Ok(projname)
     }
 }
 

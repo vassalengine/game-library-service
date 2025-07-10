@@ -1,7 +1,7 @@
 use std::{
     io::{self, Read},
     fs::File,
-    path::{Path, PathBuf}
+    path::Path
 };
 use sxd_xpath::Value;
 use zip::{
@@ -48,11 +48,11 @@ fn dump_file<P: AsRef<Path>>(
     Ok(data)
 }
 
-pub async fn dump_moduledata<P: Into<PathBuf>>(
+pub async fn dump_moduledata<P: AsRef<Path>>(
     path: P
 ) -> Result<String, Error>
 {
-    let path = path.into();
+    let path = path.as_ref().to_path_buf();
     match tokio::task::spawn_blocking(move || dump_file(path, "moduledata")).await {
         Ok(Ok(v)) => Ok(v),
         Ok(Err(e)) => Err(e),
