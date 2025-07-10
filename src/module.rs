@@ -23,7 +23,7 @@ pub enum Error {
 
 impl PartialEq for Error {
     fn eq(&self, other: &Self) -> bool {
-        // io::Error, ZipError, semver::Error are not PartialEq
+        // io::Error, ZipError are not PartialEq
         match (self, other) {
             (Self::Xml(l), Self::Xml(r)) => l == r,
             (Self::Xpath(l), Self::Xpath(r)) => l == r,
