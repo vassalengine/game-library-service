@@ -236,8 +236,6 @@ pub async fn file_post(
             owner,
             proj,
             release,
-// TODO: where to get requires? read from vmod?
-            None,
             &filename,
             content_length,
             into_stream(request, limit)

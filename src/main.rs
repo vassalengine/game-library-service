@@ -950,7 +950,6 @@ mod test {
             _owner: Owner,
             _proj: Project,
             _release: Release,
-            _requires: Option<&str>,
             _filename: &str,
             _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>

@@ -26,7 +26,7 @@ use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
     model::{FileData, FlagPost, Flag, Flags, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
-    module::check_version,
+    module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::{self, nanos_to_rfc3339, rfc3339_to_nanos},
@@ -344,7 +344,6 @@ where
         owner: Owner,
         proj: Project,
         release: Release,
-        requires: Option<&str>,
         filename: &str,
         content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
@@ -383,24 +382,42 @@ where
             )?;
         }
 
+        let mut requires = "".into();
+
         // check that vmod, vext files have semver-compliant versions
         let ext = Path::new(filename).extension().unwrap_or_default();
         if ext == "vmod" {
+            let md = dump_moduledata(file.file_path()).await?;
+            let (mod_vstr, v_vstr) = versions_in_moduledata(&md)?;
+
+            let mod_version = mod_vstr.unwrap_or("".into())
+                .parse::<Version>()?;
+
             // modules must match the version of their release
-            let mod_version = check_version(file.file_path()).await?;
             let rel_version = self.db.get_release_version(release).await?;
             if mod_version != rel_version {
                 return Err(AddFileError::ReleaseVersionMismatch(
                     mod_version, rel_version
                 ));
             }
+
+            // set minimum required Vassal version to version module used
+            if let Some(v_vstr) = v_vstr {
+                if v_vstr.parse::<Version>().is_ok() {
+                    requires = format!(">= {v_vstr}");
+                }
+            }
         }
         else if ext == "vext" {
             // extensions must have valid version numbers
-            check_version(file.file_path()).await?;
+            let md = dump_moduledata(file.file_path()).await?;
+            let (ext_vstr, _) = versions_in_moduledata(&md)?;
+            ext_vstr.unwrap_or("".into()).parse::<Version>()?;
         }
 
         info!("checked version of temp file {}", file.file_path().display());
+
+        let requires = None;
 
         // add hash prefix to file upload path
         let bucket_path = format!(

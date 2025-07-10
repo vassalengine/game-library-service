@@ -3,12 +3,11 @@ use std::{
     fs::File,
     path::{Path, PathBuf}
 };
+use sxd_xpath::Value;
 use zip::{
     ZipArchive,
     result::ZipError
 };
-
-use crate::version::{MalformedVersion, Version};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -20,8 +19,6 @@ pub enum Error {
     Xml(#[from] sxd_document::parser::Error),
     #[error("{0}")]
     Xpath(#[from] sxd_xpath::Error),
-    #[error("{0}")]
-    Version(#[from] MalformedVersion)
 }
 
 impl PartialEq for Error {
@@ -51,29 +48,37 @@ fn dump_file<P: AsRef<Path>>(
     Ok(data)
 }
 
-fn version_in_moduledata(md: &str) -> Result<String, Error> {
-    // extract <version> from moduledata
-    let package = sxd_document::parser::parse(md)?;
-    let document = package.as_document();
-    let value = sxd_xpath::evaluate_xpath(&document, "/data/version")?;
-    Ok(value.string())
-}
-
-fn check_version_impl<P: AsRef<Path>>(path: P) -> Result<Version, Error> {
-    let md = dump_file(path, "moduledata")?;
-    Ok(version_in_moduledata(&md)?.parse::<Version>()?)
-}
-
-pub async fn check_version<P: Into<PathBuf>>(
+pub async fn dump_moduledata<P: Into<PathBuf>>(
     path: P
-) -> Result<Version, Error>
+) -> Result<String, Error>
 {
     let path = path.into();
-    match tokio::task::spawn_blocking(move || check_version_impl(path)).await {
+    match tokio::task::spawn_blocking(move || dump_file(path, "moduledata")).await {
         Ok(Ok(v)) => Ok(v),
         Ok(Err(e)) => Err(e),
         Err(e) => Err(Error::Io(io::Error::from(e)))
     }
+}
+
+pub fn versions_in_moduledata(
+    md: &str
+) -> Result<(Option<String>, Option<String>), Error>
+{
+    let package = sxd_document::parser::parse(md)?;
+    let document = package.as_document();
+
+    Ok((
+        // extract <version> from moduledata
+        sxd_xpath::evaluate_xpath(&document, "/data/version")
+            .ok()
+            .map(Value::into_string)
+            .filter(|s| !s.is_empty()),
+        // extract <VassalVersion> from moduledata
+        sxd_xpath::evaluate_xpath(&document, "/data/VassalVersion")
+            .ok()
+            .map(Value::into_string)
+            .filter(|s| !s.is_empty())
+    ))
 }
 
 #[cfg(test)]
@@ -109,11 +114,29 @@ mod test {
     }
 
     #[test]
-    fn version_in_moduledata_ok() {
+    fn versions_in_moduledata_module() {
         let md = "<data><version>0.0</version></data>";
         assert_eq!(
-            version_in_moduledata(md).unwrap(),
-            "0.0"
+            versions_in_moduledata(md).unwrap(),
+            (Some("0.0".into()), None)
+        );
+    }
+
+    #[test]
+    fn versions_in_moduledata_vassal() {
+        let md = "<data><VassalVersion>0.0</VassalVersion></data>";
+        assert_eq!(
+            versions_in_moduledata(md).unwrap(),
+            (None, Some("0.0".into()))
+        );
+    }
+
+    #[test]
+    fn versions_in_moduledata_both() {
+        let md = "<data><version>0.1</version><VassalVersion>0.0</VassalVersion></data>";
+        assert_eq!(
+            versions_in_moduledata(md).unwrap(),
+            (Some("0.1".into()), Some("0.0".into()))
         );
     }
 
@@ -122,7 +145,7 @@ mod test {
         let md = "<data>";
         assert!(
             matches!(
-                version_in_moduledata(md).unwrap_err(),
+                versions_in_moduledata(md).unwrap_err(),
                 Error::Xml(_)
             )
         );
@@ -132,8 +155,8 @@ mod test {
     fn version_in_moduledata_missing_version() {
         let md = "<data></data>";
         assert_eq!(
-            version_in_moduledata(md).unwrap(),
-            ""
+            versions_in_moduledata(md).unwrap(),
+            (None, None)
         );
     }
 }

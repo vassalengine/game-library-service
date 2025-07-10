@@ -209,6 +209,8 @@ pub enum AddFileError {
     IOError(#[from] io::Error),
     #[error("{0}")]
     ModuleError(#[from] module::Error),
+    #[error("{0}")]
+    MalformedVersion(#[from] version::MalformedVersion),
     #[error("Module version {0} != release version {1}")]
     ReleaseVersionMismatch(Version, Version),
     #[error("{0}")]
@@ -224,6 +226,8 @@ impl PartialEq for AddFileError {
         // io::Error is not PartialEq, so we must exclude it
         match (self, other) {
             (Self::DatabaseError(l), Self::DatabaseError(r)) => l == r,
+            (Self::MalformedVersion(l), Self::MalformedVersion(r)) => l == r,
+            (Self::ReleaseVersionMismatch(l0, l1), Self::ReleaseVersionMismatch(r0, r1)) => l0 == r0 && l1 == r1,
             (Self::ModuleError(l), Self::ModuleError(r)) => l == r,
             (Self::TimeError(l), Self::TimeError(r)) => l == r,
             (Self::UploadError(l), Self::UploadError(r)) => l == r,
@@ -506,13 +510,11 @@ pub trait Core {
         unimplemented!();
     }
 
-    #[allow(clippy::too_many_arguments)]
     async fn add_file(
         &self,
         _owner: Owner,
         _proj: Project,
         _release: Release,
-        _requires: Option<&str>,
         _filename: &str,
         _content_length: Option<u64>,
         _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
