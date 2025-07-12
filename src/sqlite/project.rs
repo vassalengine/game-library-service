@@ -37,21 +37,47 @@ fn normalize_project_name(proj: &str) -> String {
     proj.to_lowercase().replace('-', "_")
 }
 
-async fn create_project_row<'e, E>(
+async fn create_project_history_row<'e, E>(
     ex: E,
-    user: User,
-    proj: &str,
-    proj_data: &ProjectDataPost,
     now: i64
 ) -> Result<Project, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let proj_norm = normalize_project_name(proj);
+    Ok(
+        sqlx::query_scalar!(
+            "
+INSERT INTO projects_history (
+    created_at
+)
+VALUES (?)
+RETURNING project_id
+            ",
+            now
+        )
+        .fetch_one(ex)
+        .await
+        .map(Project)?
+    )
+}
 
-    sqlx::query_scalar!(
+async fn create_project_row<'e, E>(
+    ex: E,
+    user: User,
+    proj: Project,
+    proj_name: &str,
+    proj_data: &ProjectDataPost,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let proj_norm = normalize_project_name(proj_name);
+
+    sqlx::query!(
         "
 INSERT INTO projects (
+    project_id,
     name,
     normalized_name,
     created_at,
@@ -70,10 +96,10 @@ INSERT INTO projects (
     modified_by,
     revision
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING project_id
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ",
-        proj,
+        proj.0,
+        proj_name,
         proj_norm,
         now,
         proj_data.description,
@@ -91,15 +117,17 @@ RETURNING project_id
         user.0,
         1
     )
-    .fetch_one(ex)
+    .execute(ex)
     .await
-    .map(Project)
-    .map_err(map_unique)
+    .map_err(map_unique)?;
+
+    Ok(())
 }
 
 #[derive(Debug)]
 struct ProjectDataRow<'a> {
     project_id: i64,
+    name: &'a str,
     description: &'a str,
     game_title: &'a str,
     game_title_sort: &'a str,
@@ -123,8 +151,9 @@ where
     Ok(
         sqlx::query_scalar!(
             "
-INSERT INTO project_data (
+INSERT INTO projects_data (
     project_id,
+    name,
     description,
     game_title,
     game_title_sort,
@@ -137,10 +166,11 @@ INSERT INTO project_data (
     readme,
     image
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_data_id
             ",
             row.project_id,
+            row.name,
             row.description,
             row.game_title,
             row.game_title_sort,
@@ -159,10 +189,8 @@ RETURNING project_data_id
 }
 
 #[derive(Debug)]
-struct ProjectRevisionRow<'a> {
+struct ProjectRevisionRow {
     project_id: i64,
-    name: &'a str,
-    created_at: i64,
     modified_at: i64,
     modified_by: i64,
     revision: i64,
@@ -171,27 +199,23 @@ struct ProjectRevisionRow<'a> {
 
 async fn create_project_revision_row<'e, E>(
     ex: E,
-    row: &ProjectRevisionRow<'_>
+    row: &ProjectRevisionRow
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
-INSERT INTO project_revisions (
+INSERT INTO projects_revisions (
     project_id,
-    name,
-    created_at,
     modified_at,
     modified_by,
     revision,
     project_data_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
         ",
         row.project_id,
-        row.name,
-        row.created_at,
         row.modified_at,
         row.modified_by,
         row.revision,
@@ -215,15 +239,13 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    // create project row
-    let proj = create_project_row(&mut *tx, owner, name, pd, now).await?;
+    // create project history row
+    let proj = create_project_history_row(&mut *tx, now).await?;
 
-    // associate new owner with the project
-    add_owner(&mut *tx, owner, proj).await?;
-
-    // create project revision
+    // create project data
     let dr = ProjectDataRow {
         project_id: proj.0,
+        name: name,
         description: &pd.description,
         game_title: &pd.game.title,
         game_title_sort: &pd.game.title_sort_key,
@@ -239,10 +261,9 @@ where
 
     let project_data_id = create_project_data_row(&mut *tx, &dr).await?;
 
+    // create project revision
     let rr = ProjectRevisionRow {
         project_id: proj.0,
-        name,
-        created_at: now,
         modified_at: now,
         modified_by: owner.0,
         revision: 1,
@@ -250,6 +271,12 @@ where
     };
 
     create_project_revision_row(&mut *tx, &rr).await?;
+
+    // create project
+    create_project_row(&mut *tx, owner, proj, name, pd, now).await?;
+
+    // associate new owner with the project
+    add_owner(&mut *tx, owner, proj).await?;
 
     tx.commit().await?;
 
@@ -351,12 +378,10 @@ where
     let row = get_project_row(&mut *tx, proj).await?;
     let revision = row.revision + 1;
 
-    // update project
-    update_project_row(&mut *tx, owner, proj, revision, pd, now).await?;
-
-    // create project revision
+    // create project data
     let dr = ProjectDataRow {
         project_id: proj.0,
+        name: &row.name,
         description: pd.description.as_ref().unwrap_or(&row.description),
         game_title: pd.game.title.as_ref().unwrap_or(&row.game_title),
         game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
@@ -374,15 +399,17 @@ where
 
     let rr = ProjectRevisionRow {
         project_id: proj.0,
-        name: &row.name,
-        created_at: row.created_at,
         modified_at: now,
         modified_by: owner.0,
         revision,
         project_data_id
     };
 
+    // create project revision
     create_project_revision_row(&mut *tx, &rr).await?;
+
+    // update project
+    update_project_row(&mut *tx, owner, proj, revision, pd, now).await?;
 
     tx.commit().await?;
 
@@ -440,28 +467,30 @@ where
         ProjectRow,
         "
 SELECT
-    project_revisions.project_id,
-    project_revisions.name,
-    project_data.description,
-    project_revisions.revision,
-    project_revisions.created_at,
-    project_revisions.modified_at,
-    project_revisions.modified_by,
-    project_data.game_title,
-    project_data.game_title_sort,
-    project_data.game_publisher,
-    project_data.game_year,
-    project_data.game_players_min,
-    project_data.game_players_max,
-    project_data.game_length_min,
-    project_data.game_length_max,
-    project_data.image,
-    project_data.readme
-FROM project_revisions
-JOIN project_data
-ON project_revisions.project_data_id = project_data.project_data_id
-WHERE project_revisions.project_id = ?
-    AND project_revisions.revision = ?
+    projects_revisions.project_id,
+    projects_data.name,
+    projects_data.description,
+    projects_revisions.revision,
+    projects_history.created_at,
+    projects_revisions.modified_at,
+    projects_revisions.modified_by,
+    projects_data.game_title,
+    projects_data.game_title_sort,
+    projects_data.game_publisher,
+    projects_data.game_year,
+    projects_data.game_players_min,
+    projects_data.game_players_max,
+    projects_data.game_length_min,
+    projects_data.game_length_max,
+    projects_data.image,
+    projects_data.readme
+FROM projects_revisions
+JOIN projects_data
+ON projects_revisions.project_data_id = projects_data.project_data_id
+JOIN projects_history
+ON projects_revisions.project_id = projects_history.project_id
+WHERE projects_revisions.project_id = ?
+    AND projects_revisions.revision = ?
 LIMIT 1
         ",
         proj.0,
@@ -483,10 +512,10 @@ where
     sqlx::query_scalar!(
         "
 SELECT
-    project_revisions.project_data_id
-FROM project_revisions
-WHERE project_revisions.project_id = ?
-    AND project_revisions.revision = ?
+    projects_revisions.project_data_id
+FROM projects_revisions
+WHERE projects_revisions.project_id = ?
+    AND projects_revisions.revision = ?
 LIMIT 1
         ",
         proj.0,
@@ -515,8 +544,6 @@ pub async fn update_project_non_project_data(
     // insert a new project revision row
     let rr = ProjectRevisionRow {
         project_id: proj.0,
-        name: &row.name,
-        created_at: row.created_at,
         modified_at: now,
         modified_by: owner.0,
         revision,

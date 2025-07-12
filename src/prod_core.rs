@@ -2157,7 +2157,7 @@ mod test {
                     title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: Range::default(),
+                    players: Range { min: None, max: Some(3) },
                     length: Range::default()
                 },
                 readme: "".into(),
@@ -2249,7 +2249,7 @@ mod test {
                     title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1979".into(),
-                    players: Range::default(),
+                    players: Range { min: None, max: Some(3) },
                     length: Range::default()
                 },
                 readme: "".into(),
@@ -2326,7 +2326,7 @@ mod test {
                     title_sort_key: "game of tests, a".into(),
                     publisher: "Test Game Company".into(),
                     year: "1978".into(),
-                    players: Range::default(),
+                    players: Range { min: None, max: Some(3) },
                     length: Range::default()
                 },
                 readme: "".into(),
@@ -2465,7 +2465,7 @@ mod test {
                 title_sort_key: "some new game".into(),
                 publisher: "XYZ Games".into(),
                 year: "1999".into(),
-                players: Range::default(),
+                players: Range { min: None, max: Some(3) },
                 length: Range::default(),
             },
             readme: "".into(),
