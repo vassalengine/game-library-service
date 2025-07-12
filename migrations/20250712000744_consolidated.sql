@@ -80,8 +80,6 @@ CREATE TABLE IF NOT EXISTS releases (
 CREATE TABLE IF NOT EXISTS packages_history (
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
   project_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  sort_key INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
   created_by INTEGER NOT NULL,
   deleted_at INTEGER,
@@ -94,6 +92,16 @@ CREATE TABLE IF NOT EXISTS packages_history (
     (deleted_at IS NOT NULL AND deleted_by IS NOT NULL)
   ),
   CHECK(deleted_at IS NULL OR created_at <= deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS packages_revisions (
+  package_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  sort_key INTEGER NOT NULL,
+  modified_at INTEGER NOT NULL,
+  modified_by INTEGER NOT NULL,
+  FOREIGN KEY(package_id) REFERENCES packages_history(package_id),
+  FOREIGN KEY(modified_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE IF NOT EXISTS packages (
@@ -160,14 +168,52 @@ CREATE TABLE IF NOT EXISTS tags (
   UNIQUE(project_id, tag)
 );
 
-CREATE TABLE IF NOT EXISTS projects (
+CREATE TABLE IF NOT EXISTS projects_history (
   project_id INTEGER PRIMARY KEY NOT NULL CHECK(project_id >= 0),
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS projects_data (
+  project_data_id INTEGER PRIMARY KEY NOT NULL CHECK(project_data_id >= 0),
+  project_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  game_title TEXT NOT NULL,
+  game_title_sort TEXT NOT NULL,
+  game_publisher TEXT NOT NULL,
+  game_year TEXT NOT NULL,
+  game_players_min INTEGER CHECK(game_players_min >= 1 OR game_players_min IS NULL),
+  game_players_max INTEGER CHECK(game_players_max >= 1 OR game_players_max IS NULL),
+  game_length_min INTEGER CHECK(game_length_min >= 1 OR game_length_min IS NULL),
+  game_length_max INTEGER CHECK(game_length_max >= 1 OR game_length_max IS NULL),
+  readme TEXT NOT NULL,
+  image TEXT,
+  CHECK(game_players_max >= game_players_min OR game_players_min IS NULL OR game_players_max IS NULL),
+  CHECK(game_length_max >= game_length_min OR game_length_min IS NULL OR game_length_max IS NULL),
+  FOREIGN KEY(project_id) REFERENCES projects_history(project_id),
+  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
+);
+
+CREATE TABLE IF NOT EXISTS projects_revisions (
+  project_id INTEGER NOT NULL,
+  modified_at INTEGER NOT NULL,
+  modified_by INTEGER NOT NULL,
+  revision INTEGER NOT NULL CHECK(revision >= 0),
+  project_data_id INTEGER NOT NULL,
+  UNIQUE(project_id, revision),
+  FOREIGN KEY(project_id) REFERENCES projects_history(project_id),
+  FOREIGN KEY(modified_by) REFERENCES users(user_id),
+  FOREIGN KEY(project_data_id) REFERENCES projects_data(project_data_id)
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   modified_at INTEGER NOT NULL,
-  modified_by INTEGER NOT NULL CHECK(modified_by >= 0),
-  revision INTEGER NOT NULL CHECK(revision >= 0),
+  modified_by INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
@@ -183,42 +229,10 @@ CREATE TABLE IF NOT EXISTS projects (
   CHECK(game_length_max >= game_length_min OR game_length_min IS NULL OR game_length_max IS NULL),
   UNIQUE(name),
   UNIQUE(normalized_name),
+  FOREIGN KEY(project_id) REFERENCES projects_history(project_id),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
-  FOREIGN KEY(modified_by) REFERENCES users(user_id)
-);
-
-CREATE TABLE IF NOT EXISTS project_revisions (
-  project_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  modified_at INTEGER NOT NULL,
-  modified_by INTEGER NOT NULL,
-  revision INTEGER NOT NULL CHECK(revision >= 0),
-  project_data_id INTEGER NOT NULL,
-  UNIQUE(project_id, revision),
-  FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(modified_by) REFERENCES users(user_id),
-  FOREIGN KEY(project_data_id) REFERENCES project_data(project_data_id)
-);
-
-CREATE TABLE IF NOT EXISTS project_data (
-  project_data_id INTEGER PRIMARY KEY NOT NULL CHECK(project_data_id >= 0),
-  project_id INTEGER NOT NULL,
-  description TEXT NOT NULL,
-  game_title TEXT NOT NULL,
-  game_title_sort TEXT NOT NULL,
-  game_publisher TEXT NOT NULL,
-  game_year TEXT NOT NULL,
-  game_players_min INTEGER CHECK(game_players_min >= 1 OR game_players_min IS NULL),
-  game_players_max INTEGER CHECK(game_players_max >= 1 OR game_players_max IS NULL),
-  game_length_min INTEGER CHECK(game_length_min >= 1 OR game_length_min IS NULL),
-  game_length_max INTEGER CHECK(game_length_max >= 1 OR game_length_max IS NULL),
-  readme TEXT NOT NULL,
-  image TEXT,
-  CHECK(game_players_max >= game_players_min OR game_players_min IS NULL OR game_players_max IS NULL),
-  CHECK(game_length_max >= game_length_min OR game_length_min IS NULL OR game_length_max IS NULL),
-  FOREIGN KEY(project_id) REFERENCES projects(project_id),
-  FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename)
+  FOREIGN KEY(project_id, revision) REFERENCES projects_revisions(project_id, revision)
 );
 
 CREATE TABLE IF NOT EXISTS flags (
