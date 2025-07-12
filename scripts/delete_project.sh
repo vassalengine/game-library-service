@@ -22,5 +22,7 @@ DELETE FROM packages_history WHERE project_id = $proj_id;
 UPDATE projects SET image = NULL WHERE project_id = $proj_id;
 DELETE FROM images WHERE project_id = $proj_id;
 DELETE FROM projects WHERE project_id = $proj_id;
+DELETE FROM projects_revisions WHERE project_id = $proj_id;
+DELETE FROM projects_history WHERE project_id = $proj_id;
 COMMIT TRANSACTION;
 EOF
