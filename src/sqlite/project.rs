@@ -1,7 +1,10 @@
+use itertools::Itertools;
 use sqlx::{
     Acquire, Executor, QueryBuilder, Transaction,
     sqlite::Sqlite
 };
+use unicode_normalization::UnicodeNormalization;
+use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     db::{DatabaseError, ProjectRow, map_unique},
@@ -33,8 +36,25 @@ WHERE name = ?
 
 fn normalize_project_name(proj: &str) -> String {
     // Requiring the normalized project name to be unique ensures that
-    // project names are unique modulo case and hyphens/underscores.
-    proj.to_lowercase().replace('-', "_")
+    // project names are unique modulo case, marks, punctuation,
+    // whitespace.
+
+    // normalize and decompose
+    proj.nfkd()
+        // lowercase everything
+        .flat_map(char::to_lowercase)
+        // remove marks; map other non-alphanumerics to a space
+        .filter_map(|c| match c.general_category_group() {
+            GeneralCategoryGroup::Letter |
+            GeneralCategoryGroup::Number => Some(c),
+            GeneralCategoryGroup::Mark => None,
+            _ => Some(' ')
+        })
+        // collapse runs of spaces
+        .coalesce(|a, b|
+            if a == ' ' && b == ' ' { Ok(' ') } else { Err((a, b)) }
+        )
+        .collect()
 }
 
 async fn create_project_history_row<'e, E>(
@@ -595,8 +615,10 @@ mod test {
     fn normalize_project_names() {
         assert_eq!(normalize_project_name("foo"), "foo");
         assert_eq!(normalize_project_name("FoO"), "foo");
-        assert_eq!(normalize_project_name("foo_bar"), "foo_bar");
-        assert_eq!(normalize_project_name("foo-BAR"), "foo_bar");
+        assert_eq!(normalize_project_name("foo_bar"), "foo bar");
+        assert_eq!(normalize_project_name("foo-BAR"), "foo bar");
+        assert_eq!(normalize_project_name("foo  bar"), "foo bar");
+        assert_eq!(normalize_project_name("fÖÖ bar"), "foo bar");
     }
 
     static CREATE_ROW: Lazy<ProjectRow> = Lazy::new(||

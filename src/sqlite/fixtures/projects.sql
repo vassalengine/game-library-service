@@ -133,7 +133,7 @@ VALUES
   (
     42,
     "test_game",
-    "test_game",
+    "test game",
     1699804206419538067,
     "Brian's Trademarked Game of Being a Test Case",
     "A Game of Tests",
