@@ -245,7 +245,7 @@ where
     // create project data
     let dr = ProjectDataRow {
         project_id: proj.0,
-        name: name,
+        name,
         description: &pd.description,
         game_title: &pd.game.title,
         game_title_sort: &pd.game.title_sort_key,
