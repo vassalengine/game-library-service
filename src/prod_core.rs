@@ -171,7 +171,7 @@ where
     ) -> Result<(), CreateProjectError>
     {
         let now = self.now_nanos()?;
-        let proj = check_new_project_name(proj)?;
+        check_new_project_name(proj)?;
 
         let proj_data = ProjectDataPost {
             game: GameDataPost{
@@ -265,6 +265,7 @@ where
     ) -> Result<(), CreatePackageError>
     {
         let now = self.now_nanos()?;
+        check_new_package_name(pkg)?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
@@ -277,6 +278,11 @@ where
     ) -> Result<(), UpdatePackageError>
     {
         let now = self.now_nanos()?;
+
+        if let Some(name) = &pkg_data.name {
+            check_new_package_name(&name)?;
+        }
+
         Ok(self.db.update_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
@@ -1204,17 +1210,52 @@ fn get_links(
     }
 }
 
-fn check_new_project_name(projname: &str) -> Result<&str, CreateProjectError> {
+#[derive(Debug, PartialEq, Eq)]
+struct InvalidPackageName;
+
+impl From<InvalidPackageName> for CreatePackageError {
+    fn from(_: InvalidPackageName) -> Self {
+        CreatePackageError::InvalidPackageName
+    }
+}
+
+impl From<InvalidPackageName> for UpdatePackageError {
+    fn from(_: InvalidPackageName) -> Self {
+        UpdatePackageError::InvalidPackageName
+    }
+}
+
+fn check_new_package_name(name: &str) -> Result<(), InvalidPackageName> {
+/*
+    if !PAT.is_match(name) {
+        Err(InvalidPackageName)
+    }
+    else {
+        Ok(name)
+    }
+*/
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct InvalidProjectName;
+
+impl From<InvalidProjectName> for CreateProjectError {
+    fn from(_: InvalidProjectName) -> Self {
+        CreateProjectError::InvalidProjectName
+    }
+}
+
+fn check_new_project_name(name: &str) -> Result<(), InvalidProjectName> {
     static PAT: Lazy<Regex> = Lazy::new(||
         Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+//        Regex::new(r#"^\w[\w\s{1,64}$"#)
             .expect("bad regex")
     );
 
-    if !PAT.is_match(projname) {
-        Err(CreateProjectError::InvalidProjectName)
-    }
-    else {
-        Ok(projname)
+    match PAT.is_match(name) {
+        true => Ok(()),
+        false => Err(InvalidProjectName)
     }
 }
 
@@ -1389,14 +1430,14 @@ mod test {
     #[test]
     fn check_new_project_name_ok() {
         let name = "acceptable_name";
-        assert_eq!(check_new_project_name(name).unwrap(), name);
+        assert!(check_new_project_name(name).is_ok());
     }
 
     #[test]
     fn check_new_project_name_non_ascii() {
         assert_eq!(
             check_new_project_name("💩").unwrap_err(),
-            CreateProjectError::InvalidProjectName
+            InvalidProjectName
         );
     }
 
@@ -1404,7 +1445,7 @@ mod test {
     fn check_new_project_name_leading_non_alphanumeric() {
         assert_eq!(
             check_new_project_name("-abc").unwrap_err(),
-            CreateProjectError::InvalidProjectName
+            InvalidProjectName
         );
     }
 
@@ -1412,7 +1453,7 @@ mod test {
     fn check_new_project_name_too_short() {
         assert_eq!(
             check_new_project_name("").unwrap_err(),
-            CreateProjectError::InvalidProjectName
+            InvalidProjectName
         );
     }
 
@@ -1420,7 +1461,7 @@ mod test {
     fn check_new_project_name_too_long() {
         assert_eq!(
             check_new_project_name(&"x".repeat(100)).unwrap_err(),
-            CreateProjectError::InvalidProjectName
+            InvalidProjectName
         );
     }
 

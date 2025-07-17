@@ -170,6 +170,9 @@ where
             .next_tuple()
             .ok_or(AppError::InternalError("empty path iter".into()))?;
 
+        let pkg = urlencoding::decode(&pkg)
+            .or(Err(AppError::NotFound))?;
+
         let core = get_state(parts, state).await;
 
         // look up the project, package ids
@@ -199,6 +202,9 @@ where
             .await?
             .next_tuple()
             .ok_or(AppError::InternalError("empty path iter".into()))?;
+
+        let pkg = urlencoding::decode(&pkg)
+            .or(Err(AppError::NotFound))?;
 
         let core = get_state(parts, state).await;
 
@@ -892,6 +898,66 @@ mod test {
                 Request::builder()
                     .method(Method::GET)
                     .uri("/a_project/not_a_package")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_urlencoded_package() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_ok))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/%61_%70%61%63%6B%61%67%65")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_urlencoded_not_a_package() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_fail))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/not_%61_package")
+                    .body(Body::empty())
+                    .unwrap()
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn project_package_from_request_parts_urlencoded_bad_utf8() {
+        let app = Router::new()
+            .route("/{proj}/{pkg}", get(project_package_fail))
+            .with_state(make_state(ProjectPackageTestCore {}));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/a_project/%C3%B1")
                     .body(Body::empty())
                     .unwrap()
             )

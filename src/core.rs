@@ -119,6 +119,8 @@ pub enum CreatePackageError {
     AlreadyExists,
     #[error("{0}")]
     DatabaseError(db::DatabaseError),
+    #[error("Invalid package name")]
+    InvalidPackageName,
     #[error("{0}")]
     TimeError(#[from] time::Error)
 }
@@ -136,6 +138,8 @@ impl From<db::DatabaseError> for CreatePackageError {
 pub enum UpdatePackageError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
+    #[error("Invalid package name")]
+    InvalidPackageName,
     #[error("{0}")]
     TimeError(#[from] time::Error)
 }

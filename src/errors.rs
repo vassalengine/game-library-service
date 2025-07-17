@@ -29,6 +29,8 @@ pub enum AppError {
     AlreadyExists,
     #[error("Invalid project name")]
     InvalidProjectName,
+    #[error("Invalid package name")]
+    InvalidPackageName,
     #[error("Bad request")]
     MalformedQuery,
     #[error("Bad request")]
@@ -133,6 +135,7 @@ impl From<CreatePackageError> for AppError {
         match err {
             CreatePackageError::AlreadyExists => AppError::AlreadyExists,
             CreatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            CreatePackageError::InvalidPackageName => AppError::InvalidPackageName,
             CreatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
@@ -142,6 +145,7 @@ impl From<UpdatePackageError> for AppError {
     fn from(err: UpdatePackageError) -> Self {
         match err {
             UpdatePackageError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            UpdatePackageError::InvalidPackageName => AppError::InvalidPackageName,
             UpdatePackageError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }

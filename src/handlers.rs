@@ -139,6 +139,8 @@ pub async fn package_post(
     Wrapper(Json(pkg_data)): Wrapper<Json<PackageDataPost>>
 ) -> Result<(), AppError>
 {
+    let pkg = urlencoding::decode(&pkg)
+        .or(Err(AppError::NotFound))?;
     Ok(core.create_package(owner, proj, &pkg, &pkg_data).await?)
 }
 

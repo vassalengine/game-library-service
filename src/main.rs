@@ -78,6 +78,7 @@ impl From<&AppError> for StatusCode {
             AppError::JsonError => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::LimitOutOfRange => StatusCode::BAD_REQUEST,
             AppError::InvalidProjectName => StatusCode::BAD_REQUEST,
+            AppError::InvalidPackageName => StatusCode::BAD_REQUEST,
             AppError::AlreadyExists => StatusCode::BAD_REQUEST,
             AppError::MalformedQuery => StatusCode::BAD_REQUEST,
             AppError::MalformedUpload => StatusCode::BAD_REQUEST,
