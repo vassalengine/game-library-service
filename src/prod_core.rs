@@ -171,7 +171,7 @@ where
     ) -> Result<(), CreateProjectError>
     {
         let now = self.now_nanos()?;
-        check_new_project_name(proj)?;
+        check_project_name(proj)?;
 
         let proj_data = ProjectDataPost {
             game: GameDataPost{
@@ -1242,7 +1242,7 @@ impl From<InvalidProjectName> for CreateProjectError {
     }
 }
 
-fn check_new_project_name(name: &str) -> Result<(), InvalidProjectName> {
+fn check_project_name(name: &str) -> Result<(), InvalidProjectName> {
     static PAT: Lazy<Regex> = Lazy::new(||
         Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 //        Regex::new(r#"^\w[\w\s{1,64}$"#)
@@ -1424,39 +1424,39 @@ mod test {
     }
 
     #[test]
-    fn check_new_project_name_ok() {
+    fn check_project_name_ok() {
         let name = "acceptable_name";
-        assert!(check_new_project_name(name).is_ok());
+        assert!(check_project_name(name).is_ok());
     }
 
     #[test]
-    fn check_new_project_name_non_ascii() {
+    fn check_project_name_non_ascii() {
         assert_eq!(
-            check_new_project_name("💩").unwrap_err(),
+            check_project_name("💩").unwrap_err(),
             InvalidProjectName
         );
     }
 
     #[test]
-    fn check_new_project_name_leading_non_alphanumeric() {
+    fn check_project_name_leading_non_alphanumeric() {
         assert_eq!(
-            check_new_project_name("-abc").unwrap_err(),
+            check_project_name("-abc").unwrap_err(),
             InvalidProjectName
         );
     }
 
     #[test]
-    fn check_new_project_name_too_short() {
+    fn check_project_name_too_short() {
         assert_eq!(
-            check_new_project_name("").unwrap_err(),
+            check_project_name("").unwrap_err(),
             InvalidProjectName
         );
     }
 
     #[test]
-    fn check_new_project_name_too_long() {
+    fn check_project_name_too_long() {
         assert_eq!(
-            check_new_project_name(&"x".repeat(100)).unwrap_err(),
+            check_project_name(&"x".repeat(100)).unwrap_err(),
             InvalidProjectName
         );
     }
