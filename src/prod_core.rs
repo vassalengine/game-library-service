@@ -265,7 +265,7 @@ where
     ) -> Result<(), CreatePackageError>
     {
         let now = self.now_nanos()?;
-        check_new_package_name(pkg)?;
+        check_package_name(pkg)?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
@@ -280,7 +280,7 @@ where
         let now = self.now_nanos()?;
 
         if let Some(name) = &pkg_data.name {
-            check_new_package_name(&name)?;
+            check_package_name(name)?;
         }
 
         Ok(self.db.update_package(owner, proj, pkg, pkg_data, now).await?)
@@ -1225,16 +1225,12 @@ impl From<InvalidPackageName> for UpdatePackageError {
     }
 }
 
-fn check_new_package_name(name: &str) -> Result<(), InvalidPackageName> {
-/*
-    if !PAT.is_match(name) {
-        Err(InvalidPackageName)
+fn check_package_name(name: &str) -> Result<(), InvalidPackageName> {
+    // reject package names with leading or trailing whitespace
+    match name == name.trim() {
+        true => Ok(()),
+        false => Err(InvalidPackageName)
     }
-    else {
-        Ok(name)
-    }
-*/
-    Ok(())
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1462,6 +1458,20 @@ mod test {
         assert_eq!(
             check_new_project_name(&"x".repeat(100)).unwrap_err(),
             InvalidProjectName
+        );
+    }
+
+    #[test]
+    fn check_package_name_ok() {
+        let name = "acceptable_name";
+        assert!(check_package_name(name).is_ok());
+    }
+
+    #[test]
+    fn check_package_name_leading_trailing_whitespace() {
+        assert_eq!(
+            check_package_name("  bad  ").unwrap_err(),
+            InvalidPackageName
         );
     }
 
