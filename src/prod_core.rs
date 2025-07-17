@@ -1234,7 +1234,9 @@ fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
 fn normalize_title_sort_key(s: &str) -> String {
     s.nfkd()
         .flat_map(char::to_lowercase)
+        // strip marks
         .filter(|c| get_canonical_combining_class(*c) == CanonicalCombiningClass::NotReordered)
+        // skip initial punctuation
         .skip_while(
             |c| ![
                 GeneralCategoryGroup::Letter,
