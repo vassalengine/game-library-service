@@ -9,16 +9,11 @@ pub struct MaybePackageDataPost {
 }
 
 impl MaybePackageDataPost {
-    fn overlong(&self) -> bool {
-        self.description.len() > DESCRIPTION_MAX_LENGTH
-    }
-
-    fn untrimmed(&self) -> bool {
-        self.description != self.description.trim()
+    fn is_valid(&self) -> bool {
+        self.description.len() <= PACKAGE_DESCRIPTION_MAX_LENGTH &&
+        self.description == self.description.trim()
     }
 }
-
-// TODO: what limits package name length?
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "MaybePackageDataPost")]
@@ -37,10 +32,7 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
     type Error = PackageDataPostError;
 
     fn try_from(m: MaybePackageDataPost) -> Result<Self, Self::Error> {
-        if m.overlong() || m.untrimmed() {
-            Err(PackageDataPostError(m))
-        }
-        else {
+        if m.is_valid() {
             Ok(
                 PackageDataPost {
                     sort_key: m.sort_key,
@@ -48,10 +40,14 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
                 }
             )
         }
+        else {
+            Err(PackageDataPostError(m))
+        }
     }
 }
 
-// TODO: limit package name length
+const PACKAGE_NAME_MAX_LENGTH: usize = 128;
+const PACKAGE_DESCRIPTION_MAX_LENGTH: usize = 256;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybePackageDataPatch {
@@ -61,7 +57,7 @@ pub struct MaybePackageDataPatch {
 }
 
 impl MaybePackageDataPatch {
-    fn empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         matches!(
             self,
             MaybePackageDataPatch {
@@ -72,22 +68,21 @@ impl MaybePackageDataPatch {
         )
     }
 
-    fn overlong(&self) -> bool {
-        matches!(
-            &self.description,
-            Some(d) if d.len() > DESCRIPTION_MAX_LENGTH
-        )
-    }
-
-    fn untrimmed(&self) -> bool {
-        matches!(
-            &self.name,
-            Some(s) if s != s.trim()
-        ) ||
-        matches!(
-            &self.description,
-            Some(s) if s != s.trim()
-        )
+    fn is_valid(&self) -> bool {
+        !self.is_empty() &&
+         match &self.name {
+            Some(n) => !n.is_empty() &&
+                n.len() <= PACKAGE_NAME_MAX_LENGTH &&
+                n == n.trim(),
+            None => true
+        }
+        &&
+        match &self.description {
+            Some(d) => !d.is_empty() &&
+                d.len() <= PACKAGE_DESCRIPTION_MAX_LENGTH &&
+                d == d.trim(),
+            None => true
+        }
     }
 }
 
@@ -109,10 +104,7 @@ impl TryFrom<MaybePackageDataPatch> for PackageDataPatch {
     fn try_from(m: MaybePackageDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
         // and field lengths must be within bounds
-        if m.empty() || m.overlong() || m.untrimmed() {
-            Err(PackageDataPatchError(m))
-        }
-        else {
+        if m.is_valid() {
             Ok(
                 PackageDataPatch {
                     name: m.name,
@@ -120,6 +112,9 @@ impl TryFrom<MaybePackageDataPatch> for PackageDataPatch {
                     description: m.description
                 }
             )
+        }
+        else {
+            Err(PackageDataPatchError(m))
         }
     }
 }
@@ -134,7 +129,7 @@ where
 }
 
 // maximum field lengths
-const DESCRIPTION_MAX_LENGTH: usize = 1024;
+const PROJECT_DESCRIPTION_MAX_LENGTH: usize = 1024;
 const GAME_TITLE_MAX_LENGTH: usize = 256;
 const GAME_PUBLISHER_MAX_LENGTH: usize = 256;
 const GAME_YEAR_MAX_LENGTH: usize = 32;
@@ -193,7 +188,7 @@ pub struct MaybeProjectDataPatch {
 }
 
 impl MaybeProjectDataPatch {
-    fn empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         matches!(
             self,
             MaybeProjectDataPatch {
@@ -218,59 +213,54 @@ impl MaybeProjectDataPatch {
         )
     }
 
-    fn overlong(&self) -> bool {
-        matches!(
-            &self.description,
-            Some(s) if s.len() > DESCRIPTION_MAX_LENGTH
-        ) ||
-        matches!(
-            &self.readme,
-            Some(s) if s.len() > README_MAX_LENGTH
-        ) ||
-        matches!(
-            &self.image,
-            Some(Some(s)) if s.len() > IMAGE_MAX_LENGTH
-        ) ||
-        if let Some(game) = &self.game {
-            matches!(
-                &game.title,
-                Some(s) if s.len() > GAME_TITLE_MAX_LENGTH
-            ) ||
-            matches!(
-                &game.publisher,
-                Some(s) if s.len() > GAME_PUBLISHER_MAX_LENGTH
-            ) ||
-            matches!(
-                &game.year,
-                Some(s) if s.len() > GAME_YEAR_MAX_LENGTH
-            )
+    fn is_valid(&self) -> bool {
+        !self.is_empty() &&
+        // check description
+        match &self.description {
+            Some(d) => !d.is_empty() &&
+                d.len() <= PROJECT_DESCRIPTION_MAX_LENGTH &&
+                d == d.trim(),
+            None => true,
         }
-        else {
-            false
+        &&
+        // check readme
+        match &self.readme {
+            Some(r) => r.len() <= README_MAX_LENGTH,
+            None => true
         }
-    }
-
-    fn untrimmed(&self) -> bool {
-        matches!(
-            &self.description,
-            Some(s) if s != s.trim()
-        ) ||
-        if let Some(game) = &self.game {
-            matches!(
-                &game.title,
-                Some(s) if s != s.trim()
-            ) ||
-            matches!(
-                &game.publisher,
-                Some(s) if s != s.trim()
-            ) ||
-            matches!(
-                &game.year,
-                Some(s) if s != s.trim()
-            )
+        &&
+        // check image
+        match &self.image {
+            Some(Some(i)) => i.len() <= IMAGE_MAX_LENGTH,
+            _ => true
         }
-        else {
-            false
+        &&
+        // check game
+        match &self.game {
+            Some(game) => (
+                // check title
+                match &game.title {
+                    Some(t) => !t.is_empty() &&
+                        t.len() <= GAME_TITLE_MAX_LENGTH &&
+                        t == t.trim(),
+                    None => true
+                }
+                &&
+                // check title
+                match &game.publisher {
+                    Some(p) => p.len() <= GAME_PUBLISHER_MAX_LENGTH &&
+                        p == p.trim(),
+                    None => true
+                }
+                &&
+                // check year
+                match &game.year {
+                    Some(y) => y.len() <= GAME_YEAR_MAX_LENGTH &&
+                        y == y.trim(),
+                    None => true
+                }
+            ),
+            None => true
         }
     }
 }
@@ -296,10 +286,7 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
     fn try_from(m: MaybeProjectDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
         // and field lengths must be within bounds
-        if m.empty() || m.overlong() || m.untrimmed() {
-            Err(ProjectDataPatchError(m))
-        }
-        else {
+        if m.is_valid() {
             Ok(
                 ProjectDataPatch {
                     description: m.description,
@@ -309,6 +296,9 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
                     image: m.image
                 }
             )
+        }
+        else {
+            Err(ProjectDataPatchError(m))
         }
     }
 }
@@ -363,20 +353,17 @@ pub struct MaybeProjectDataPost {
 }
 
 impl MaybeProjectDataPost {
-    fn overlong(&self) -> bool {
-        self.description.len() > DESCRIPTION_MAX_LENGTH ||
-        self.game.title.len() > GAME_TITLE_MAX_LENGTH ||
-        self.game.publisher.len() > GAME_PUBLISHER_MAX_LENGTH ||
-        self.game.year.len() > GAME_YEAR_MAX_LENGTH ||
-        self.readme.len() > README_MAX_LENGTH ||
-        self.image.as_ref().is_some_and(|i| i.len() > IMAGE_MAX_LENGTH)
-    }
-
-    fn untrimmed(&self) -> bool {
-        self.description != self.description.trim() ||
-        self.game.title != self.game.title.trim() ||
-        self.game.publisher != self.game.publisher.trim() ||
-        self.game.year != self.game.year.trim()
+    fn is_valid(&self) -> bool {
+        self.description.len() <= PROJECT_DESCRIPTION_MAX_LENGTH &&
+        self.description == self.description.trim() &&
+        self.game.title.len() <= GAME_TITLE_MAX_LENGTH &&
+        self.game.title == self.game.title.trim() &&
+        self.game.publisher.len() <= GAME_PUBLISHER_MAX_LENGTH &&
+        self.game.publisher == self.game.publisher.trim() &&
+        self.game.year.len() <= GAME_YEAR_MAX_LENGTH &&
+        self.game.year == self.game.year.trim() &&
+        self.readme.len() <= README_MAX_LENGTH &&
+        self.image.as_ref().is_none_or(|i| i.len() <= IMAGE_MAX_LENGTH)
     }
 }
 
@@ -399,10 +386,7 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
 
     fn try_from(m: MaybeProjectDataPost) -> Result<Self, Self::Error> {
         // field lengths must be within bounds
-        if m.overlong() || m.untrimmed() {
-            Err(ProjectDataPostError(m))
-        }
-        else {
+        if m.is_valid() {
             Ok(
                 ProjectDataPost{
                     description: m.description,
@@ -412,6 +396,9 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
                     image: m.image
                 }
             )
+        }
+        else {
+            Err(ProjectDataPostError(m))
         }
     }
 }
@@ -507,7 +494,7 @@ mod test {
     #[test]
     fn try_from_package_data_post_overlong_description() {
         let mpdp = MaybePackageDataPost {
-            description: "x".repeat(DESCRIPTION_MAX_LENGTH + 1),
+            description: "x".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1),
             ..Default::default()
         };
 
@@ -551,7 +538,7 @@ mod test {
     #[test]
     fn try_from_package_data_patch_overlong_description() {
         let mpdp = MaybePackageDataPatch {
-            description: Some("x".repeat(DESCRIPTION_MAX_LENGTH + 1)),
+            description: Some("x".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1)),
             ..Default::default()
         };
 
@@ -651,7 +638,7 @@ mod test {
     #[test]
     fn try_from_project_data_post_overlong_description() {
         let mpdp = MaybeProjectDataPost {
-            description: "x".repeat(DESCRIPTION_MAX_LENGTH + 1),
+            description: "x".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1),
             ..Default::default()
         };
 
@@ -810,7 +797,7 @@ mod test {
 
     #[test]
     fn maybe_project_data_patch_default_empty() {
-        assert!(MaybeProjectDataPatch::default().empty());
+        assert!(MaybeProjectDataPatch::default().is_empty());
     }
 
     #[test]
@@ -819,7 +806,7 @@ mod test {
             MaybeProjectDataPatch {
                 game: Some(MaybeGameDataPatch::default()),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -829,7 +816,7 @@ mod test {
             !MaybeProjectDataPatch {
                 description: Some("description".into()),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -839,7 +826,7 @@ mod test {
             !MaybeProjectDataPatch {
                 readme: Some("readme".into()),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -849,7 +836,7 @@ mod test {
             !MaybeProjectDataPatch {
                 image: Some(None),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -859,7 +846,7 @@ mod test {
             !MaybeProjectDataPatch {
                 image: Some(Some("image".into())),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -872,7 +859,7 @@ mod test {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -885,7 +872,7 @@ mod test {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -898,7 +885,7 @@ mod test {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -914,7 +901,7 @@ mod test {
                     ..Default::default()
                 }),
                 ..Default::default()
-            }.empty()
+            }.is_empty()
         );
     }
 
@@ -962,7 +949,7 @@ mod test {
     #[test]
     fn try_from_project_data_patch_overlong_description() {
         let mpdp = MaybeProjectDataPatch {
-            description: Some("x".repeat(DESCRIPTION_MAX_LENGTH + 1)),
+            description: Some("x".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1)),
             ..Default::default()
         };
 
@@ -1045,7 +1032,7 @@ mod test {
             ProjectDataPatchError(mpdp)
         );
     }
-  
+
     #[test]
     fn try_from_maybe_flag_post_flag_post_inappropriate() {
         assert_eq!(
