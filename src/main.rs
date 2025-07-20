@@ -43,6 +43,7 @@ mod errors;
 mod extractors;
 mod handlers;
 mod image;
+mod input;
 mod jwt;
 mod model;
 mod module;
@@ -491,8 +492,9 @@ mod test {
 
     use crate::{
         core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+        input::{FlagPost, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, RangePost},
         jwt::{self, EncodingKey},
-        model::{FlagPost, Flag, Flags, FlagTag, GameData, GameDataPost, Owner, FileData, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, RangePost, Release, ReleaseData, User, Users},
+        model::{Flag, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };

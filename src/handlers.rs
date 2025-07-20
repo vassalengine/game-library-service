@@ -18,7 +18,8 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
-    model::{Admin, FlagPost, Flags, Owned, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, Users, User},
+    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    model::{Admin, Flags, Owned, ProjectData, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 

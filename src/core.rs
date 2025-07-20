@@ -10,7 +10,8 @@ use thiserror::Error;
 
 use crate::{
     db,
-    model::{FlagPost, Flags, Owner, PackageDataPatch, PackageDataPost, Package, Projects, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Release, User, Users},
+    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    model::{Flags, Owner, Package, Projects, ProjectData, Project, Release, User, Users},
     module,
     params::ProjectsParams,
     pagination,

@@ -15,7 +15,8 @@ mod users;
 
 use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
-    model::{FlagPost, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    model::{GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };

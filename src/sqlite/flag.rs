@@ -5,7 +5,8 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, FlagRow},
-    model::{FlagTag, FlagPost, Project, User}
+    input::FlagPost,
+    model::{FlagTag, Project, User}
 };
 
 impl<'a> From<&'a FlagPost> for (u32, Option<&'a str>) {

@@ -7,7 +7,8 @@ use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::{
-    model::{FlagPost, FlagTag, GalleryImage, Owner, Package, PackageDataPatch, PackageDataPost, Project, ProjectDataPatch, ProjectDataPost, Release, User, Users},
+    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    model::{FlagTag, GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, SortBy},
     version::Version
 };

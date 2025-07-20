@@ -25,7 +25,8 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    model::{FileData, FlagPost, Flag, Flags, GalleryImage, GameData, GameDataPatch, GameDataPost, Owner, Package, PackageData, PackageDataPatch, PackageDataPost, ProjectData, ProjectDataPatch, ProjectDataPost, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    input::{FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -1353,7 +1354,7 @@ mod test {
     use tokio::io::AsyncRead;
 
     use crate::{
-        model::{GameDataPatch, GameDataPost, RangePatch, RangePost},
+        input::{GameDataPatch, GameDataPost, RangePatch, RangePost},
         pagination::Direction,
         sqlite::{Pool, SqlxDatabaseClient},
         upload::UploadError

@@ -5,7 +5,8 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, PackageRow, map_unique},
-    model::{Owner, Package, PackageDataPatch, PackageDataPost, Project},
+    input::{PackageDataPatch, PackageDataPost},
+    model::{Owner, Package,  Project},
     sqlite::project::update_project_non_project_data
 };
 

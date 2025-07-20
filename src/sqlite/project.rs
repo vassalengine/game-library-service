@@ -8,7 +8,8 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     db::{DatabaseError, ProjectRow, map_unique},
-    model::{Owner, Project, ProjectDataPatch, ProjectDataPost, User},
+    input::{ProjectDataPatch, ProjectDataPost},
+    model::{Owner, Project, User},
     sqlite::users::add_owner
 };
 
@@ -591,7 +592,7 @@ mod test {
 
     use once_cell::sync::Lazy;
 
-    use crate::model::{GameDataPost, RangePost};
+    use crate::input::{GameDataPost, RangePost};
 
     type Pool = sqlx::Pool<Sqlite>;
 
