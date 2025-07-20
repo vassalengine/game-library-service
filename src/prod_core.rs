@@ -943,7 +943,7 @@ where
                 // we got moduledata
                 let (vstr, v_vstr) = versions_in_moduledata(&md)?;
 
-                if ext != "vext" {
+                if ext != "vmdx" {
                     // not an extension; it must be a module
 
                     // modules must have a .vmod extension
@@ -991,7 +991,7 @@ where
             },
             Err(e) => {
                 // modules and extensions must have moduledata
-                if ext == "vmod" || ext == "vext" {
+                if ext == "vmod" || ext == "vmdx" {
                     return Err(AddFileError::ModuleError(e));
                 }
                 Ok(None)
