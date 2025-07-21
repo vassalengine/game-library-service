@@ -32,16 +32,14 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
     type Error = PackageDataPostError;
 
     fn try_from(m: MaybePackageDataPost) -> Result<Self, Self::Error> {
-        if m.is_valid() {
-            Ok(
+        match m.is_valid() {
+            true => Ok(
                 PackageDataPost {
                     sort_key: m.sort_key,
                     description: m.description
                 }
-            )
-        }
-        else {
-            Err(PackageDataPostError(m))
+            ),
+            false => Err(PackageDataPostError(m))
         }
     }
 }
@@ -104,17 +102,15 @@ impl TryFrom<MaybePackageDataPatch> for PackageDataPatch {
     fn try_from(m: MaybePackageDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
         // and field lengths must be within bounds
-        if m.is_valid() {
-            Ok(
+        match m.is_valid() {
+            true => Ok(
                 PackageDataPatch {
                     name: m.name,
                     sort_key: m.sort_key,
                     description: m.description
                 }
-            )
-        }
-        else {
-            Err(PackageDataPatchError(m))
+            ),
+            false => Err(PackageDataPatchError(m))
         }
     }
 }
@@ -286,8 +282,8 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
     fn try_from(m: MaybeProjectDataPatch) -> Result<Self, Self::Error> {
         // at least one element must be present to be a valid request
         // and field lengths must be within bounds
-        if m.is_valid() {
-            Ok(
+        match m.is_valid() {
+            true => Ok(
                 ProjectDataPatch {
                     description: m.description,
                     tags: m.tags,
@@ -295,10 +291,8 @@ impl TryFrom<MaybeProjectDataPatch> for ProjectDataPatch {
                     readme: m.readme,
                     image: m.image
                 }
-            )
-        }
-        else {
-            Err(ProjectDataPatchError(m))
+            ),
+            false => Err(ProjectDataPatchError(m))
         }
     }
 }
