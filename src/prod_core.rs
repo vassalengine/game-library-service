@@ -25,7 +25,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    input::{ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, PACKAGE_NAME_MAX_LENGTH},
+    input::{is_valid_package_name, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -1212,7 +1212,14 @@ fn get_links(
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct InvalidPackageName;
+pub struct InvalidPackageName;
+
+fn check_package_name(name: &str) -> Result<(), InvalidPackageName> {
+    match is_valid_package_name(name) {
+        true => Ok(()),
+        false => Err(InvalidPackageName)
+    }
+}
 
 impl From<InvalidPackageName> for CreatePackageError {
     fn from(_: InvalidPackageName) -> Self {
@@ -1223,19 +1230,6 @@ impl From<InvalidPackageName> for CreatePackageError {
 impl From<InvalidPackageName> for UpdatePackageError {
     fn from(_: InvalidPackageName) -> Self {
         UpdatePackageError::InvalidPackageName
-    }
-}
-
-fn check_package_name(name: &str) -> Result<(), InvalidPackageName> {
-    // package names must not exceed 128 characters
-    // reject package names with leading or trailing whitespace
-    // reject package names with consecutive whitespace
-    match name.len() <= PACKAGE_NAME_MAX_LENGTH &&
-        name == name.trim() &&
-        !name.has_consecutive_whitespace()
-    {
-        true => Ok(()),
-        false => Err(InvalidPackageName)
     }
 }
 
@@ -1464,20 +1458,6 @@ mod test {
         assert_eq!(
             check_project_name(&"x".repeat(100)).unwrap_err(),
             InvalidProjectName
-        );
-    }
-
-    #[test]
-    fn check_package_name_ok() {
-        let name = "acceptable_name";
-        assert!(check_package_name(name).is_ok());
-    }
-
-    #[test]
-    fn check_package_name_leading_trailing_whitespace() {
-        assert_eq!(
-            check_package_name("  bad  ").unwrap_err(),
-            InvalidPackageName
         );
     }
 

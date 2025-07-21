@@ -57,8 +57,22 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
     }
 }
 
-pub const PACKAGE_NAME_MAX_LENGTH: usize = 128;
+const PACKAGE_NAME_MAX_LENGTH: usize = 128;
 const PACKAGE_DESCRIPTION_MAX_LENGTH: usize = 256;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct InvalidPackageName;
+
+pub fn is_valid_package_name(name: &str) -> bool {
+    // reject empty package names
+    // reject overlong package names
+    // reject package names with leading or trailing whitespace
+    // reject package names with consecutive whitespace
+    !name.is_empty() &&
+    name.len() <= PACKAGE_NAME_MAX_LENGTH &&
+    name == name.trim() &&
+    !name.has_consecutive_whitespace()
+}
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybePackageDataPatch {
@@ -82,10 +96,7 @@ impl MaybePackageDataPatch {
     fn is_valid(&self) -> bool {
         !self.is_empty() &&
          match &self.name {
-            Some(n) => !n.is_empty() &&
-                n.len() <= PACKAGE_NAME_MAX_LENGTH &&
-                n == n.trim() &&
-                !n.has_consecutive_whitespace(),
+            Some(n) => is_valid_package_name(n),
             None => true
         }
         &&
@@ -494,6 +505,27 @@ impl TryFrom<MaybeFlagPost> for FlagPost {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn is_valid_package_name_ok() {
+        let name = "acceptable_name";
+        assert!(is_valid_package_name(name));
+    }
+
+    #[test]
+    fn is_valid_package_name_untrimmed() {
+        assert!(!is_valid_package_name("  bad  "));
+    }
+
+    #[test]
+    fn is_valid_package_name_consecutive_whitespace() {
+        assert!(!is_valid_package_name("x  x"));
+    }
+
+    #[test]
+    fn is_valid_package_name_overlong() {
+        assert!(!is_valid_package_name(&"x".repeat(PACKAGE_NAME_MAX_LENGTH + 1)));
+    }
 
     #[test]
     fn try_from_package_data_post_ok() {
