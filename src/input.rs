@@ -2,6 +2,19 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::model::FlagTag;
 
+trait ConsecutiveWhitespace {
+    fn has_consecutive_whitespace(&self) -> bool;
+}
+
+impl<T: AsRef<str>> ConsecutiveWhitespace for T {
+    fn has_consecutive_whitespace(&self) -> bool {
+        self.as_ref().chars()
+            .zip(self.as_ref().chars().skip(1))
+            .find(|(a, b)| a.is_whitespace() && b.is_whitespace())
+            .is_some()
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Default, Eq, PartialEq, Serialize)]
 pub struct MaybePackageDataPost {
     pub sort_key: i64,
@@ -71,7 +84,8 @@ impl MaybePackageDataPatch {
          match &self.name {
             Some(n) => !n.is_empty() &&
                 n.len() <= PACKAGE_NAME_MAX_LENGTH &&
-                n == n.trim(),
+                n == n.trim() &&
+                !n.has_consecutive_whitespace(),
             None => true
         }
         &&
@@ -238,21 +252,24 @@ impl MaybeProjectDataPatch {
                 match &game.title {
                     Some(t) => !t.is_empty() &&
                         t.len() <= GAME_TITLE_MAX_LENGTH &&
-                        t == t.trim(),
+                        t == t.trim() &&
+                        !t.has_consecutive_whitespace(),
                     None => true
                 }
                 &&
                 // check title
                 match &game.publisher {
                     Some(p) => p.len() <= GAME_PUBLISHER_MAX_LENGTH &&
-                        p == p.trim(),
+                        p == p.trim() &&
+                        !p.has_consecutive_whitespace(),
                     None => true
                 }
                 &&
                 // check year
                 match &game.year {
                     Some(y) => y.len() <= GAME_YEAR_MAX_LENGTH &&
-                        y == y.trim(),
+                        y == y.trim() &&
+                        !y.has_consecutive_whitespace(),
                     None => true
                 }
             ),
@@ -348,15 +365,24 @@ pub struct MaybeProjectDataPost {
 
 impl MaybeProjectDataPost {
     fn is_valid(&self) -> bool {
+        // check description
         self.description.len() <= PROJECT_DESCRIPTION_MAX_LENGTH &&
         self.description == self.description.trim() &&
+        // check title
         self.game.title.len() <= GAME_TITLE_MAX_LENGTH &&
         self.game.title == self.game.title.trim() &&
+        !self.game.title.has_consecutive_whitespace() &&
+        // check publisher
         self.game.publisher.len() <= GAME_PUBLISHER_MAX_LENGTH &&
         self.game.publisher == self.game.publisher.trim() &&
+        !self.game.publisher.has_consecutive_whitespace() &&
+        // check year
         self.game.year.len() <= GAME_YEAR_MAX_LENGTH &&
         self.game.year == self.game.year.trim() &&
+        !self.game.year.has_consecutive_whitespace() &&
+        // check readme
         self.readme.len() <= README_MAX_LENGTH &&
+        // check image
         self.image.as_ref().is_none_or(|i| i.len() <= IMAGE_MAX_LENGTH)
     }
 }
@@ -469,7 +495,7 @@ impl TryFrom<MaybeFlagPost> for FlagPost {
 mod test {
     use super::*;
 
- #[test]
+    #[test]
     fn try_from_package_data_post_ok() {
         assert_eq!(
             PackageDataPost::try_from(
