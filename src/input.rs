@@ -558,7 +558,7 @@ mod test {
     #[test]
     fn try_from_package_data_patch_overlong_description() {
         let mpdp = MaybePackageDataPatch {
-            description: Some("x".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1)),
+            description: Some("x".repeat(PACKAGE_DESCRIPTION_MAX_LENGTH + 1)),
             ..Default::default()
         };
 
