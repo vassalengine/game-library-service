@@ -608,6 +608,32 @@ mod test {
     }
 
     #[test]
+    fn try_from_package_data_patch_consecutive_whitespace_name() {
+        let mpdp = MaybePackageDataPatch {
+            name: Some("x  x".into()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            PackageDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            PackageDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_package_data_patch_overlong_name() {
+        let mpdp = MaybePackageDataPatch {
+            name: Some("x".repeat(PACKAGE_DESCRIPTION_MAX_LENGTH + 1)),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            PackageDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            PackageDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
     fn try_from_package_data_patch_empty() {
         let mpdp = MaybePackageDataPatch::default();
 
@@ -683,6 +709,22 @@ mod test {
     }
 
     #[test]
+    fn try_from_project_data_post_consecutive_whitespace_title() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameDataPost {
+                title: "x  x".into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
     fn try_from_project_data_post_overlong_publisher() {
         let mpdp = MaybeProjectDataPost {
             game: GameDataPost {
@@ -699,10 +741,42 @@ mod test {
     }
 
     #[test]
+    fn try_from_project_data_post_consecutive_whitespace_publisher() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameDataPost {
+                publisher: "x  x".into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
     fn try_from_project_data_post_overlong_year() {
         let mpdp = MaybeProjectDataPost {
             game: GameDataPost {
                 year: "x".repeat(GAME_YEAR_MAX_LENGTH + 1),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPost::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPostError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_post_consecutive_whitespace_year() {
+        let mpdp = MaybeProjectDataPost {
+            game: GameDataPost {
+                year: "x  x".into(),
                 ..Default::default()
             },
             ..Default::default()
@@ -978,10 +1052,55 @@ mod test {
     }
 
     #[test]
+    fn try_from_project_data_patch_untrimmed_description() {
+        let mpdp = MaybeProjectDataPatch {
+            description: Some(" x ".into()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
     fn try_from_project_data_patch_overlong_title() {
         let mpdp = MaybeProjectDataPatch {
             game: Some(MaybeGameDataPatch {
                 title: Some("x".repeat(GAME_TITLE_MAX_LENGTH + 1)),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_untrimmed_title() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                title: Some(" x ".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_consecutive_whitespace_title() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                title: Some("x  x".into()),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1010,10 +1129,74 @@ mod test {
     }
 
     #[test]
+    fn try_from_project_data_patch_untrimmed_publisher() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                publisher: Some(" x ".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_consecutive_whitespace_publisher() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                publisher: Some("x  x".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
     fn try_from_project_data_patch_overlong_year() {
         let mpdp = MaybeProjectDataPatch {
             game: Some(MaybeGameDataPatch {
                 year: Some("x".repeat(GAME_YEAR_MAX_LENGTH + 1)),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_untrimmed_year() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                year: Some(" x ".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectDataPatch::try_from(mpdp.clone()).unwrap_err(),
+            ProjectDataPatchError(mpdp)
+        );
+    }
+
+    #[test]
+    fn try_from_project_data_patch_consecutive_whitespace_year() {
+        let mpdp = MaybeProjectDataPatch {
+            game: Some(MaybeGameDataPatch {
+                year: Some("x  x".into()),
                 ..Default::default()
             }),
             ..Default::default()
