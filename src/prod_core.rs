@@ -1242,14 +1242,39 @@ impl From<InvalidProjectName> for CreateProjectError {
     }
 }
 
-fn check_project_name(name: &str) -> Result<(), InvalidProjectName> {
-    static PAT: Lazy<Regex> = Lazy::new(||
+fn is_valid_project_name(name: &str) -> bool {
+   static PAT: Lazy<Regex> = Lazy::new(||
         Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
-//        Regex::new(r#"^\w[\w\s{1,64}$"#)
             .expect("bad regex")
     );
 
-    match PAT.is_match(name) {
+    PAT.is_match(name)
+
+/*
+    // project names must not be overlong
+    // project names must contain only L, M, N, P, Z category characters
+    // reject project names with leading or trailing whitespace
+    // reject project names with consecutive whitespace
+    !(
+        name.len() > 64 ||
+        name != name.trim() ||
+        name.chars().find(|c|
+            ![
+                GeneralCategoryGroup::Letter,
+                GeneralCategoryGroup::Mark,
+                GeneralCategoryGroup::Number,
+                GeneralCategoryGroup::Punctuation,
+                GeneralCategoryGroup::Separator
+            ].contains(&c.general_category_group())
+        ).is_some() ||
+        name.has_consecutive_whitespace()
+    )
+*/
+
+}
+
+fn check_project_name(name: &str) -> Result<(), InvalidProjectName> {
+    match is_valid_project_name(name) {
         true => Ok(()),
         false => Err(InvalidProjectName)
     }
