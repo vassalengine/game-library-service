@@ -2,7 +2,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::model::FlagTag;
 
-trait ConsecutiveWhitespace {
+pub trait ConsecutiveWhitespace {
     fn has_consecutive_whitespace(&self) -> bool;
 }
 
@@ -57,7 +57,7 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
     }
 }
 
-const PACKAGE_NAME_MAX_LENGTH: usize = 128;
+pub const PACKAGE_NAME_MAX_LENGTH: usize = 128;
 const PACKAGE_DESCRIPTION_MAX_LENGTH: usize = 256;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

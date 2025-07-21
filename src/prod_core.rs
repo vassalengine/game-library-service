@@ -25,7 +25,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    input::{FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, PACKAGE_NAME_MAX_LENGTH},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -1227,8 +1227,13 @@ impl From<InvalidPackageName> for UpdatePackageError {
 }
 
 fn check_package_name(name: &str) -> Result<(), InvalidPackageName> {
+    // package names must not exceed 128 characters
     // reject package names with leading or trailing whitespace
-    match name == name.trim() {
+    // reject package names with consecutive whitespace
+    match name.len() <= PACKAGE_NAME_MAX_LENGTH &&
+        name == name.trim() &&
+        !name.has_consecutive_whitespace()
+    {
         true => Ok(()),
         false => Err(InvalidPackageName)
     }
