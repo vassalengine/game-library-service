@@ -581,7 +581,6 @@ mod test {
         );
     }
 
-/*
     #[test]
     fn try_from_package_data_patch_empty_name() {
         let mpdp = MaybePackageDataPatch {
@@ -594,7 +593,6 @@ mod test {
             PackageDataPatchError(mpdp)
         );
     }
-*/
 
     #[test]
     fn try_from_package_data_patch_untrimmed_name() {
