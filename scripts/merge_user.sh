@@ -21,7 +21,7 @@ UPDATE image_revisions SET published_by = $dst WHERE published_by = $src;
 UPDATE galleries SET published_by = $dst WHERE published_by = $src;
 UPDATE galleries SET removed_by = $dst WHERE removed_by = $src;
 UPDATE projects SET modified_by = $dst WHERE modified_by = $src;
-UPDATE project_revisions SET modified_by = $dst WHERE modified_by = $src;
+UPDATE projects_revisions SET modified_by = $dst WHERE modified_by = $src;
 UPDATE flags SET user_id = $dst WHERE user_id = $src;
 DELETE FROM users WHERE user_id = $src;
 END TRANSACTION;
