@@ -1449,6 +1449,44 @@ mod test {
     }
 
     #[test]
+    fn check_package_name_ok() {
+        let name = "acceptable_name";
+        assert!(check_package_name(name).is_ok());
+    }
+
+    #[test]
+    fn check_package_name_empty() {
+        assert_eq!(
+            check_package_name("").unwrap_err(),
+            InvalidPackageName
+        );
+    }
+
+    #[test]
+    fn check_package_name_overlong() {
+        assert_eq!(
+            check_package_name(&"x".repeat(200)).unwrap_err(),
+            InvalidPackageName
+        );
+    }
+
+    #[test]
+    fn check_package_name_untrimmed() {
+        assert_eq!(
+            check_package_name(&" x ").unwrap_err(),
+            InvalidPackageName
+        );
+    }
+
+    #[test]
+    fn check_package_name_consecutive_whitespace() {
+        assert_eq!(
+            check_package_name(&"x  x").unwrap_err(),
+            InvalidPackageName
+        );
+    }
+
+    #[test]
     fn check_project_name_ok() {
         let name = "acceptable_name";
         assert!(check_project_name(name).is_ok());
@@ -2563,6 +2601,55 @@ mod test {
         assert_eq!(
             core.get_project_revision(proj, 3).await.unwrap(),
             old_data
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_package_ok(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let owner = Owner(1);
+        let proj = Project(42);
+        let name = "Good Package Name";
+        let data = PackageData {
+            name: name.into(),
+            sort_key: 1,
+            description: "".into(),
+            releases: vec![]
+        };
+
+        let cdata = PackageDataPost {
+            description: data.description.clone(),
+            sort_key: -1
+        };
+
+        core.create_package(owner, proj, name, &cdata).await.unwrap();
+        // package was created if this succeeds
+        core.get_package_id(proj, name).await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages"))]
+    async fn create_package_bad_name(pool: Pool) {
+        let core = make_core(pool, fake_now);
+
+        let owner = Owner(1);
+        let proj = Project(42);
+        let name = "  -  bad  ";
+        let data = PackageData {
+            name: name.into(),
+            sort_key: 1,
+            description: "".into(),
+            releases: vec![]
+        };
+
+        let cdata = PackageDataPost {
+            description: data.description.clone(),
+            sort_key: 1
+        };
+
+        assert_eq!(
+            core.create_package(owner, proj, name, &cdata).await.unwrap_err(),
+            CreatePackageError::InvalidPackageName
         );
     }
 
