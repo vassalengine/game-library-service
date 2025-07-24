@@ -144,6 +144,9 @@ where
             .next_tuple()
             .ok_or(AppError::InternalError("empty path iter".into()))?;
 
+        let proj = urlencoding::decode(&proj)
+            .or(Err(AppError::NotFound))?;
+
         let core = get_state(parts, state).await;
 
         // look up the project id
@@ -169,6 +172,9 @@ where
             .await?
             .next_tuple()
             .ok_or(AppError::InternalError("empty path iter".into()))?;
+
+        let proj = urlencoding::decode(&proj)
+            .or(Err(AppError::NotFound))?;
 
         let pkg = urlencoding::decode(&pkg)
             .or(Err(AppError::NotFound))?;
@@ -202,6 +208,9 @@ where
             .await?
             .next_tuple()
             .ok_or(AppError::InternalError("empty path iter".into()))?;
+
+        let proj = urlencoding::decode(&proj)
+            .or(Err(AppError::NotFound))?;
 
         let pkg = urlencoding::decode(&pkg)
             .or(Err(AppError::NotFound))?;
