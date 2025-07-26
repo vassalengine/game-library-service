@@ -15,7 +15,7 @@ use crate::{
 
 pub async fn get_project_id<'e, E>(
     ex: E,
-    projname: &str
+    projslug: &str
 ) -> Result<Option<Project>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -25,9 +25,9 @@ where
             "
 SELECT project_id
 FROM projects
-WHERE name = ?
+WHERE slug = ?
             ",
-            projname
+            projslug
         )
         .fetch_optional(ex)
         .await?

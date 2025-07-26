@@ -168,7 +168,7 @@ WHERE package_id = ?
 
 pub async fn get_project_package_release_ids<'e, E>(
     ex: E,
-    projname: &str,
+    projslug: &str,
     pkgslug: &str,
     release: &str
 ) -> Result<Option<(Project, Package, Release)>, DatabaseError>
@@ -186,11 +186,11 @@ JOIN packages
 ON projects.project_id = packages.project_id
 JOIN releases
 ON packages.package_id = releases.package_id
-WHERE projects.name = ?
+WHERE projects.slug = ?
     AND packages.slug = ?
     AND releases.version = ?
             ",
-            projname,
+            projslug,
             pkgslug,
             release
         )

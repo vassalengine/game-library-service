@@ -106,7 +106,7 @@ WHERE project_id = ?
 
 pub async fn get_project_package_ids<'e, E>(
     ex: E,
-    projname: &str,
+    projslug: &str,
     pkgslug: &str
 ) -> Result<Option<(Project, Package)>, DatabaseError>
 where
@@ -120,10 +120,10 @@ SELECT packages.project_id,
 FROM projects
 JOIN packages
 ON projects.project_id = packages.project_id
-WHERE projects.name = ?
+WHERE projects.slug = ?
     AND packages.slug = ?
             ",
-            projname,
+            projslug,
             pkgslug
         )
         .fetch_optional(ex)
