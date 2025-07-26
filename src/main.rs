@@ -990,6 +990,7 @@ mod test {
                     flags: vec![
                         Flag {
                             project: "a_project".into(),
+                            slug: "a_project".into(),
                             flagged_by: "bob".into(),
                             flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
                             flag: FlagTag::Spam,
@@ -4582,6 +4583,7 @@ mod test {
                 flags: vec![
                     Flag {
                         project: "a_project".into(),
+                        slug: "a_project".into(),
                         flagged_by: "bob".into(),
                         flagged_at: "2023-10-30T18:53:53.056386142Z".into(),
                         flag: FlagTag::Spam,

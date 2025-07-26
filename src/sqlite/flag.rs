@@ -78,6 +78,7 @@ where
             "
 SELECT
     projects.name AS project,
+    projects.slug,
     flags.flag,
     flags.flagged_at,
     users.username AS flagged_by,

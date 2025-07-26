@@ -126,6 +126,7 @@ pub struct FileRow {
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct FlagRow {
     pub project: String,
+    pub slug: String,
     pub flag: FlagTag,
     pub flagged_at: i64,
     pub flagged_by: String,
