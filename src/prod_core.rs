@@ -1390,7 +1390,7 @@ impl TryFrom<FlagRow> for Flag {
         Ok(
             Flag {
                 project: r.project,
-                slug: r.slug,
+                slug: urlencoding::encode(&r.slug).into(),
                 flag: r.flag,
                 flagged_by: r.flagged_by,
                 flagged_at: nanos_to_rfc3339(r.flagged_at)?,
