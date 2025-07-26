@@ -176,6 +176,8 @@ where
         let proj = urlencoding::decode(&proj)
             .or(Err(AppError::NotFound))?;
 
+        let pkg = urlencoding::encode(&pkg);
+
         let core = get_state(parts, state).await;
 
         // look up the project, package ids
@@ -208,6 +210,8 @@ where
 
         let proj = urlencoding::decode(&proj)
             .or(Err(AppError::NotFound))?;
+
+        let pkg = urlencoding::encode(&pkg);
 
         let core = get_state(parts, state).await;
 
