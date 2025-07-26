@@ -16,29 +16,31 @@ VALUES
 INSERT INTO packages_revisions (
   package_id,
   name,
+  slug,
   sort_key,
   modified_at,
   modified_by
 )
 VALUES
-  (1, "a_package", 0, 1702137389180282477, 1),
-  (2, "b_package", 1, 1667750189180282477, 1),
-  (3, "c_package", 2, 1699286189180282477, 1),
-  (4, "d_package", 3, 1699286189180282477, 1)
+  (1, "a_package", "a_package", 0, 1702137389180282477, 1),
+  (2, "b_package", "b_package", 1, 1667750189180282477, 1),
+  (3, "c_package", "c_package", 2, 1699286189180282477, 1),
+  (4, "d_package", "d_package", 3, 1699286189180282477, 1)
 ;
 
 INSERT INTO packages (
   package_id,
   project_id,
   name,
+  slug,
   sort_key,
   created_at,
   created_by
 )
 VALUES
-  (1, 42, "a_package", 0, 1702137389180282477, 1),
-  (2, 42, "b_package", 1, 1667750189180282477, 1),
-  (3, 42, "c_package", 2, 1699286189180282477, 1)
+  (1, 42, "a_package", "a_package", 0, 1702137389180282477, 1),
+  (2, 42, "b_package", "b_package", 1, 1667750189180282477, 1),
+  (3, 42, "c_package", "c_package", 2, 1699286189180282477, 1)
 ;
 
 INSERT INTO releases_history (

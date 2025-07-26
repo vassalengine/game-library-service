@@ -25,7 +25,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     image,
-    input::{is_valid_package_name, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{is_valid_package_name, slug_for, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -266,7 +266,8 @@ where
     ) -> Result<(), CreatePackageError>
     {
         let now = self.now_nanos()?;
-        check_package_name(pkg)?;
+        check_package_name(&pkg_data.name)?;
+        check_package_slug(&pkg, &pkg_data.name)?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
@@ -670,6 +671,7 @@ where
         Ok(
             PackageData {
                 name: pr.name,
+                slug: pr.slug,
                 sort_key: pr.sort_key,
                 description: "".into(),
                 releases
@@ -1216,6 +1218,17 @@ pub struct InvalidPackageName;
 
 fn check_package_name(name: &str) -> Result<(), InvalidPackageName> {
     match is_valid_package_name(name) {
+        true => Ok(()),
+        false => Err(InvalidPackageName)
+    }
+}
+
+fn check_package_slug(
+    slug: &str,
+    name: &str
+) -> Result<(), InvalidPackageName>
+{
+    match slug == slug_for(name) {
         true => Ok(()),
         false => Err(InvalidPackageName)
     }
@@ -2268,6 +2281,7 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "a_package".into(),
+                        slug: "a_package".into(),
                         sort_key: 0,
                         description: "".into(),
                         releases: vec![
@@ -2303,12 +2317,14 @@ mod test {
                     },
                     PackageData {
                         name: "b_package".into(),
+                        slug: "b_package".into(),
                         sort_key: 1,
                         description: "".into(),
                         releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
+                        slug: "c_package".into(),
                         sort_key: 2,
                         description: "".into(),
                         releases: vec![
@@ -2360,6 +2376,7 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "a_package".into(),
+                        slug: "a_package".into(),
                         sort_key: 0,
                         description: "".into(),
                         releases: vec![
@@ -2395,12 +2412,14 @@ mod test {
                     },
                     PackageData {
                         name: "b_package".into(),
+                        slug: "b_package".into(),
                         sort_key: 1,
                         description: "".into(),
                         releases: vec![]
                     },
                     PackageData {
                         name: "c_package".into(),
+                        slug: "c_package".into(),
                         sort_key: 2,
                         description: "".into(),
                         releases: vec![]
@@ -2437,12 +2456,14 @@ mod test {
                 packages: vec![
                     PackageData {
                         name: "b_package".into(),
+                        slug: "b_package".into(),
                         sort_key: 1,
                         description: "".into(),
                         releases: vec![],
                     },
                     PackageData {
                         name: "c_package".into(),
+                        slug: "c_package".into(),
                         sort_key: 2,
                         description: "".into(),
                         releases: vec![],
@@ -2611,21 +2632,24 @@ mod test {
         let owner = Owner(1);
         let proj = Project(42);
         let name = "Good Package Name";
+        let slug = "Good-Package-Name";
         let data = PackageData {
             name: name.into(),
+            slug: slug.into(),
             sort_key: 1,
             description: "".into(),
             releases: vec![]
         };
 
         let cdata = PackageDataPost {
+            name: data.name.clone(),
             description: data.description.clone(),
             sort_key: -1
         };
 
-        core.create_package(owner, proj, name, &cdata).await.unwrap();
+        core.create_package(owner, proj, slug, &cdata).await.unwrap();
         // package was created if this succeeds
-        core.get_package_id(proj, name).await.unwrap();
+        core.get_package_id(proj, slug).await.unwrap();
     }
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
@@ -2637,12 +2661,14 @@ mod test {
         let name = "  -  bad  ";
         let data = PackageData {
             name: name.into(),
+            slug: name.into(),
             sort_key: 1,
             description: "".into(),
             releases: vec![]
         };
 
         let cdata = PackageDataPost {
+            name: data.name.into(),
             description: data.description.clone(),
             sort_key: 1
         };

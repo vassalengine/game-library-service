@@ -169,7 +169,7 @@ WHERE package_id = ?
 pub async fn get_project_package_release_ids<'e, E>(
     ex: E,
     projname: &str,
-    pkgname: &str,
+    pkgslug: &str,
     release: &str
 ) -> Result<Option<(Project, Package, Release)>, DatabaseError>
 where
@@ -187,11 +187,11 @@ ON projects.project_id = packages.project_id
 JOIN releases
 ON packages.package_id = releases.package_id
 WHERE projects.name = ?
-    AND packages.name = ?
+    AND packages.slug = ?
     AND releases.version = ?
             ",
             projname,
-            pkgname,
+            pkgslug,
             release
         )
         .fetch_optional(ex)

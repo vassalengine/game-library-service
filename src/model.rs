@@ -64,6 +64,7 @@ pub struct ReleaseData {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageData {
     pub name: String,
+    pub slug: String,
     pub sort_key: i64,
     pub description: String,
     pub releases: Vec<ReleaseData>

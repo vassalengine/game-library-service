@@ -576,6 +576,7 @@ mod test {
             packages: vec![
                 PackageData {
                     name: "a_package".into(),
+                    slug: "a_package".into(),
                     sort_key: 0,
                     description: "Some package".into(),
                     releases: vec![
@@ -3799,6 +3800,7 @@ mod test {
 
     async fn post_package_ok(rw: bool) -> Response {
         let pd = PackageDataPost {
+            name: "pkg".into(),
             sort_key: 4,
             description: "".into()
         };
@@ -3830,6 +3832,7 @@ mod test {
 
     async fn post_package_not_a_project(rw: bool) -> Response {
         let pd = PackageDataPost {
+            name: "pkg".into(),
             sort_key: 4,
             description: "".into()
         };
@@ -3861,6 +3864,7 @@ mod test {
 
     async fn post_package_unauth(rw: bool) -> Response {
         let pd = PackageDataPost {
+            name: "pkg".into(),
             sort_key: 4,
             description: "".into()
         };
@@ -3891,6 +3895,7 @@ mod test {
 
     async fn post_package_already_exists(rw: bool) -> Response {
         let pd = PackageDataPost {
+            name: "pkg".into(),
             sort_key: 4,
             description: "".into()
         };

@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::model::FlagTag;
@@ -17,12 +19,14 @@ impl<T: AsRef<str>> ConsecutiveWhitespace for T {
 
 #[derive(Clone, Debug, Deserialize, Default, Eq, PartialEq, Serialize)]
 pub struct MaybePackageDataPost {
+    pub name: String,
     pub sort_key: i64,
     pub description: String
 }
 
 impl MaybePackageDataPost {
     fn is_valid(&self) -> bool {
+        is_valid_package_name(&self.name) &&
         self.description.len() <= PACKAGE_DESCRIPTION_MAX_LENGTH &&
         self.description == self.description.trim()
     }
@@ -31,8 +35,7 @@ impl MaybePackageDataPost {
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "MaybePackageDataPost")]
 pub struct PackageDataPost {
-// TODO: display name?
-//    pub name: String,
+    pub name: String,
     pub sort_key: i64,
     pub description: String
 }
@@ -48,6 +51,7 @@ impl TryFrom<MaybePackageDataPost> for PackageDataPost {
         match m.is_valid() {
             true => Ok(
                 PackageDataPost {
+                    name: m.name,
                     sort_key: m.sort_key,
                     description: m.description
                 }
@@ -107,6 +111,29 @@ impl MaybePackageDataPatch {
             None => true
         }
     }
+}
+
+pub fn slug_for(s: &str) -> String {
+    static HYPHENS: Lazy<Regex> = Lazy::new(||
+        Regex::new("-+").expect("bad regex")
+    );
+
+    static SPECIAL: Lazy<Regex> = Lazy::new(||
+        Regex::new(r#"[:/?#\[\]@!$&'()*+,;=%"<>\\^`{}|]"#).expect("bad regex")
+    );
+
+    // replace whitespace with hyphens
+    let s = s.replace(char::is_whitespace, "-");
+    // remove all special characters
+    let s = SPECIAL.replace_all(&s, "");
+    // coalesce consecutive hyphens
+    let s = HYPHENS.replace_all(&s, "-");
+    // percent-encode non-ascii
+    let s = urlencoding::encode(&s);
+    // remove leading and trailing hyphens
+    s.trim_start_matches('-')
+        .trim_end_matches('-')
+        .into()
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -528,15 +555,47 @@ mod test {
     }
 
     #[test]
+    fn slug_for_no_change() {
+        assert_eq!(slug_for("abcd"), "abcd");
+    }
+
+    #[test]
+    fn slug_for_whitespace() {
+        assert_eq!(slug_for("x      x"), "x-x");
+    }
+
+    #[test]
+    fn slug_for_consecutive_hyphens() {
+        assert_eq!(slug_for("x----x---x"), "x-x-x");
+    }
+
+    #[test]
+    fn slug_for_trim_hyphens() {
+        assert_eq!(slug_for("-x-"), "x");
+    }
+
+    #[test]
+    fn slug_for_special() {
+        assert_eq!(slug_for("x/#?*x"), "xx");
+    }
+
+    #[test]
+    fn slug_for_percent_encoded() {
+        assert_eq!(slug_for("x💩x"), "x%F0%9F%92%A9x");
+    }
+
+    #[test]
     fn try_from_package_data_post_ok() {
         assert_eq!(
             PackageDataPost::try_from(
                 MaybePackageDataPost {
+                    name: "pkg".into(),
                     sort_key: 3,
                     description: "desc".into()
                 }
             ).unwrap(),
             PackageDataPost {
+                name: "pkg".into(),
                 sort_key: 3,
                 description: "desc".into()
             }

@@ -5,7 +5,7 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, PackageRow, map_unique},
-    input::{PackageDataPatch, PackageDataPost},
+    input::{PackageDataPatch, PackageDataPost, slug_for},
     model::{Owner, Package,  Project},
     sqlite::project::update_project_non_project_data
 };
@@ -24,6 +24,7 @@ where
 SELECT
     package_id,
     name,
+    slug,
     sort_key,
     created_at
 FROM packages
@@ -54,6 +55,7 @@ where
 SELECT
     packages_history.package_id AS "package_id!",
     packages_revisions.name AS "name!",
+    packages_revisions.slug AS "slug!",
     packages_revisions.sort_key AS "sort_key!",
     packages_history.created_at AS "created_at!"
 FROM packages_history
@@ -80,7 +82,7 @@ ORDER BY sort_key ASC
 pub async fn get_package_id<'e, E>(
     ex: E,
     proj: Project,
-    pkgname: &str
+    pkgslug: &str
 ) -> Result<Option<Package>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -91,10 +93,10 @@ where
 SELECT package_id
 FROM packages
 WHERE project_id = ?
-    AND name = ?
+    AND slug = ?
             ",
             proj.0,
-            pkgname
+            pkgslug
         )
         .fetch_optional(ex)
         .await?
@@ -135,7 +137,8 @@ async fn create_package_row<'e, E>(
     owner: Owner,
     proj: Project,
     pkg: Package,
-    pkgname: &str,
+    name: &str,
+    slug: &str,
     sort_key: i64,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -148,15 +151,17 @@ INSERT INTO packages (
     package_id,
     project_id,
     name,
+    slug,
     sort_key,
     created_at,
     created_by
 )
-VALUES (?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?)
         ",
         pkg.0,
         proj.0,
-        pkgname,
+        name,
+        slug,
         sort_key,
         now,
         owner.0
@@ -201,7 +206,8 @@ async fn create_package_revision_row<'e, E>(
     ex: E,
     owner: Owner,
     pkg: Package,
-    pkg_name: &str,
+    name: &str,
+    slug: &str,
     sort_key: i64,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -213,14 +219,16 @@ where
 INSERT INTO packages_revisions (
     package_id,
     name,
+    slug,
     sort_key,
     modified_at,
     modified_by
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
         ",
         pkg.0,
-        pkg_name,
+        name,
+        slug,
         sort_key,
         now,
         owner.0
@@ -235,7 +243,7 @@ pub async fn create_package<'a, A>(
     conn: A,
     owner: Owner,
     proj: Project,
-    pkgname: &str,
+    slug: &str,
     pkg_data: &PackageDataPost,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -252,7 +260,8 @@ where
         &mut *tx,
         owner,
         pkg,
-        pkgname,
+        &pkg_data.name,
+        slug,
         sort_key,
         now
     ).await?;
@@ -262,7 +271,8 @@ where
         owner,
         proj,
         pkg,
-        pkgname,
+        &pkg_data.name,
+        slug,
         sort_key,
         now
     ).await?;
@@ -290,7 +300,11 @@ where
     let mut qbs = qb.separated(", ");
 
     if let Some(name) = &pd.name {
-        qbs.push("name = ").push_bind_unseparated(name);
+        qbs
+            .push("name = ")
+            .push_bind_unseparated(name)
+            .push("slug = ")
+            .push_bind_unseparated(slug_for(name));
     }
 
     if let Some(sort_key) = &pd.sort_key {
@@ -325,6 +339,7 @@ where
 INSERT INTO packages_revisions (
     package_id,
     name,
+    slug,
     sort_key,
     modified_at,
     modified_by
@@ -332,6 +347,7 @@ INSERT INTO packages_revisions (
 SELECT
     package_id,
     name,
+    slug,
     sort_key,
     ? AS modified_at,
     ? AS modified_by
@@ -476,18 +492,21 @@ mod test {
                 PackageRow {
                     package_id: 1,
                     name: "a_package".into(),
+                    slug: "a_package".into(),
                     sort_key: 0,
                     created_at: 1702137389180282477
                 },
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
+                    slug: "b_package".into(),
                     sort_key: 1,
                     created_at: 1667750189180282477
                 },
                 PackageRow {
                     package_id: 3,
                     name: "c_package".into(),
+                    slug: "c_package".into(),
                     sort_key: 2,
                     created_at: 1699286189180282477
                 }
@@ -523,6 +542,7 @@ mod test {
                 PackageRow {
                     package_id: 2,
                     name: "b_package".into(),
+                    slug: "b_package".into(),
                     sort_key: 1,
                     created_at: 1667750189180282477
                 }
@@ -566,6 +586,7 @@ mod test {
             proj,
             "newpkg",
             &PackageDataPost {
+                name: "newpkg".into(),
                 sort_key: 4,
                 description: "".into()
             },
@@ -575,6 +596,7 @@ mod test {
         let pr = PackageRow {
             package_id: 5,
             name: "newpkg".into(),
+            slug: "newpkg".into(),
             sort_key: 4,
             created_at: 1699804206419538067
         };
@@ -605,6 +627,7 @@ mod test {
                     Project(0),
                     "newpkg",
                     &PackageDataPost {
+                        name: "newpkg".into(),
                         sort_key: 4,
                         description: "".into()
                     },
@@ -624,6 +647,7 @@ mod test {
                 Project(42),
                 "a_package",
                 &PackageDataPost {
+                    name: "a_package".into(),
                     sort_key: 4,
                     description: "".into()
                 },
@@ -641,18 +665,21 @@ mod test {
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                slug: "a_package".into(),
                 sort_key: 0,
                 created_at: 1702137389180282477
             },
             PackageRow {
                 package_id: 2,
                 name: "b_package".into(),
+                slug: "b_package".into(),
                 sort_key: 1,
                 created_at: 1667750189180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                slug: "c_package".into(),
                 sort_key: 2,
                 created_at: 1699286189180282477
             }
@@ -689,18 +716,21 @@ mod test {
             PackageRow {
                 package_id: 2,
                 name: "b_package".into(),
+                slug: "b_package".into(),
                 sort_key: 1,
                 created_at: 1667750189180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                slug: "c_package".into(),
                 sort_key: 2,
                 created_at: 1699286189180282477
             },
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                slug: "a_package".into(),
                 sort_key: 4,
                 created_at: 1702137389180282477
             }
@@ -735,18 +765,21 @@ mod test {
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                slug: "a_package".into(),
                 sort_key: 0,
                 created_at: 1702137389180282477
             },
             PackageRow {
                 package_id: 2,
                 name: "b_package".into(),
+                slug: "b_package".into(),
                 sort_key: 1,
                 created_at: 1667750189180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                slug: "c_package".into(),
                 sort_key: 2,
                 created_at: 1699286189180282477
             }
@@ -779,12 +812,14 @@ mod test {
             PackageRow {
                 package_id: 1,
                 name: "a_package".into(),
+                slug: "a_package".into(),
                 sort_key: 0,
                 created_at: 1702137389180282477
             },
             PackageRow {
                 package_id: 3,
                 name: "c_package".into(),
+                slug: "c_package".into(),
                 sort_key: 2,
                 created_at: 1699286189180282477
             }
