@@ -128,8 +128,6 @@ pub fn slug_for(s: &str) -> String {
     let s = SPECIAL.replace_all(&s, "");
     // coalesce consecutive hyphens
     let s = HYPHENS.replace_all(&s, "-");
-    // percent-encode non-ascii
-    let s = urlencoding::encode(&s);
     // remove leading and trailing hyphens
     s.trim_start_matches('-')
         .trim_end_matches('-')
@@ -580,8 +578,8 @@ mod test {
     }
 
     #[test]
-    fn slug_for_percent_encoded() {
-        assert_eq!(slug_for("x💩x"), "x%F0%9F%92%A9x");
+    fn slug_for_nonascii() {
+        assert_eq!(slug_for("x💩x"), "x💩x");
     }
 
     #[test]

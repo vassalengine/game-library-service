@@ -671,7 +671,7 @@ where
         Ok(
             PackageData {
                 name: pr.name,
-                slug: pr.slug,
+                slug: urlencoding::encode(&pr.slug).into(),
                 sort_key: pr.sort_key,
                 description: "".into(),
                 releases
