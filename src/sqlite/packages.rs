@@ -107,7 +107,7 @@ WHERE project_id = ?
 pub async fn get_project_package_ids<'e, E>(
     ex: E,
     projname: &str,
-    pkgname: &str
+    pkgslug: &str
 ) -> Result<Option<(Project, Package)>, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -121,10 +121,10 @@ FROM projects
 JOIN packages
 ON projects.project_id = packages.project_id
 WHERE projects.name = ?
-    AND packages.name = ?
+    AND packages.slug = ?
             ",
             projname,
-            pkgname
+            pkgslug
         )
         .fetch_optional(ex)
         .await?
