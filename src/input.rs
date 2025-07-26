@@ -392,6 +392,7 @@ pub struct GameDataPost {
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeProjectDataPost {
+    pub name: String,
     pub description: String,
     pub tags: Vec<String>,
     pub game: GameDataPost,
@@ -426,6 +427,7 @@ impl MaybeProjectDataPost {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "MaybeProjectDataPost")]
 pub struct ProjectDataPost {
+    pub name: String,
     pub description: String,
     pub tags: Vec<String>,
     pub game: GameDataPost,
@@ -445,6 +447,7 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
         if m.is_valid() {
             Ok(
                 ProjectDataPost{
+                    name: m.name,
                     description: m.description,
                     tags: m.tags,
                     game: m.game,
@@ -737,6 +740,7 @@ mod test {
         assert_eq!(
             ProjectDataPost::try_from(
                 MaybeProjectDataPost {
+                    name: "name".into(),
                     description: "description".into(),
                     tags: vec![],
                     game: GameDataPost {
@@ -752,6 +756,7 @@ mod test {
                 }
             ).unwrap(),
             ProjectDataPost {
+                name: "name".into(),
                 description: "description".into(),
                 tags: vec![],
                 game: GameDataPost {
@@ -914,6 +919,7 @@ mod test {
                 "players": { "min": null, "max": null },
                 "length": { "min": null, "max": null }
             },
+            "name": "",
             "description": "",
             "tags": [],
             "readme": ""
@@ -922,6 +928,7 @@ mod test {
         assert_eq!(
             serde_json::from_str::<MaybeProjectDataPost>(json).unwrap(),
             MaybeProjectDataPost {
+                name: "".into(),
                 description: "".into(),
                 tags: vec![],
                 game: GameDataPost {

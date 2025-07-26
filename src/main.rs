@@ -517,6 +517,7 @@ mod test {
     static PROJECT_SUMMARY_A: Lazy<ProjectSummary> = Lazy::new(||
         ProjectSummary {
             name: "project_a".into(),
+            slug: "project_a".into(),
             description: "whatever".into(),
             revision: 1,
             created_at: "2024-03-29T16:51:08Z".into(),
@@ -536,6 +537,7 @@ mod test {
     static PROJECT_SUMMARY_B: Lazy<ProjectSummary> = Lazy::new(||
         ProjectSummary {
             name: "project_b".into(),
+            slug: "project_b".into(),
             description: "la la la".into(),
             revision: 1,
             created_at: "2024-03-29T17:00:23Z".into(),
@@ -557,6 +559,7 @@ mod test {
     static EIA_PROJECT_DATA: Lazy<ProjectData> = Lazy::new(||
         ProjectData {
             name: "eia".into(),
+            slug: "eia".into(),
             description: "A module for Empires in Arms".into(),
             revision: 1,
             created_at: "2023-10-26T00:00:00.000000000Z".into(),
@@ -2051,6 +2054,7 @@ mod test {
 
     async fn post_project_ok(rw: bool) -> Response {
         let proj_data = ProjectDataPost {
+            name: "name".into(),
             description: "A module for Empires in Arms".into(),
             tags: vec![],
             game: GameDataPost {
@@ -2092,6 +2096,7 @@ mod test {
 
     async fn post_project_unauth(rw: bool) -> Response {
         let proj_data = ProjectDataPost {
+            name: "name".into(),
             description: "A module for Empires in Arms".into(),
             tags: vec![],
             game: GameDataPost {

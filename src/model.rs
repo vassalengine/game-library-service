@@ -79,6 +79,7 @@ pub struct GalleryImage {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectData {
     pub name: String,
+    pub slug: String,
     pub description: String,
     pub revision: i64,
     pub created_at: String,
@@ -95,6 +96,7 @@ pub struct ProjectData {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProjectSummary {
     pub name: String,
+    pub slug: String,
     pub description: String,
     pub revision: i64,
     pub created_at: String,

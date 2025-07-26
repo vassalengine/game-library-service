@@ -172,7 +172,9 @@ where
     ) -> Result<(), CreateProjectError>
     {
         let now = self.now_nanos()?;
-        check_project_name(proj)?;
+
+        check_project_name(&proj_data.name)?;
+        check_project_slug(proj, &proj_data.name)?;
 
         let proj_data = ProjectDataPost {
             game: GameDataPost{
@@ -713,6 +715,7 @@ where
         Ok(
             ProjectData {
                 name: proj_row.name,
+                slug: urlencoding::encode(&proj_row.slug).into(),
                 description: proj_row.description,
                 revision: proj_row.revision,
                 created_at: nanos_to_rfc3339(proj_row.created_at)?,
@@ -1293,6 +1296,17 @@ fn check_project_name(name: &str) -> Result<(), InvalidProjectName> {
     }
 }
 
+fn check_project_slug(
+    slug: &str,
+    name: &str
+) -> Result<(), InvalidProjectName>
+{
+    match slug == slug_for(name) {
+        true => Ok(()),
+        false => Err(InvalidProjectName)
+    }
+}
+
 fn split_title_sort_key(title: &str) -> (&str, Option<&str>) {
     match title.split_once(' ') {
         // Probably Spanish or French, "a" is not an article
@@ -1350,6 +1364,7 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
         Ok(
             ProjectSummary {
                 name: r.name,
+                slug: r.slug,
                 description: r.description,
                 revision: r.revision,
                 created_at: nanos_to_rfc3339(r.created_at)?,
@@ -1442,6 +1457,7 @@ mod test {
     fn fake_project_summary(name: &str) -> ProjectSummary {
         ProjectSummary {
             name: name.into(),
+            slug: name.into(),
             description: "".into(),
             revision: 1,
             created_at: "1970-01-01T00:00:00Z".into(),
@@ -2262,6 +2278,7 @@ mod test {
             core.get_project(Project(42)).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
+                slug: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067Z".into(),
@@ -2357,6 +2374,7 @@ mod test {
             core.get_project_revision(Project(42), 3).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
+                slug: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 3,
                 created_at: "2023-11-12T15:50:06.419538067Z".into(),
@@ -2437,6 +2455,7 @@ mod test {
             core.get_project_revision(Project(42), 1).await.unwrap(),
             ProjectData {
                 name: "test_game".into(),
+                slug: "test_game".into(),
                 description: "Brian's Trademarked Game of Being a Test Case".into(),
                 revision: 1,
                 created_at: "2023-11-12T15:50:06.419538067Z".into(),
@@ -2482,6 +2501,7 @@ mod test {
         let name = "newproj";
         let data = ProjectData {
             name: name.into(),
+            slug: name.into(),
             description: "A New Game".into(),
             revision: 1,
             created_at: NOW.into(),
@@ -2503,6 +2523,7 @@ mod test {
         };
 
         let cdata = ProjectDataPost {
+            name: name.into(),
             description: data.description.clone(),
             tags: vec![],
             game: GameDataPost {
@@ -2530,6 +2551,7 @@ mod test {
         let name = "  -  bad  ";
         let data = ProjectData {
             name: name.into(),
+            slug: name.into(),
             description: "A New Game".into(),
             revision: 1,
             created_at: NOW.into(),
@@ -2551,6 +2573,7 @@ mod test {
         };
 
         let cdata = ProjectDataPost {
+            name: name.into(),
             description: data.description.clone(),
             tags: vec![],
             game: GameDataPost {
@@ -2578,6 +2601,7 @@ mod test {
         let name = "test_game";
         let new_data = ProjectData {
             name: name.into(),
+            slug: name.into(),
             description: "new description".into(),
             revision: 4,
             created_at: "2023-11-12T15:50:06.419538067Z".into(),

@@ -86,14 +86,14 @@ async fn create_project_row<'e, E>(
     ex: E,
     user: User,
     proj: Project,
-    proj_name: &str,
+    slug: &str,
     proj_data: &ProjectDataPost,
     now: i64
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let proj_norm = normalize_project_name(proj_name);
+    let proj_norm = normalize_project_name(&proj_data.name);
 
     sqlx::query!(
         "
@@ -101,6 +101,7 @@ INSERT INTO projects (
     project_id,
     name,
     normalized_name,
+    slug,
     created_at,
     description,
     game_title,
@@ -117,11 +118,12 @@ INSERT INTO projects (
     modified_by,
     revision
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ",
         proj.0,
-        proj_name,
+        proj_data.name,
         proj_norm,
+        slug,
         now,
         proj_data.description,
         proj_data.game.title,
@@ -149,6 +151,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 struct ProjectDataRow<'a> {
     project_id: i64,
     name: &'a str,
+    slug: &'a str,
     description: &'a str,
     game_title: &'a str,
     game_title_sort: &'a str,
@@ -175,6 +178,7 @@ where
 INSERT INTO projects_data (
     project_id,
     name,
+    slug,
     description,
     game_title,
     game_title_sort,
@@ -187,11 +191,12 @@ INSERT INTO projects_data (
     readme,
     image
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING project_data_id
             ",
             row.project_id,
             row.name,
+            row.slug,
             row.description,
             row.game_title,
             row.game_title_sort,
@@ -251,7 +256,7 @@ VALUES (?, ?, ?, ?, ?)
 pub async fn create_project<'a, A>(
     conn: A,
     owner: User,
-    name: &str,
+    slug: &str,
     pd: &ProjectDataPost,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -266,7 +271,8 @@ where
     // create project data
     let dr = ProjectDataRow {
         project_id: proj.0,
-        name,
+        name: &pd.name,
+        slug,
         description: &pd.description,
         game_title: &pd.game.title,
         game_title_sort: &pd.game.title_sort_key,
@@ -294,7 +300,7 @@ where
     create_project_revision_row(&mut *tx, &rr).await?;
 
     // create project
-    create_project_row(&mut *tx, owner, proj, name, pd, now).await?;
+    create_project_row(&mut *tx, owner, proj, slug, pd, now).await?;
 
     // associate new owner with the project
     add_owner(&mut *tx, owner, proj).await?;
@@ -403,6 +409,7 @@ where
     let dr = ProjectDataRow {
         project_id: proj.0,
         name: &row.name,
+        slug: &row.slug,
         description: pd.description.as_ref().unwrap_or(&row.description),
         game_title: pd.game.title.as_ref().unwrap_or(&row.game_title),
         game_title_sort: pd.game.title_sort_key.as_ref().unwrap_or(&row.game_title_sort),
@@ -450,6 +457,7 @@ where
 SELECT
     project_id,
     name,
+    slug,
     description,
     revision,
     created_at,
@@ -490,6 +498,7 @@ where
 SELECT
     projects_revisions.project_id,
     projects_data.name,
+    projects_data.slug,
     projects_data.description,
     projects_revisions.revision,
     projects_history.created_at,
@@ -626,6 +635,7 @@ mod test {
         ProjectRow {
             project_id: 1,
             name: "test_game".into(),
+            slug: "test_game".into(),
             description: "Brian's Trademarked Game of Being a Test Case".into(),
             revision: 1,
             created_at: 1699804206419538067,
@@ -646,6 +656,7 @@ mod test {
 
     static CREATE_DATA: Lazy<ProjectDataPost> = Lazy::new(||
         ProjectDataPost {
+            name: CREATE_ROW.name.clone(),
             description: CREATE_ROW.description.clone(),
             tags: vec![],
             game: GameDataPost {
@@ -919,6 +930,7 @@ mod test {
         ProjectRow {
             project_id: 42,
             name: "test_game".into(),
+            slug: "test_game".into(),
             description: "Brian's Trademarked Game of Being a Test Case".into(),
             revision: 3,
             created_at: 1699804206419538067,
@@ -941,6 +953,7 @@ mod test {
         ProjectRow {
             project_id: 42,
             name: "test_game".into(),
+            slug: "test_game".into(),
             description: "Brian's Trademarked Game of Being a Test Case".into(),
             revision: 1,
             created_at: 1699804206419538067,

@@ -50,6 +50,7 @@ pub struct ProjectSummaryRow {
     pub rank: f64,
     pub project_id: i64,
     pub name: String,
+    pub slug: String,
     pub description: String,
     pub revision: i64,
     pub created_at: i64,
@@ -69,6 +70,7 @@ pub struct ProjectSummaryRow {
 pub struct ProjectRow {
     pub project_id: i64,
     pub name: String,
+    pub slug: String,
     pub description: String,
     pub revision: i64,
     pub created_at: i64,

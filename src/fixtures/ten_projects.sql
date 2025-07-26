@@ -18,6 +18,7 @@ INSERT INTO projects_data (
   project_data_id,
   project_id,
   name,
+  slug,
   description,
   game_title,
   game_title_sort,
@@ -31,16 +32,16 @@ INSERT INTO projects_data (
   image
 )
 VALUES
-  (1, 1, "a", "a", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (2, 2, "b", "b", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (3, 3, "c", "c", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (4, 4, "d", "d", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (5, 5, "e", "e", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (6, 6, "f", "f", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (7, 7, "g", "g", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (8, 8, "h", "h", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (9, 9, "i", "i", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (10, 10, "j", "j", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL);
+  (1, 1, "a", "a", "a", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (2, 2, "b", "b", "b", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (3, 3, "c", "c", "c",  "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (4, 4, "d", "d", "d", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (5, 5, "e", "e", "e", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (6, 6, "f", "f", "f", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (7, 7, "g", "g", "g", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (8, 8, "h", "h", "h", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (9, 9, "i", "i", "i", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (10, 10, "j", "j", "j","", "", "", "", NULL, NULL, NULL, NULL, "", NULL);
 
 INSERT INTO projects_revisions (
   project_id,
@@ -65,6 +66,7 @@ INSERT INTO projects (
   project_id,
   name,
   normalized_name,
+  slug,
   created_at,
   description,
   game_title,
@@ -82,13 +84,13 @@ INSERT INTO projects (
   revision
 )
 VALUES
-  (1, "a", "a", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 1, 1, 1),
-  (2, "b", "b", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 2, 1, 1),
-  (3, "c", "c", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 3, 1, 1),
-  (4, "d", "d", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 4, 1, 1),
-  (5, "e", "e", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 5, 1, 1),
-  (6, "f", "f", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 6, 1, 1),
-  (7, "g", "g", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 7, 1, 1),
-  (8, "h", "h", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 8, 1, 1),
-  (9, "i", "i", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 9, 1, 1),
-  (10, "j", "j", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 10, 1, 1);
+  (1, "a", "a", "a", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 1, 1, 1),
+  (2, "b", "b", "b", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 2, 1, 1),
+  (3, "c", "c", "c", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 3, 1, 1),
+  (4, "d", "d", "d", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 4, 1, 1),
+  (5, "e", "e", "e", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 5, 1, 1),
+  (6, "f", "f", "f", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 6, 1, 1),
+  (7, "g", "g", "g", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 7, 1, 1),
+  (8, "h", "h", "h", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 8, 1, 1),
+  (9, "i", "i", "i", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 9, 1, 1),
+  (10, "j", "j", "j", 0, "", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 10, 1, 1);
