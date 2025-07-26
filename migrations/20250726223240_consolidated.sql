@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS packages_history (
 CREATE TABLE IF NOT EXISTS packages_revisions (
   package_id INTEGER NOT NULL,
   name TEXT NOT NULL,
+  slug TEXT NOT NULL,
   sort_key INTEGER NOT NULL,
   modified_at INTEGER NOT NULL,
   modified_by INTEGER NOT NULL,
@@ -108,6 +109,7 @@ CREATE TABLE IF NOT EXISTS packages (
   package_id INTEGER PRIMARY KEY NOT NULL, 
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
+  slug TEXT NOT NULL,
   sort_key INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
   created_by INTEGER NOT NULL,
@@ -115,6 +117,7 @@ CREATE TABLE IF NOT EXISTS packages (
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(created_by) REFERENCES users(user_id),
   UNIQUE(project_id, name),
+  UNIQUE(project_id, slug),
   UNIQUE(project_id, sort_key)
 );
 
@@ -177,6 +180,7 @@ CREATE TABLE IF NOT EXISTS projects_data (
   project_data_id INTEGER PRIMARY KEY NOT NULL CHECK(project_data_id >= 0),
   project_id INTEGER NOT NULL,
   name TEXT NOT NULL,
+  slug TEXT NOT NULL,
   description TEXT NOT NULL,
   game_title TEXT NOT NULL,
   game_title_sort TEXT NOT NULL,
@@ -210,6 +214,7 @@ CREATE TABLE IF NOT EXISTS projects (
   project_id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
+  slug TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   modified_at INTEGER NOT NULL,
   modified_by INTEGER NOT NULL,
@@ -229,6 +234,7 @@ CREATE TABLE IF NOT EXISTS projects (
   CHECK(game_length_max >= game_length_min OR game_length_min IS NULL OR game_length_max IS NULL),
   UNIQUE(name),
   UNIQUE(normalized_name),
+  UNIQUE(slug),
   FOREIGN KEY(project_id) REFERENCES projects_history(project_id),
   FOREIGN KEY(project_id, image) REFERENCES images(project_id, filename),
   FOREIGN KEY(modified_by) REFERENCES users(user_id),
