@@ -18,6 +18,7 @@ DELETE FROM packages WHERE project_id = $proj_id;
 DELETE FROM packages_revisions WHERE package_id IN (SELECT package_id FROM packages_history WHERE project_id = $proj_id);
 DELETE FROM packages_history WHERE project_id = $proj_id;
 UPDATE projects SET image = NULL WHERE project_id = $proj_id;
+UPDATE projects_data SET image = NULL WHERE project_id = $proj_id;
 DELETE FROM images WHERE project_id = $proj_id;
 DELETE FROM projects WHERE project_id = $proj_id;
 DELETE FROM projects_revisions WHERE project_id = $proj_id;
