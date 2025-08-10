@@ -753,27 +753,23 @@ where
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
+        let mf = match sort_by {
+            SortBy::CreationTime |
+            SortBy::ModificationTime => MidField::Timestamp(
+                rfc3339_to_nanos(field)
+                    .map_err(|_| GetProjectsError::MalformedQuery)?
+            ),
+            _ => MidField::Text(field)
+        };
+
         Ok(
-            match sort_by {
-                SortBy::CreationTime |
-                SortBy::ModificationTime => self.db.get_projects_mid_window(
-                    sort_by,
-                    dir,
-                    MidField::Timestamp(
-                        rfc3339_to_nanos(field)
-                            .map_err(|_| GetProjectsError::MalformedQuery)?
-                    ),
-                    id,
-                    limit
-                ).await,
-                _ => self.db.get_projects_mid_window(
-                    sort_by,
-                    dir,
-                    MidField::Text(field),
-                    id,
-                    limit
-                ).await
-            }?
+            self.db.get_projects_mid_window(
+                sort_by,
+                dir,
+                mf,
+                id,
+                limit
+            ).await?
         )
     }
 
@@ -787,40 +783,28 @@ where
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
+        let qmf = match sort_by {
+            SortBy::CreationTime |
+            SortBy::ModificationTime => QueryMidField::Timestamp(
+                rfc3339_to_nanos(field)
+                    .map_err(|_| GetProjectsError::MalformedQuery)?
+            ),
+            SortBy::Relevance => QueryMidField::Weight(
+                field.parse::<f64>()
+                    .map_err(|_| GetProjectsError::MalformedQuery)?
+            ),
+            _ => QueryMidField::Text(field)
+        };
+
         Ok(
-            match sort_by {
-                SortBy::CreationTime |
-                SortBy::ModificationTime => self.db.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir,
-                    QueryMidField::Timestamp(
-                        rfc3339_to_nanos(field)
-                            .map_err(|_| GetProjectsError::MalformedQuery)?
-                    ),
-                    id,
-                    limit
-                ).await,
-                SortBy::Relevance => self.db.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir,
-                    QueryMidField::Weight(
-                        field.parse::<f64>()
-                            .map_err(|_| GetProjectsError::MalformedQuery)?
-                    ),
-                    id,
-                    limit
-                ).await,
-                _ => self.db.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir,
-                    QueryMidField::Text(field),
-                    id,
-                    limit
-                ).await
-            }?
+            self.db.get_projects_query_mid_window(
+                query,
+                sort_by,
+                dir,
+                qmf,
+                id,
+                limit
+            ).await?
         )
     }
 
