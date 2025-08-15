@@ -12,8 +12,7 @@ impl<T: AsRef<str>> ConsecutiveWhitespace for T {
     fn has_consecutive_whitespace(&self) -> bool {
         self.as_ref().chars()
             .zip(self.as_ref().chars().skip(1))
-            .find(|(a, b)| a.is_whitespace() && b.is_whitespace())
-            .is_some()
+            .any(|(a, b)| a.is_whitespace() && b.is_whitespace())
     }
 }
 
