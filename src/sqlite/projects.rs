@@ -343,6 +343,11 @@ mod test {
         assert_eq!(get_projects_count(&pool).await.unwrap(), 2);
     }
 
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_query_count_ok(pool: Pool) {
+        assert_eq!(get_projects_query_count(&pool, "Another").await.unwrap(), 1);
+    }
+
     #[track_caller]
     fn assert_projects_window(
         act: Result<Vec<ProjectSummaryRow>, DatabaseError>,
