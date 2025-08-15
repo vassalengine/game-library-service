@@ -269,7 +269,7 @@ where
     {
         let now = self.now_nanos()?;
         check_package_name(&pkg_data.name)?;
-        check_package_slug(&pkg, &pkg_data.name)?;
+        check_package_slug(pkg, &pkg_data.name)?;
         Ok(self.db.create_package(owner, proj, pkg, pkg_data, now).await?)
     }
 
