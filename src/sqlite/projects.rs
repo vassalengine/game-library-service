@@ -7,7 +7,7 @@ use sqlx::{
 use std::fmt;
 
 use crate::{
-    db::{DatabaseError, ProjectSummaryRow, WhereField},
+    db::{DatabaseError, Facet, ProjectSummaryRow},
     pagination::{Direction, SortBy}
 };
 
@@ -25,54 +25,54 @@ impl fmt::Display for WhereValue<'_> {
 */
 
 trait JoinExt {
-    fn push_join(&mut self, wf: &WhereField) -> &mut Self;
+    fn push_join(&mut self, wf: &Facet) -> &mut Self;
 }
 
 impl<'args> JoinExt for QueryBuilder<'args, Sqlite> {
-    fn push_join(&mut self, wf: &WhereField) -> &mut Self {
+    fn push_join(&mut self, wf: &Facet) -> &mut Self {
         match wf {
-            WhereField::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
-            WhereField::Owner(_) => self.push(" JOIN owners ON projects.project_id = owners.project_id JOIN users ON owners.user_id = users.user_id "),
-            WhereField::Player(_) => self.push(" JOIN players ON projects.project_id = players.project_id JOIN users ON owners.user_id = users.user_id "),
+            Facet::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
+            Facet::Owner(_) => self.push(" JOIN owners ON projects.project_id = owners.project_id JOIN users ON owners.user_id = users.user_id "),
+            Facet::Player(_) => self.push(" JOIN players ON projects.project_id = players.project_id JOIN users ON owners.user_id = users.user_id "),
             _ => self
         }
     }
 }
 
 trait WhereExt<'args> {
-    fn push_where(&mut self, wf: &'args WhereField) -> &mut Self;
+    fn push_where(&mut self, wf: &'args Facet) -> &mut Self;
 }
 
 impl<'qb, 'args, Sep> WhereExt<'args> for Separated<'qb, 'args, Sqlite, Sep>
 where
     Sep: std::fmt::Display
 {
-    fn push_where(&mut self, wf: &'args WhereField) -> &mut Self
+    fn push_where(&mut self, wf: &'args Facet) -> &mut Self
     {
         match wf {
-            WhereField::Publisher(p) =>
+            Facet::Publisher(p) =>
                 self.push(" projects.game_publisher == ")
                     .push_bind_unseparated(p),
-            WhereField::Year(y) =>
+            Facet::Year(y) =>
                 self.push(" projects.game_year == ")
                     .push_bind_unseparated(y),
-            WhereField::PlayersMin(m) =>
+            Facet::PlayersMin(m) =>
                 self.push(" projects.game_players_min == ")
                     .push_bind_unseparated(m),
-            WhereField::PlayersMax(m) =>
+            Facet::PlayersMax(m) =>
                 self.push(" projects.game_players_max == ")
                     .push_bind_unseparated(m),
-            WhereField::LengthMin(m) =>
+            Facet::LengthMin(m) =>
                 self.push(" projects.game_length_min == ")
                     .push_bind_unseparated(m),
-            WhereField::LengthMax(m) =>
+            Facet::LengthMax(m) =>
                 self.push(" projects.game_length_max == ")
                     .push_bind_unseparated(m),
-            WhereField::Tag(t) =>
+            Facet::Tag(t) =>
                 self.push(" tags.tag == ")
                     .push_bind_unseparated(t),
-            WhereField::Owner(u) |
-            WhereField::Player(u) =>
+            Facet::Owner(u) |
+            Facet::Player(u) =>
                 self.push(" users.username == ")
                     .push_bind_unseparated(u)
         }
@@ -122,9 +122,9 @@ WHERE tag = ?
 
 // TODO: rename wheres to restr?
 
-pub async fn get_projects_where_count<'e, E>(
+pub async fn get_projects_facet_count<'e, E>(
     ex: E,
-    wheres: &[WhereField]
+    wheres: &[Facet]
 ) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -180,7 +180,7 @@ WHERE projects_fts MATCH ?
 }
 
 /*
-pub async fn get_projects_where_query_count<'e, E>(
+pub async fn get_projects_facet_query_count<'e, E>(
     ex: E,
     wheres: &[(&str, &str, &WhereValue<'_>)],
     query: &str,
@@ -304,9 +304,9 @@ where
     )
 }
 
-pub async fn get_projects_where_end_window<'e, E>(
+pub async fn get_projects_facet_end_window<'e, E>(
     ex: E,
-    wheres: &[WhereField],
+    wheres: &[Facet],
     sort_by: SortBy,
     dir: Direction,
     limit: u32
@@ -383,7 +383,7 @@ WHERE projects_fts MATCH
 }
 
 /*
-pub async fn get_projects_where_query_end_window<'e, E>(
+pub async fn get_projects_facet_query_end_window<'e, E>(
     ex: E,
     wheres: &[(&str, &str, &WhereValue<'_>)],
     query: &str,
@@ -466,9 +466,9 @@ where
     )
 }
 
-pub async fn get_projects_where_mid_window<'e, 'f, E, F>(
+pub async fn get_projects_facet_mid_window<'e, 'f, E, F>(
     ex: E,
-    wheres: &'f [WhereField],
+    wheres: &'f [Facet],
     sort_by: SortBy,
     dir: Direction,
     field: &'f F,
@@ -577,7 +577,7 @@ JOIN (
 }
 
 /*
-pub async fn get_projects_where_query_mid_window<'e, 'f, E, F>(
+pub async fn get_projects_facet_query_mid_window<'e, 'f, E, F>(
     ex: E,
     wheres: &[(&str, &str, &'f WhereValue<'_>)],
     query: &'f str,
@@ -679,63 +679,63 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_count_one(pool: Pool) {
+    async fn get_projects_facet_count_one(pool: Pool) {
         let wheres = [
-            WhereField::Publisher("XYZ".into())
+            Facet::Publisher("XYZ".into())
         ];
-        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+        assert_eq!(get_projects_facet_count(&pool, &wheres).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_count_zero(pool: Pool) {
+    async fn get_projects_facet_count_zero(pool: Pool) {
         let wheres = [
-            WhereField::Publisher("zzz".into())
+            Facet::Publisher("zzz".into())
         ];
-        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 0);
+        assert_eq!(get_projects_facet_count(&pool, &wheres).await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_count_multi_one(pool: Pool) {
+    async fn get_projects_facet_count_multi_one(pool: Pool) {
         let wheres = [
-            WhereField::Publisher("XYZ".into()),
-            WhereField::Year("1993".into())
+            Facet::Publisher("XYZ".into()),
+            Facet::Year("1993".into())
         ];
-        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+        assert_eq!(get_projects_facet_count(&pool, &wheres).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_count_join_one(pool: Pool) {
+    async fn get_projects_facet_count_join_one(pool: Pool) {
         let wheres = [
-            WhereField::Publisher("XYZ".into()),
+            Facet::Publisher("XYZ".into()),
 // TODO: bridge username to users over owners; argh
 //            ("owners", "username", &WhereValue::Text("Alice".into()))
         ];
-        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+        assert_eq!(get_projects_facet_count(&pool, &wheres).await.unwrap(), 1);
     }
 
 /*
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_query_count_one(pool: Pool) {
+    async fn get_projects_facet_query_count_one(pool: Pool) {
         let wheres = [
             ("projects", "game_publisher", &WhereValue::Text("XYZ".into()))
         ];
-        assert_eq!(get_projects_where_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
+        assert_eq!(get_projects_facet_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_query_count_query_zero(pool: Pool) {
+    async fn get_projects_facet_query_count_query_zero(pool: Pool) {
         let wheres = [
             ("projects", "game_publisher", &WhereValue::Text("XYZ".into()))
         ];
-        assert_eq!(get_projects_where_query_count(&pool, &wheres, "xxx").await.unwrap(), 0);
+        assert_eq!(get_projects_facet_query_count(&pool, &wheres, "xxx").await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_where_query_count_where_zero(pool: Pool) {
+    async fn get_projects_facet_query_count_facet_zero(pool: Pool) {
         let wheres = [
             ("projects", "game_publisher", &WhereValue::Text("zzz".into()))
         ];
-        assert_eq!(get_projects_where_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
+        assert_eq!(get_projects_facet_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
     }
 */
 

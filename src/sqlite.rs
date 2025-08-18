@@ -14,7 +14,7 @@ mod tags;
 mod users;
 
 use crate::{
-    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow, WhereField},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow, Facet},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, SortBy},
@@ -50,22 +50,22 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projects::get_projects_query_count(&self.0, query).await
     }
 
-    async fn get_projects_where_count(
+    async fn get_projects_facet_count(
         &self,
-        wheres: &[WhereField]
+        wheres: &[Facet]
     ) -> Result<i64, DatabaseError>
     {
-        projects::get_projects_where_count(&self.0, wheres).await
+        projects::get_projects_facet_count(&self.0, wheres).await
     }
 
 /*
-    async fn get_projects_where_query_count(
+    async fn get_projects_facet_query_count(
         &self,
         wheres: &[(&str, &str, &WhereValue<'_>)],
         query: &str
     ) -> Result<i64, DatabaseError>
     {
-        projects::get_projects_where_query_count(&self.0, wheres, query).await
+        projects::get_projects_facet_query_count(&self.0, wheres, query).await
     }
 */
 
@@ -159,19 +159,19 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projects::get_projects_query_end_window(&self.0, query, sort_by, dir, limit).await
     }
 
-    async fn get_projects_where_end_window(
+    async fn get_projects_facet_end_window(
         &self,
-        wheres: &[WhereField],
+        wheres: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        projects::get_projects_where_end_window(&self.0, wheres, sort_by, dir, limit).await
+        projects::get_projects_facet_end_window(&self.0, wheres, sort_by, dir, limit).await
     }
 
 /*
-    async fn get_projects_where_query_end_window(
+    async fn get_projects_facet_query_end_window(
         &self,
         wheres: &[(&str, &str, &WhereValue<'_>)],
         query: &str,
@@ -180,7 +180,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        projects::get_projects_where_query_end_window(&self.0, wheres, query, sort_by, dir, limit).await
+        projects::get_projects_facet_query_end_window(&self.0, wheres, query, sort_by, dir, limit).await
     }
 */
 
@@ -254,9 +254,9 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         }
     }
 
-    async fn get_projects_where_mid_window(
+    async fn get_projects_facet_mid_window(
         &self,
-        wheres: &[WhereField],
+        wheres: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         field: MidField<'_>,
@@ -265,7 +265,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
         match field {
-            MidField::Timestamp(f) => projects::get_projects_where_mid_window(
+            MidField::Timestamp(f) => projects::get_projects_facet_mid_window(
                 &self.0,
                 wheres,
                 sort_by,
@@ -274,7 +274,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 id,
                 limit
             ).await,
-            MidField::Text(f) => projects::get_projects_where_mid_window(
+            MidField::Text(f) => projects::get_projects_facet_mid_window(
                 &self.0,
                 wheres,
                 sort_by,
@@ -287,7 +287,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     }
 
 /*
-    async fn get_projects_where_query_mid_window(
+    async fn get_projects_facet_query_mid_window(
         &self,
         wheres: &[(&str, &str, &WhereValue<'_>)],
         query: &str,
@@ -299,7 +299,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
         match field {
-            QueryMidField::Timestamp(f) => projects::get_projects_where_query_mid_window(
+            QueryMidField::Timestamp(f) => projects::get_projects_facet_query_mid_window(
                 &self.0,
                 wheres,
                 query,
@@ -309,7 +309,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 id,
                 limit
             ).await,
-            QueryMidField::Weight(f) => projects::get_projects_where_query_mid_window(
+            QueryMidField::Weight(f) => projects::get_projects_facet_query_mid_window(
                 &self.0,
                 wheres,
                 query,
@@ -319,7 +319,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 id,
                 limit
             ).await,
-            QueryMidField::Text(f) => projects::get_projects_where_query_mid_window(
+            QueryMidField::Text(f) => projects::get_projects_facet_query_mid_window(
                 &self.0,
                 wheres,
                 query,

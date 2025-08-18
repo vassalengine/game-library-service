@@ -144,7 +144,7 @@ pub enum QueryMidField<'a> {
     Text(&'a str)
 }
 
-pub enum WhereField {
+pub enum Facet {
     Publisher(String),
     Year(String),
     PlayersMin(u32),
@@ -171,13 +171,13 @@ pub trait DatabaseClient {
         _query: &str
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
-    fn get_projects_where_count(
+    fn get_projects_facet_count(
         &self,
-        wheres: &[WhereField]
+        wheres: &[Facet]
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
 /*
-    fn get_projects_where_query_count(
+    fn get_projects_facet_query_count(
         &self,
         wheres: &[(&str, &str, &WhereValue<'_>)],
         _query: &str
@@ -244,16 +244,16 @@ pub trait DatabaseClient {
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
-    fn get_projects_where_end_window(
+    fn get_projects_facet_end_window(
         &self,
-        _wheres: &[WhereField],
+        _wheres: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
 /*
-    fn get_projects_where_query_end_window(
+    fn get_projects_facet_query_end_window(
         &self,
         _wheres: &[(&str, &str, &WhereValue<'_>)],
         _query: &str,
@@ -282,9 +282,9 @@ pub trait DatabaseClient {
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
-    fn get_projects_where_mid_window(
+    fn get_projects_facet_mid_window(
         &self,
-        _wheres: &[WhereField],
+        _wheres: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
         _field: MidField<'_>,
@@ -293,7 +293,7 @@ pub trait DatabaseClient {
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
 /*
-    fn get_projects_where_query_mid_window(
+    fn get_projects_facet_query_mid_window(
         &self,
         _wheres: &[(&str, &str, &WhereValue<'_>)],
         _query: &str,
