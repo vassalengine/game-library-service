@@ -147,10 +147,12 @@ pub enum QueryMidField<'a> {
 pub enum Facet {
     Publisher(String),
     Year(String),
+/*
     PlayersMin(u32),
     PlayersMax(u32),
     LengthMin(u32),
     LengthMax(u32),
+*/
     Tag(String),
     Owner(String),
     Player(String)
@@ -173,13 +175,13 @@ pub trait DatabaseClient {
 
     fn get_projects_facet_count(
         &self,
-        wheres: &[Facet]
+        _facets: &[Facet]
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
 /*
     fn get_projects_facet_query_count(
         &self,
-        wheres: &[(&str, &str, &WhereValue<'_>)],
+        _facets: &[(&str, &str, &WhereValue<'_>)],
         _query: &str
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 */
@@ -246,7 +248,7 @@ pub trait DatabaseClient {
 
     fn get_projects_facet_end_window(
         &self,
-        _wheres: &[Facet],
+        _facets: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
         _limit: u32
@@ -255,7 +257,7 @@ pub trait DatabaseClient {
 /*
     fn get_projects_facet_query_end_window(
         &self,
-        _wheres: &[(&str, &str, &WhereValue<'_>)],
+        _facets: &[(&str, &str, &WhereValue<'_>)],
         _query: &str,
         _sort_by: SortBy,
         _dir: Direction,
@@ -284,7 +286,7 @@ pub trait DatabaseClient {
 
     fn get_projects_facet_mid_window(
         &self,
-        _wheres: &[Facet],
+        _facets: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
         _field: MidField<'_>,
@@ -295,7 +297,7 @@ pub trait DatabaseClient {
 /*
     fn get_projects_facet_query_mid_window(
         &self,
-        _wheres: &[(&str, &str, &WhereValue<'_>)],
+        _facets: &[(&str, &str, &WhereValue<'_>)],
         _query: &str,
         _sort_by: SortBy,
         _dir: Direction,

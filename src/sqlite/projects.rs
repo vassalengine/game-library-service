@@ -25,12 +25,12 @@ impl fmt::Display for WhereValue<'_> {
 */
 
 trait JoinExt {
-    fn push_join(&mut self, wf: &Facet) -> &mut Self;
+    fn push_join(&mut self, f: &Facet) -> &mut Self;
 }
 
 impl<'args> JoinExt for QueryBuilder<'args, Sqlite> {
-    fn push_join(&mut self, wf: &Facet) -> &mut Self {
-        match wf {
+    fn push_join(&mut self, f: &Facet) -> &mut Self {
+        match f {
             Facet::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
             Facet::Owner(_) => self.push(" JOIN owners ON projects.project_id = owners.project_id JOIN users ON owners.user_id = users.user_id "),
             Facet::Player(_) => self.push(" JOIN players ON projects.project_id = players.project_id JOIN users ON owners.user_id = users.user_id "),
@@ -40,22 +40,23 @@ impl<'args> JoinExt for QueryBuilder<'args, Sqlite> {
 }
 
 trait WhereExt<'args> {
-    fn push_where(&mut self, wf: &'args Facet) -> &mut Self;
+    fn push_where(&mut self, f: &'args Facet) -> &mut Self;
 }
 
 impl<'qb, 'args, Sep> WhereExt<'args> for Separated<'qb, 'args, Sqlite, Sep>
 where
     Sep: std::fmt::Display
 {
-    fn push_where(&mut self, wf: &'args Facet) -> &mut Self
+    fn push_where(&mut self, f: &'args Facet) -> &mut Self
     {
-        match wf {
+        match f {
             Facet::Publisher(p) =>
                 self.push(" projects.game_publisher == ")
                     .push_bind_unseparated(p),
             Facet::Year(y) =>
                 self.push(" projects.game_year == ")
                     .push_bind_unseparated(y),
+/*
             Facet::PlayersMin(m) =>
                 self.push(" projects.game_players_min == ")
                     .push_bind_unseparated(m),
@@ -68,6 +69,7 @@ where
             Facet::LengthMax(m) =>
                 self.push(" projects.game_length_max == ")
                     .push_bind_unseparated(m),
+*/
             Facet::Tag(t) =>
                 self.push(" tags.tag == ")
                     .push_bind_unseparated(t),
@@ -134,15 +136,15 @@ FROM projects
         "
     );
 
-    for wf in facets {
-        qb.push_join(wf);
+    for f in facets {
+        qb.push_join(f);
     }
 
     qb.push(" WHERE ");
 
     let mut qbs = qb.separated(" AND ");
-    for wf in facets {
-        qbs.push_where(wf);
+    for f in facets {
+        qbs.push_where(f);
     }
 
 //    eprintln!("{}", qb.sql());
@@ -314,15 +316,15 @@ where
 {
     let mut qb = QueryBuilder::new(WINDOW_SELECT);
 
-    for wf in facets {
-        qb.push_join(wf);
+    for f in facets {
+        qb.push_join(f);
     }
 
     qb.push(" WHERE ");
 
     let mut qbs = qb.separated(" AND ");
-    for wf in facets {
-        qbs.push_where(wf);
+    for f in facets {
+        qbs.push_where(f);
     }
 
     Ok(
@@ -479,15 +481,15 @@ where
 {
     let mut qb = QueryBuilder::new(WINDOW_SELECT);
 
-    for wf in facets {
-        qb.push_join(wf);
+    for f in facets {
+        qb.push_join(f);
     }
 
     qb.push(" WHERE ");
 
     let mut qbs = qb.separated(" AND ");
-    for wf in facets {
-        qbs.push_where(wf);
+    for f in facets {
+        qbs.push_where(f);
     }
 
     Ok(
