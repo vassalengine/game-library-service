@@ -144,6 +144,18 @@ pub enum QueryMidField<'a> {
     Text(&'a str)
 }
 
+pub enum WhereField {
+    Publisher(String),
+    Year(String),
+    PlayersMin(u32),
+    PlayersMax(u32),
+    LengthMin(u32),
+    LengthMax(u32),
+    Tag(String),
+    Owner(String),
+    Player(String)
+}
+
 pub trait DatabaseClient {
     fn get_project_id(
         &self,
@@ -159,7 +171,20 @@ pub trait DatabaseClient {
         _query: &str
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
-    fn get_user_id(
+    fn get_projects_where_count(
+        &self,
+        wheres: &[WhereField]
+    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
+
+/*
+    fn get_projects_where_query_count(
+        &self,
+        wheres: &[(&str, &str, &WhereValue<'_>)],
+        _query: &str
+    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
+*/
+
+   fn get_user_id(
         &self,
         _username: &str
     ) -> impl Future<Output = Result<Option<User>, DatabaseError>> + Send;
@@ -219,6 +244,25 @@ pub trait DatabaseClient {
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
+    fn get_projects_where_end_window(
+        &self,
+        _wheres: &[WhereField],
+        _sort_by: SortBy,
+        _dir: Direction,
+        _limit: u32
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
+
+/*
+    fn get_projects_where_query_end_window(
+        &self,
+        _wheres: &[(&str, &str, &WhereValue<'_>)],
+        _query: &str,
+        _sort_by: SortBy,
+        _dir: Direction,
+        _limit: u32
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
+*/
+
     fn get_projects_mid_window(
         &self,
         _sort_by: SortBy,
@@ -237,6 +281,29 @@ pub trait DatabaseClient {
         _id: u32,
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
+
+    fn get_projects_where_mid_window(
+        &self,
+        _wheres: &[WhereField],
+        _sort_by: SortBy,
+        _dir: Direction,
+        _field: MidField<'_>,
+        _id: u32,
+        _limit: u32
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
+
+/*
+    fn get_projects_where_query_mid_window(
+        &self,
+        _wheres: &[(&str, &str, &WhereValue<'_>)],
+        _query: &str,
+        _sort_by: SortBy,
+        _dir: Direction,
+        _field: QueryMidField<'_>,
+        _id: u32,
+        _limit: u32
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
+*/
 
     fn create_project(
         &self,

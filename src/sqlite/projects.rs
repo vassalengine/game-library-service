@@ -1,12 +1,83 @@
+use const_format::formatcp;
 use sqlx::{
     Encode, Executor, QueryBuilder, Type,
+    query_builder::Separated,
     sqlite::Sqlite
 };
+use std::fmt;
 
 use crate::{
-    db::{DatabaseError, ProjectSummaryRow},
+    db::{DatabaseError, ProjectSummaryRow, WhereField},
     pagination::{Direction, SortBy}
 };
+
+// TODO: put a QueryBuilder into the db object for reuse?
+
+/*
+impl fmt::Display for WhereValue<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WhereValue::Text(s) => write!(f, "{}", s),
+            WhereValue::Integer(i) => write!(f, "{}", i)
+        }
+    }
+}
+*/
+
+trait JoinExt {
+    fn push_join(&mut self, wf: &WhereField) -> &mut Self;
+}
+
+impl<'args> JoinExt for QueryBuilder<'args, Sqlite> {
+    fn push_join(&mut self, wf: &WhereField) -> &mut Self {
+        match wf {
+            WhereField::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
+            WhereField::Owner(_) => self.push(" JOIN owners ON projects.project_id = owners.project_id JOIN users ON owners.user_id = users.user_id "),
+            WhereField::Player(_) => self.push(" JOIN players ON projects.project_id = players.project_id JOIN users ON owners.user_id = users.user_id "),
+            _ => self
+        }
+    }
+}
+
+trait WhereExt<'args> {
+    fn push_where(&mut self, wf: &'args WhereField) -> &mut Self;
+}
+
+impl<'qb, 'args, Sep> WhereExt<'args> for Separated<'qb, 'args, Sqlite, Sep>
+where
+    Sep: std::fmt::Display
+{
+    fn push_where(&mut self, wf: &'args WhereField) -> &mut Self
+    {
+        match wf {
+            WhereField::Publisher(p) =>
+                self.push(" projects.game_publisher == ")
+                    .push_bind_unseparated(p),
+            WhereField::Year(y) =>
+                self.push(" projects.game_year == ")
+                    .push_bind_unseparated(y),
+            WhereField::PlayersMin(m) =>
+                self.push(" projects.game_players_min == ")
+                    .push_bind_unseparated(m),
+            WhereField::PlayersMax(m) =>
+                self.push(" projects.game_players_max == ")
+                    .push_bind_unseparated(m),
+            WhereField::LengthMin(m) =>
+                self.push(" projects.game_length_min == ")
+                    .push_bind_unseparated(m),
+            WhereField::LengthMax(m) =>
+                self.push(" projects.game_length_max == ")
+                    .push_bind_unseparated(m),
+            WhereField::Tag(t) =>
+                self.push(" tags.tag == ")
+                    .push_bind_unseparated(t),
+            WhereField::Owner(u) |
+            WhereField::Player(u) =>
+                self.push(" users.username == ")
+                    .push_bind_unseparated(u)
+        }
+    }
+}
 
 pub async fn get_projects_count<'e, E>(
     ex: E
@@ -23,6 +94,66 @@ FROM projects
         )
         .fetch_one(ex)
         .await?
+    )
+}
+
+/*
+pub async fn get_projects_tag_count<'e, E>(
+    ex: E,
+    tag: &str
+) -> Result<i64, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT COUNT(1)
+FROM tags
+WHERE tag = ?
+            ",
+            tag
+        )
+        .fetch_one(ex)
+        .await?
+    )
+}
+*/
+
+// TODO: rename wheres to restr?
+
+pub async fn get_projects_where_count<'e, E>(
+    ex: E,
+    wheres: &[WhereField]
+) -> Result<i64, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut qb = QueryBuilder::new(
+        "
+SELECT COUNT(1)
+FROM projects
+        "
+    );
+
+    for wf in wheres {
+        qb.push_join(wf);
+    }
+
+    qb.push(" WHERE ");
+
+    let mut qbs = qb.separated(" AND ");
+    for wf in wheres {
+        qbs.push_where(wf);
+    }
+
+//    eprintln!("{}", qb.sql());
+
+    Ok(
+        qb
+            .build_query_scalar()
+            .fetch_one(ex)
+            .await?
     )
 }
 
@@ -47,6 +178,45 @@ WHERE projects_fts MATCH ?
         .await?
     )
 }
+
+/*
+pub async fn get_projects_where_query_count<'e, E>(
+    ex: E,
+    wheres: &[(&str, &str, &WhereValue<'_>)],
+    query: &str,
+) -> Result<i64, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let query = fts5_quote(query);
+
+    let mut qb = QueryBuilder::new(
+        "
+SELECT COUNT(1)
+FROM projects
+JOIN projects_fts
+ON projects_fts.rowid = projects.project_id
+        "
+    );
+
+    // TODO: limit fields here
+
+    add_joins_projects(&mut qb, wheres);
+
+    qb.push(" WHERE projects_fts MATCH ")
+        .push_bind(query)
+        .push(" AND ");
+
+    add_wheres(&mut qb, wheres);
+
+    Ok(
+        qb
+            .build_query_scalar()
+            .fetch_one(ex)
+            .await?
+    )
+}
+*/
 
 impl SortBy {
     fn field(&self) -> &'static str {
@@ -77,6 +247,39 @@ impl Direction {
     }
 }
 
+const SUMMARY_FIELDS: &str = "
+    projects.project_id,
+    projects.name,
+    projects.slug,
+    projects.description,
+    projects.revision,
+    projects.created_at,
+    projects.modified_at,
+    projects.game_title,
+    projects.game_title_sort,
+    projects.game_publisher,
+    projects.game_year,
+    projects.game_players_min,
+    projects.game_players_max,
+    projects.game_length_min,
+    projects.game_length_max,
+    projects.image
+";
+
+const WINDOW_SELECT: &str = formatcp!("
+SELECT
+    0.0 AS rank,
+    {SUMMARY_FIELDS}
+FROM projects
+");
+
+const WINDOW_SELECT_FTS: &str = formatcp!("
+SELECT
+    fts.rank,
+    {SUMMARY_FIELDS}
+FROM projects
+");
+
 pub async fn get_projects_end_window<'e, E>(
     ex: E,
     sort_by: SortBy,
@@ -87,39 +290,56 @@ where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        QueryBuilder::new(
-            "
-SELECT
-    0.0 AS rank,
-    project_id,
-    name,
-    slug,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    game_players_min,
-    game_players_max,
-    game_length_min,
-    game_length_max,
-    image
-FROM projects
-ORDER BY "
-        )
-        .push(sort_by.field())
-        .push(" ")
-        .push(dir.dir())
-        .push(", project_id ")
-        .push(dir.dir())
-        .push(" LIMIT ")
-        .push_bind(limit)
-        .build_query_as::<ProjectSummaryRow>()
-        .fetch_all(ex)
-        .await?
+        QueryBuilder::new(formatcp!("{WINDOW_SELECT} ORDER BY "))
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
+    )
+}
+
+pub async fn get_projects_where_end_window<'e, E>(
+    ex: E,
+    wheres: &[WhereField],
+    sort_by: SortBy,
+    dir: Direction,
+    limit: u32
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut qb = QueryBuilder::new(WINDOW_SELECT);
+
+    for wf in wheres {
+        qb.push_join(wf);
+    }
+
+    qb.push(" WHERE ");
+
+    let mut qbs = qb.separated(" AND ");
+    for wf in wheres {
+        qbs.push_where(wf);
+    }
+
+    Ok(
+        qb
+            .push(" ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
 
@@ -141,45 +361,69 @@ where
     E: Executor<'e, Database = Sqlite>
 {
     Ok(
-        QueryBuilder::new(
-            "
-SELECT
-    fts.rank,
-    projects.project_id,
-    projects.name,
-    projects.slug,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.game_players_min,
-    projects.game_players_max,
-    projects.game_length_min,
-    projects.game_length_max,
-    projects.image
-FROM projects
+        QueryBuilder::new(formatcp!("{WINDOW_SELECT_FTS}
 JOIN projects_fts AS fts
 ON projects.project_id = fts.rowid
-WHERE projects_fts MATCH "
-        )
-        .push_bind(fts5_quote(query))
-        .push(" ORDER BY ")
-        .push(sort_by.field())
-        .push(" ")
-        .push(dir.dir())
-        .push(", projects.project_id ")
-        .push(dir.dir())
-        .push(" LIMIT ")
-        .push_bind(limit)
-        .build_query_as::<ProjectSummaryRow>()
-        .fetch_all(ex)
-        .await?
+WHERE projects_fts MATCH
+                "
+            ))
+            .push_bind(fts5_quote(query))
+            .push(" ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", projects.project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
+
+/*
+pub async fn get_projects_where_query_end_window<'e, E>(
+    ex: E,
+    wheres: &[(&str, &str, &WhereValue<'_>)],
+    query: &str,
+    sort_by: SortBy,
+    dir: Direction,
+    limit: u32
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let mut qb = QueryBuilder::new(formatcp!("{WINDOW_SELECT_FTS}
+JOIN projects_fts AS fts
+ON projects.project_id = fts.rowid
+            "
+        ));
+
+    add_joins_fts(&mut qb, wheres);
+
+    qb.push(" WHERE projects_fts MATCH ")
+        .push_bind(fts5_quote(query))
+        .push(" WHERE ");
+
+    add_wheres(&mut qb, wheres);
+
+    Ok(
+        qb
+            .push(" ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", projects.project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
+    )
+}
+*/
 
 pub async fn get_projects_mid_window<'e, 'f, E, F>(
     ex: E,
@@ -194,53 +438,87 @@ where
     F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
 {
     Ok(
-        QueryBuilder::new(
-            "
-SELECT
-    0.0 AS rank,
-    project_id,
-    name,
-    slug,
-    description,
-    revision,
-    created_at,
-    modified_at,
-    game_title,
-    game_title_sort,
-    game_publisher,
-    game_year,
-    game_players_min,
-    game_players_max,
-    game_length_min,
-    game_length_max,
-    image
-FROM projects
-WHERE "
-        )
-        .push(sort_by.field())
-        .push(" ")
-        .push(dir.op())
-        .push(" ")
-        .push_bind(field)
-        .push(" OR (")
-        .push(sort_by.field())
-        .push(" = ")
-        .push_bind(field)
-        .push(" AND project_id ")
-        .push(dir.op())
-        .push(" ")
-        .push_bind(id)
-        .push(") ORDER BY ")
-        .push(sort_by.field())
-        .push(" ")
-        .push(dir.dir())
-        .push(", project_id ")
-        .push(dir.dir())
-        .push(" LIMIT ")
-        .push_bind(limit)
-        .build_query_as::<ProjectSummaryRow>()
-        .fetch_all(ex)
-        .await?
+        QueryBuilder::new(formatcp!("{WINDOW_SELECT} WHERE "))
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(field)
+            .push(" OR (")
+            .push(sort_by.field())
+            .push(" = ")
+            .push_bind(field)
+            .push(" AND project_id ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(id)
+            .push(") ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
+    )
+}
+
+pub async fn get_projects_where_mid_window<'e, 'f, E, F>(
+    ex: E,
+    wheres: &'f [WhereField],
+    sort_by: SortBy,
+    dir: Direction,
+    field: &'f F,
+    id: u32,
+    limit: u32
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>,
+    F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
+{
+    let mut qb = QueryBuilder::new(WINDOW_SELECT);
+
+    for wf in wheres {
+        qb.push_join(wf);
+    }
+
+    qb.push(" WHERE ");
+
+    let mut qbs = qb.separated(" AND ");
+    for wf in wheres {
+        qbs.push_where(wf);
+    }
+
+    Ok(
+        qb
+            .push(" AND (")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(field)
+            .push(" OR (")
+            .push(sort_by.field())
+            .push(" = ")
+            .push_bind(field)
+            .push(" AND project_id ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(id)
+            .push(")) ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
 
@@ -261,61 +539,108 @@ where
     // query planner is confused by MATCH when it's used with boolean
     // connectives.
     Ok(
-        QueryBuilder::new(
-            "
-SELECT
-    fts.rank,
-    projects.project_id,
-    projects.name,
-    projects.slug,
-    projects.description,
-    projects.revision,
-    projects.created_at,
-    projects.modified_at,
-    projects.game_title,
-    projects.game_title_sort,
-    projects.game_publisher,
-    projects.game_year,
-    projects.game_players_min,
-    projects.game_players_max,
-    projects.game_length_min,
-    projects.game_length_max,
-    projects.image
-FROM projects
+        QueryBuilder::new(formatcp!("{WINDOW_SELECT_FTS}
 JOIN (
     SELECT
         projects_fts.rowid,
         projects_fts.rank
     FROM projects_fts
-    WHERE projects_fts MATCH "
-        )
-        .push_bind(fts5_quote(query))
-        .push(") AS fts ON fts.rowid = projects.project_id WHERE ")
-        .push(sort_by.field())
-        .push(dir.op())
-        .push(" ")
-        .push_bind(field)
-        .push(" OR (")
-        .push(sort_by.field())
-        .push(" = ")
-        .push_bind(field)
-        .push(" AND project_id ")
-        .push(dir.op())
-        .push(" ")
-        .push_bind(id)
-        .push(") ORDER BY ")
-        .push(sort_by.field())
-        .push(" ")
-        .push(dir.dir())
-        .push(", project_id ")
-        .push(dir.dir())
-        .push(" LIMIT ")
-        .push_bind(limit)
-        .build_query_as::<ProjectSummaryRow>()
-        .fetch_all(ex)
-        .await?
+    WHERE projects_fts MATCH
+                "
+            ))
+            .push_bind(fts5_quote(query))
+            .push(") AS fts ON fts.rowid = projects.project_id WHERE ")
+            .push(sort_by.field())
+            .push(dir.op())
+            .push(" ")
+            .push_bind(field)
+            .push(" OR (")
+            .push(sort_by.field())
+            .push(" = ")
+            .push_bind(field)
+            .push(" AND project_id ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(id)
+            .push(") ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
     )
 }
+
+/*
+pub async fn get_projects_where_query_mid_window<'e, 'f, E, F>(
+    ex: E,
+    wheres: &[(&str, &str, &'f WhereValue<'_>)],
+    query: &'f str,
+    sort_by: SortBy,
+    dir: Direction,
+    field: &'f F,
+    id: u32,
+    limit: u32
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>,
+    F: Send + Sync + Encode<'f, Sqlite> + Type<Sqlite>
+{
+    // We get rows from the FTS table in a subquery because the sqlite
+    // query planner is confused by MATCH when it's used with boolean
+    // connectives.
+    let mut qb = QueryBuilder::new(formatcp!("{WINDOW_SELECT_FTS}
+JOIN (
+    SELECT
+        projects_fts.rowid,
+        projects_fts.rank
+    FROM projects_fts
+    WHERE projects_fts MATCH
+                "
+            ));
+
+    qb.push_bind(fts5_quote(query))
+        .push(") AS fts ON fts.rowid = projects.project_id ");
+
+    add_joins_projects(&mut qb, wheres);
+
+    qb.push(" WHERE ");
+    add_wheres(&mut qb, wheres);
+
+    Ok(
+        qb
+            .push(" AND (")
+            .push(sort_by.field())
+            .push(dir.op())
+            .push(" ")
+            .push_bind(field)
+            .push(" OR (")
+            .push(sort_by.field())
+            .push(" = ")
+            .push_bind(field)
+            .push(" AND project_id ")
+            .push(dir.op())
+            .push(" ")
+            .push_bind(id)
+            .push(")) ORDER BY ")
+            .push(sort_by.field())
+            .push(" ")
+            .push(dir.dir())
+            .push(", project_id ")
+            .push(dir.dir())
+            .push(" LIMIT ")
+            .push_bind(limit)
+            .build_query_as::<ProjectSummaryRow>()
+            .fetch_all(ex)
+            .await?
+    )
+}
+*/
 
 #[cfg(test)]
 mod test {
@@ -344,9 +669,75 @@ mod test {
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
-    async fn get_projects_query_count_ok(pool: Pool) {
+    async fn get_projects_query_count_one(pool: Pool) {
         assert_eq!(get_projects_query_count(&pool, "Another").await.unwrap(), 1);
     }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_query_count_zero(pool: Pool) {
+        assert_eq!(get_projects_query_count(&pool, "xxx").await.unwrap(), 0);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_count_one(pool: Pool) {
+        let wheres = [
+            WhereField::Publisher("XYZ".into())
+        ];
+        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_count_zero(pool: Pool) {
+        let wheres = [
+            WhereField::Publisher("zzz".into())
+        ];
+        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 0);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_count_multi_one(pool: Pool) {
+        let wheres = [
+            WhereField::Publisher("XYZ".into()),
+            WhereField::Year("1993".into())
+        ];
+        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_count_join_one(pool: Pool) {
+        let wheres = [
+            WhereField::Publisher("XYZ".into()),
+// TODO: bridge username to users over owners; argh
+//            ("owners", "username", &WhereValue::Text("Alice".into()))
+        ];
+        assert_eq!(get_projects_where_count(&pool, &wheres).await.unwrap(), 1);
+    }
+
+/*
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_query_count_one(pool: Pool) {
+        let wheres = [
+            ("projects", "game_publisher", &WhereValue::Text("XYZ".into()))
+        ];
+        assert_eq!(get_projects_where_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_query_count_query_zero(pool: Pool) {
+        let wheres = [
+            ("projects", "game_publisher", &WhereValue::Text("XYZ".into()))
+        ];
+        assert_eq!(get_projects_where_query_count(&pool, &wheres, "xxx").await.unwrap(), 0);
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn get_projects_where_query_count_where_zero(pool: Pool) {
+        let wheres = [
+            ("projects", "game_publisher", &WhereValue::Text("zzz".into()))
+        ];
+        assert_eq!(get_projects_where_query_count(&pool, &wheres, "Another").await.unwrap(), 0);
+    }
+*/
 
     #[track_caller]
     fn assert_projects_window(

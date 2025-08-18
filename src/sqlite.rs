@@ -14,7 +14,7 @@ mod tags;
 mod users;
 
 use crate::{
-    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow, WhereField},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, SortBy},
@@ -49,6 +49,25 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     {
         projects::get_projects_query_count(&self.0, query).await
     }
+
+    async fn get_projects_where_count(
+        &self,
+        wheres: &[WhereField]
+    ) -> Result<i64, DatabaseError>
+    {
+        projects::get_projects_where_count(&self.0, wheres).await
+    }
+
+/*
+    async fn get_projects_where_query_count(
+        &self,
+        wheres: &[(&str, &str, &WhereValue<'_>)],
+        query: &str
+    ) -> Result<i64, DatabaseError>
+    {
+        projects::get_projects_where_query_count(&self.0, wheres, query).await
+    }
+*/
 
     async fn get_user_id(
         &self,
@@ -140,6 +159,31 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         projects::get_projects_query_end_window(&self.0, query, sort_by, dir, limit).await
     }
 
+    async fn get_projects_where_end_window(
+        &self,
+        wheres: &[WhereField],
+        sort_by: SortBy,
+        dir: Direction,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+    {
+        projects::get_projects_where_end_window(&self.0, wheres, sort_by, dir, limit).await
+    }
+
+/*
+    async fn get_projects_where_query_end_window(
+        &self,
+        wheres: &[(&str, &str, &WhereValue<'_>)],
+        query: &str,
+        sort_by: SortBy,
+        dir: Direction,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+    {
+        projects::get_projects_where_query_end_window(&self.0, wheres, query, sort_by, dir, limit).await
+    }
+*/
+
     async fn get_projects_mid_window(
         &self,
         sort_by: SortBy,
@@ -209,6 +253,85 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             ).await
         }
     }
+
+    async fn get_projects_where_mid_window(
+        &self,
+        wheres: &[WhereField],
+        sort_by: SortBy,
+        dir: Direction,
+        field: MidField<'_>,
+        id: u32,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+    {
+        match field {
+            MidField::Timestamp(f) => projects::get_projects_where_mid_window(
+                &self.0,
+                wheres,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await,
+            MidField::Text(f) => projects::get_projects_where_mid_window(
+                &self.0,
+                wheres,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await
+        }
+    }
+
+/*
+    async fn get_projects_where_query_mid_window(
+        &self,
+        wheres: &[(&str, &str, &WhereValue<'_>)],
+        query: &str,
+        sort_by: SortBy,
+        dir: Direction,
+        field: QueryMidField<'_>,
+        id: u32,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+    {
+        match field {
+            QueryMidField::Timestamp(f) => projects::get_projects_where_query_mid_window(
+                &self.0,
+                wheres,
+                query,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await,
+            QueryMidField::Weight(f) => projects::get_projects_where_query_mid_window(
+                &self.0,
+                wheres,
+                query,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await,
+            QueryMidField::Text(f) => projects::get_projects_where_query_mid_window(
+                &self.0,
+                wheres,
+                query,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await
+        }
+    }
+*/
 
     async fn create_project(
         &self,
