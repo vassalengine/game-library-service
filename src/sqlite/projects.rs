@@ -4,7 +4,6 @@ use sqlx::{
     query_builder::Separated,
     sqlite::Sqlite
 };
-use std::fmt;
 
 use crate::{
     db::{DatabaseError, ProjectSummaryRow},
@@ -28,7 +27,7 @@ trait JoinExt {
     fn push_join(&mut self, f: &Facet) -> &mut Self;
 }
 
-impl<'args> JoinExt for QueryBuilder<'args, Sqlite> {
+impl JoinExt for QueryBuilder<'_, Sqlite> {
     fn push_join(&mut self, f: &Facet) -> &mut Self {
         match f {
             Facet::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
@@ -43,7 +42,7 @@ trait WhereExt<'args> {
     fn push_where(&mut self, f: &'args Facet) -> &mut Self;
 }
 
-impl<'qb, 'args, Sep> WhereExt<'args> for Separated<'qb, 'args, Sqlite, Sep>
+impl<'args, Sep> WhereExt<'args> for Separated<'_, 'args, Sqlite, Sep>
 where
     Sep: std::fmt::Display
 {
