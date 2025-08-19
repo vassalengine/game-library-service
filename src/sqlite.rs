@@ -14,10 +14,10 @@ mod tags;
 mod users;
 
 use crate::{
-    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow, Facet},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{GalleryImage, Owner, Package, Project, Release, User, Users},
-    pagination::{Direction, SortBy},
+    pagination::{Direction, Facet, SortBy},
     version::Version
 };
 

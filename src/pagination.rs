@@ -433,6 +433,22 @@ pub struct Pagination {
     pub total: i64
 }
 
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum Facet {
+    Publisher(String),
+    Year(String),
+/*
+    PlayersMin(u32),
+    PlayersMax(u32),
+    LengthMin(u32),
+    LengthMax(u32),
+*/
+    Tag(String),
+    Owner(String),
+    Player(String)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

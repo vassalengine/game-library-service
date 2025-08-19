@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FlagTag, GalleryImage, Owner, Package, Project, Release, User, Users},
-    pagination::{Direction, SortBy},
+    pagination::{Direction, Facet, SortBy},
     version::Version
 };
 
@@ -142,20 +142,6 @@ pub enum QueryMidField<'a> {
     Timestamp(i64),
     Weight(f64),
     Text(&'a str)
-}
-
-pub enum Facet {
-    Publisher(String),
-    Year(String),
-/*
-    PlayersMin(u32),
-    PlayersMax(u32),
-    LengthMin(u32),
-    LengthMax(u32),
-*/
-    Tag(String),
-    Owner(String),
-    Player(String)
 }
 
 pub trait DatabaseClient {

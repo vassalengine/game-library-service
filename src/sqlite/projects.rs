@@ -7,8 +7,8 @@ use sqlx::{
 use std::fmt;
 
 use crate::{
-    db::{DatabaseError, Facet, ProjectSummaryRow},
-    pagination::{Direction, SortBy}
+    db::{DatabaseError, ProjectSummaryRow},
+    pagination::{Direction, Facet, SortBy}
 };
 
 // TODO: put a QueryBuilder into the db object for reuse?
