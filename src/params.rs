@@ -15,7 +15,6 @@ pub struct MaybeProjectsParams {
 }
 
 impl MaybeProjectsParams {
-    fn valid(&self) -> bool {
         // sort, order, query, from are incompatible with seek
         // from is incompatible with query
         !(
@@ -90,7 +89,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = Error;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        match m.valid() {
+        match m.is_valid() {
             true => Ok(
                 ProjectsParams {
                     limit: m.limit,
@@ -116,7 +115,7 @@ mod test {
             order: Some(Direction::Ascending),
             ..Default::default()
         };
-        assert!(mpp.valid());
+        assert!(mpp.is_valid());
     }
 
     #[test]
@@ -126,7 +125,7 @@ mod test {
             sort: Some(SortBy::ProjectName),
             ..Default::default()
         };
-        assert!(!mpp.valid());
+        assert!(!mpp.is_valid());
     }
 
     #[test]
@@ -136,7 +135,7 @@ mod test {
             order: Some(Direction::Ascending),
             ..Default::default()
         };
-        assert!(!mpp.valid());
+        assert!(!mpp.is_valid());
     }
 
     #[test]
@@ -146,7 +145,7 @@ mod test {
             from: Some("whatever".into()),
             ..Default::default()
         };
-        assert!(!mpp.valid());
+        assert!(!mpp.is_valid());
     }
 
     #[test]
@@ -156,7 +155,7 @@ mod test {
             q: Some("whatever".into()),
             ..Default::default()
         };
-        assert!(!mpp.valid());
+        assert!(!mpp.is_valid());
     }
 
     #[test]
@@ -166,7 +165,7 @@ mod test {
             q: Some("whatever".into()),
             ..Default::default()
         };
-        assert!(!mpp.valid());
+        assert!(!mpp.is_valid());
     }
 
     #[test]
