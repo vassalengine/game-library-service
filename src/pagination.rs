@@ -16,7 +16,6 @@ pub enum LimitError {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "&str")]
-#[repr(transparent)]
 pub struct Limit(NonZeroU8);
 
 impl Limit {
