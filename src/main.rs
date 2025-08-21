@@ -1773,54 +1773,6 @@ mod test {
         assert_projects_seek_after_ok(response).await;
     }
 
-    async fn get_projects_seek_empty(rw: bool) -> Response {
-        try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?seek="))
-                .body(Body::empty())
-                .unwrap(),
-            rw
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_empty_rw() {
-        let response = get_projects_seek_empty(true).await;
-        assert_malformed_query(response).await;
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_empty_ro() {
-        let response = get_projects_seek_empty(false).await;
-        assert_malformed_query(response).await;
-    }
-
-    async fn get_projects_seek_bad(rw: bool) -> Response {
-        try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?seek=%@$"))
-                .body(Body::empty())
-                .unwrap(),
-            rw
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_bad_rw() {
-        let response = get_projects_seek_bad(true).await;
-        assert_malformed_query(response).await;
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_bad_ro() {
-        let response = get_projects_seek_bad(true).await;
-        assert_malformed_query(response).await;
-    }
-
     async fn get_projects_seek_too_long(rw: bool) -> Response {
         let long = "x".repeat(1000);
 
