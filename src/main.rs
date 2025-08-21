@@ -758,7 +758,7 @@ mod test {
                                     dir: Direction::Ascending
                                 },
                                 params.limit
-                            ).unwrap()
+                            )
                         ),
                         next_page: Some(
                             SeekLink::new(
@@ -768,7 +768,7 @@ mod test {
                                     dir: Direction::Ascending
                                 },
                                 params.limit
-                            ).unwrap()
+                            )
                         ),
                         total: 1234
                     }
@@ -1306,7 +1306,7 @@ mod test {
 
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1316,7 +1316,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1367,7 +1367,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1377,7 +1377,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1501,7 +1501,7 @@ mod test {
                 dir: Direction::Ascending
             },
             None
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1533,7 +1533,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1543,7 +1543,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1571,7 +1571,7 @@ mod test {
                 dir: Direction::Descending
             },
             None
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1603,7 +1603,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1613,7 +1613,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1641,7 +1641,7 @@ mod test {
                 dir: Direction::Ascending
             },
             None
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1673,7 +1673,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1683,7 +1683,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1711,7 +1711,7 @@ mod test {
                 dir: Direction::Ascending
             },
             None
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1743,7 +1743,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1753,7 +1753,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             None
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1831,7 +1831,7 @@ mod test {
                 dir: Direction::Ascending
             },
             Limit::new(5)
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1864,7 +1864,7 @@ mod test {
                 dir: Direction::Ascending
             },
             Limit::new(5)
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1896,7 +1896,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1906,7 +1906,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }
@@ -1934,7 +1934,7 @@ mod test {
                 dir: Direction::Ascending
             },
             Limit::new(5)
-        ).unwrap();
+        );
 
         try_request(
             Request::builder()
@@ -1966,7 +1966,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     next_page: Some(
                         SeekLink::new(
@@ -1976,7 +1976,7 @@ mod test {
                                 dir: Direction::Ascending
                             },
                             Limit::new(5)
-                        ).unwrap()
+                        )
                     ),
                     total: 1234
                 }

@@ -124,15 +124,8 @@ where
             seek, limit.unwrap_or_default()
         ).await?;
 
-        let prev_page = match prev {
-            Some(prev) => Some(SeekLink::new(&prev, limit)?),
-            None => None
-        };
-
-        let next_page = match next {
-            Some(next) => Some(SeekLink::new(&next, limit)?),
-            None => None
-        };
+        let prev_page = prev.map(|prev| SeekLink::new(&prev, limit));
+        let next_page = next.map(|next| SeekLink::new(&next, limit));
 
         Ok(
             Projects {

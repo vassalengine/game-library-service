@@ -1,8 +1,6 @@
-use base64::{Engine as _};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
-    str::{self, FromStr},
     num::NonZeroU8
 };
 
@@ -57,60 +55,10 @@ impl fmt::Display for Limit {
     }
 }
 
-#[derive(Debug, thiserror::Error, Eq, PartialEq)]
-#[error("anchor tag {0} unknown")]
-pub struct AnchorTagError(String);
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(try_from = "&str", into = "String")]
-enum AnchorTag {
-    Start,
-    Before,
-    After,
-    StartQuery,
-    BeforeQuery,
-    AfterQuery
-}
-
-impl From<AnchorTag> for String {
-    fn from(value: AnchorTag) -> Self {
-        match value {
-            AnchorTag::Start => "s".into(),
-            AnchorTag::Before => "b".into(),
-            AnchorTag::After => "a".into(),
-            AnchorTag::StartQuery => "q".into(),
-            AnchorTag::BeforeQuery => "p".into(),
-            AnchorTag::AfterQuery => "r".into()
-        }
-    }
-}
-
-impl TryFrom<&str> for AnchorTag {
-    type Error = AnchorTagError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "s" => Ok(AnchorTag::Start),
-            "b" => Ok(AnchorTag::Before),
-            "a" => Ok(AnchorTag::After),
-            "q" => Ok(AnchorTag::StartQuery),
-            "p" => Ok(AnchorTag::BeforeQuery),
-            "r" => Ok(AnchorTag::AfterQuery),
-            _ => Err(AnchorTagError(value.into()))
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
-struct RawAnchor {
-    tag: AnchorTag,
-    field: Option<String>,
-    query: Option<String>,
-    id: Option<u32>
-}
-
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(try_from = "RawAnchor", into = "RawAnchor")]
+// Must be String instead of &str due to percent-decoding;
+// the incoming type is actually Cow<'a, str>
+#[serde(try_from = "String")]
 pub enum Anchor {
     Start,
     Before(String, u32),
@@ -121,100 +69,84 @@ pub enum Anchor {
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
-#[error("anchor {0:?} invalid")]
-pub struct AnchorError(RawAnchor);
+#[error("anchor {0} invalid")]
+pub struct AnchorError(String);
 
-impl TryFrom<RawAnchor> for Anchor {
+impl TryFrom<String> for Anchor {
     type Error = AnchorError;
 
-    fn try_from(ra: RawAnchor) -> Result<Self, Self::Error> {
-        match ra {
-            RawAnchor {
-                tag: AnchorTag::Start,
-                field: None,
-                query: None,
-                id: None
-            } => Ok(Anchor::Start),
-            RawAnchor {
-                tag: AnchorTag::Before,
-                field: Some(f),
-                query: None,
-                id: Some(i)
-            } => Ok(Anchor::Before(f, i)),
-           RawAnchor {
-                tag: AnchorTag::After,
-                field: Some(f),
-                query: None,
-                id: Some(i)
-            } => Ok(Anchor::After(f, i)),
-            RawAnchor {
-                tag: AnchorTag::StartQuery,
-                field: None,
-                query: Some(q),
-                id: None
-            } => Ok(Anchor::StartQuery(q)),
-            RawAnchor {
-                tag: AnchorTag::BeforeQuery,
-                field: Some(f),
-                query: Some(q),
-                id: Some(i)
-            } => Ok(Anchor::BeforeQuery(q, f, i)),
-            RawAnchor {
-                tag: AnchorTag::AfterQuery,
-                field: Some(f),
-                query: Some(q),
-                id: Some(i)
-            } => Ok(Anchor::AfterQuery(q, f, i)),
-            _ => Err(AnchorError(ra))
+    fn try_from(v: String) -> Result<Self, Self::Error> {
+        let mut s = v.split('\t');
+
+        let tag = s.next()
+            .ok_or(AnchorError(v.clone()))?;
+
+        match tag {
+            "s" if s.next().is_none() => Ok(Anchor::Start),
+            "b" => match (s.next(), s.next(), s.next()) {
+                (Some(f), Some(i), None) => {
+                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
+                    Ok(Anchor::Before(f.into(), i))
+                },
+                _ => Err(AnchorError(v.clone()))
+            },
+            "a" => match (s.next(), s.next(), s.next()) {
+                (Some(f), Some(i), None) => {
+                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
+                    Ok(Anchor::After(f.into(), i))
+                },
+                _ => Err(AnchorError(v.clone()))
+            },
+            "q" => match (s.next(), s.next()) {
+                (Some(q), None) => Ok(Anchor::StartQuery(q.into())),
+                _ => Err(AnchorError(v.clone()))
+            },
+            "p" => match (s.next(), s.next(), s.next(), s.next()) {
+                (Some(q), Some(f), Some(i), None) => {
+                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
+                    Ok(Anchor::BeforeQuery(q.into(), f.into(), i))
+                },
+                _ => Err(AnchorError(v.clone()))
+            },
+            "r" => match (s.next(), s.next(), s.next(), s.next()) {
+                (Some(q), Some(f), Some(i), None) => {
+                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
+                    Ok(Anchor::AfterQuery(q.into(), f.into(), i))
+                },
+                _ => Err(AnchorError(v.clone()))
+            },
+            _ => Err(AnchorError(v.clone()))
         }
     }
 }
 
-impl From<Anchor> for RawAnchor {
-    fn from(a: Anchor) -> Self {
-        match a {
-            Anchor::Start => RawAnchor {
-                tag: AnchorTag::Start,
-                field: None,
-                query: None,
-                id: None
-            },
-            Anchor::Before(field, id) => RawAnchor {
-                tag: AnchorTag::Before,
-                field: Some(field),
-                query: None,
-                id: Some(id)
-            },
-            Anchor::After(field, id) => RawAnchor {
-                tag: AnchorTag::After,
-                field: Some(field),
-                query: None,
-                id: Some(id)
-            },
-            Anchor::StartQuery(query) => RawAnchor {
-                tag: AnchorTag::StartQuery,
-                field: None,
-                query: Some(query),
-                id: None
-            },
-            Anchor::BeforeQuery(query, field, id) => RawAnchor {
-                tag: AnchorTag::BeforeQuery,
-                field: Some(field),
-                query: Some(query),
-                id: Some(id)
-            },
-            Anchor::AfterQuery(query, field, id) => RawAnchor {
-                tag: AnchorTag::AfterQuery,
-                field: Some(field),
-                query: Some(query),
-                id: Some(id)
-            }
+impl From<Anchor> for String {
+    fn from(a: Anchor) -> String {
+        a.to_string()
+    }
+}
+
+impl fmt::Display for Anchor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Anchor::Start =>
+                write!(f, "s"),
+            Anchor::Before(field, id) =>
+                write!(f, "b\t{}\t{}", field, id),
+            Anchor::After(field, id) =>
+                write!(f, "a\t{}\t{}", field, id),
+            Anchor::StartQuery(query) =>
+                write!(f, "q\t{}", query),
+            Anchor::BeforeQuery(query, field, id) =>
+                write!(f, "p\t{}\t{}\t{}", query, field, id),
+            Anchor::AfterQuery(query, field, id) =>
+                write!(f, "r\t{}\t{}\t{}", query, field, id)
         }
     }
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
-#[error("direction {0:?} invalid")]
+#[error("direction {0} invalid")]
 pub struct DirectionError(String);
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -234,11 +166,8 @@ impl Direction {
 }
 
 impl From<Direction> for String {
-    fn from(value: Direction) -> Self {
-        match value {
-            Direction::Ascending => "a".into(),
-            Direction::Descending => "d".into()
-        }
+    fn from(d: Direction) -> Self {
+        d.to_string()
     }
 }
 
@@ -254,8 +183,18 @@ impl TryFrom<&str> for Direction {
     }
 }
 
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let d = match self {
+            Direction::Ascending => "a",
+            Direction::Descending => "d"
+        };
+        write!(f, "{}", d)
+    }
+}
+
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
-#[error("sort {0:?} invalid")]
+#[error("sort {0} invalid")]
 pub struct SortByError(String);
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -270,14 +209,8 @@ pub enum SortBy {
 }
 
 impl From<SortBy> for String {
-    fn from(value: SortBy) -> Self {
-        match value {
-            SortBy::ProjectName => "p".into(),
-            SortBy::GameTitle => "t".into(),
-            SortBy::ModificationTime => "m".into(),
-            SortBy::CreationTime => "c".into(),
-            SortBy::Relevance => "r".into()
-        }
+    fn from(s: SortBy) -> Self {
+        s.to_string()
     }
 }
 
@@ -296,6 +229,19 @@ impl TryFrom<&str> for SortBy {
     }
 }
 
+impl fmt::Display for SortBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+         let s = match self {
+            SortBy::ProjectName => "p",
+            SortBy::GameTitle => "t",
+            SortBy::ModificationTime => "m",
+            SortBy::CreationTime => "c",
+            SortBy::Relevance => "r"
+        };
+        write!(f, "{}", s)
+    }
+}
+
 impl SortBy {
     pub fn default_direction(&self) -> Direction {
         match self {
@@ -308,31 +254,10 @@ impl SortBy {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum SeekError {
-    #[error("{0}")]
-    CsvError(#[from] csv::Error),
-    #[error("{0}")]
-    CsvIntoInnerError(Box<dyn std::error::Error + Send>),
-    #[error("{0}")]
-    Utf8Error(#[from] std::string::FromUtf8Error),
     #[error("Relevance must be paired with a query anchor, not {0:?}")]
-    RelevanceMismatch(Anchor),
-    #[error("Empty seek")]
-    EmptySeek
-}
-
-impl PartialEq for SeekError {
-    fn eq(&self, other: &Self) -> bool {
-        // csv::Error and csv::CsvIntoInnerError are not PartialEq,
-        // so we must exclude those
-        match (self, other) {
-            (Self::Utf8Error(l), Self::Utf8Error(r)) => l == r,
-            (Self::RelevanceMismatch(l), Self::RelevanceMismatch(r)) => l == r,
-            (Self::EmptySeek, Self::EmptySeek) => true,
-            _ => false
-        }
-    }
+    RelevanceMismatch(Anchor)
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -352,54 +277,22 @@ impl Default for Seek {
     }
 }
 
-impl TryFrom<Seek> for String {
+impl TryFrom<(SortBy, Direction, Anchor)> for Seek {
     type Error = SeekError;
 
-    fn try_from(s: Seek) -> Result<Self, Self::Error> {
-        String::try_from(&s)
-    }
-}
-
-impl TryFrom<&Seek> for String {
-    type Error = SeekError;
-
-    fn try_from(s: &Seek) -> Result<Self, Self::Error> {
-        let mut w = csv::WriterBuilder::new()
-            .has_headers(false)
-            .from_writer(vec![]);
-
-        w.serialize(s)?;
-        let mut b = w.into_inner()
-            .map_err(|e| SeekError::CsvIntoInnerError(Box::new(e)))?;
-        b.pop(); // drop the terminator
-        Ok(String::from_utf8(b)?)
-    }
-}
-
-impl FromStr for Seek {
-    type Err = SeekError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut r = csv::ReaderBuilder::new()
-            .has_headers(false)
-            .from_reader(s.as_bytes());
-
-        if let Some(result) = r.deserialize().next() {
-            let seek: Seek = result?;
-
-            // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
-            match seek.sort_by {
-                SortBy::Relevance => match seek.anchor {
-                    Anchor::StartQuery(..) |
-                    Anchor::AfterQuery(..) |
-                    Anchor::BeforeQuery(..) => Ok(seek),
-                    a => Err(SeekError::RelevanceMismatch(a))
-                },
-                _ => Ok(seek)
-            }
-        }
-        else {
-            Err(SeekError::EmptySeek)
+    fn try_from(
+        (sort_by, dir, anchor): (SortBy, Direction, Anchor)
+    ) -> Result<Self, Self::Error>
+    {
+        // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
+        match sort_by {
+            SortBy::Relevance => match anchor {
+                Anchor::StartQuery(..) |
+                Anchor::AfterQuery(..) |
+                Anchor::BeforeQuery(..) => Ok(Seek { sort_by, dir, anchor }),
+                a => Err(SeekError::RelevanceMismatch(a))
+            },
+            _ => Ok(Seek { sort_by, dir, anchor })
         }
     }
 }
@@ -408,14 +301,20 @@ impl FromStr for Seek {
 pub struct SeekLink(String);
 
 impl SeekLink {
-    pub fn new(seek: &Seek, limit: Option<Limit>) -> Result<SeekLink, SeekError> {
-        let s = String::try_from(seek)?;
-        let s = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s);
-
-        match limit {
-            Some(l) => Ok(SeekLink(format!("?limit={}&seek={}", l, s))),
-            None => Ok(SeekLink(format!("?seek={}", s)))
-        }
+    pub fn new(
+        seek: &Seek,
+        limit: Option<Limit>
+    ) -> SeekLink
+    {
+        let Seek { sort_by, dir, anchor } = seek;
+        let anchor_s = anchor.to_string();
+        let anchor = urlencoding::encode(&anchor_s);
+        SeekLink(
+            match limit {
+                Some(l) => format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}&limit={l}"),
+                None => format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}"),
+            }
+        )
     }
 }
 
@@ -431,7 +330,6 @@ pub struct Pagination {
     pub next_page: Option<SeekLink>,
     pub total: i64
 }
-
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Facet {
@@ -487,37 +385,9 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_anchor_tag_round_trip(a: AnchorTag) {
-        assert_eq!(
-            AnchorTag::try_from(String::from(a).as_str()).unwrap(),
-            a
-        );
-    }
-
-    #[test]
-    fn anchor_tag_round_trip() {
-        assert_anchor_tag_round_trip(AnchorTag::Start);
-        assert_anchor_tag_round_trip(AnchorTag::Before);
-        assert_anchor_tag_round_trip(AnchorTag::After);
-        assert_anchor_tag_round_trip(AnchorTag::StartQuery);
-        assert_anchor_tag_round_trip(AnchorTag::BeforeQuery);
-        assert_anchor_tag_round_trip(AnchorTag::AfterQuery);
-    }
-
-    #[test]
-    fn anchor_tag_string_bad() {
-        assert!(
-            matches!(
-                AnchorTag::try_from("z").unwrap_err(),
-                AnchorTagError(_)
-            )
-        );
-    }
-
-    #[track_caller]
     fn assert_anchor_round_trip(a: Anchor) {
         assert_eq!(
-            Anchor::try_from(RawAnchor::from(a.clone())).unwrap(),
+            Anchor::try_from(String::from(a.clone())).unwrap(),
             a
         );
     }
@@ -530,22 +400,6 @@ mod test {
         assert_anchor_round_trip(Anchor::StartQuery("a".into()));
         assert_anchor_round_trip(Anchor::BeforeQuery("a".into(), "b".into(), 1));
         assert_anchor_round_trip(Anchor::AfterQuery("a".into(), "b".into(), 1));
-    }
-
-    #[test]
-    fn raw_anchor_bad() {
-        let ra = RawAnchor {
-            tag: AnchorTag::Before,
-            field: None,
-            query: None,
-            id: None
-        };
-        assert!(
-            matches!(
-                Anchor::try_from(ra).unwrap_err(),
-                AnchorError(_)
-            )
-        );
     }
 
     #[track_caller]
@@ -630,128 +484,32 @@ mod test {
     }
 
     #[test]
-    fn seek_roundtrip_start() {
+    fn seek_try_from_ok() {
         let seek = Seek {
             sort_by: SortBy::ProjectName,
             dir: Direction::Ascending,
             anchor: Anchor::Start,
         };
 
-        assert_eq!(
-            String::try_from(&seek)
-                .unwrap()
-                .parse::<Seek>()
-                .unwrap(),
-            seek
-        );
+        let t = (SortBy::ProjectName, Direction::Ascending, Anchor::Start);
+        assert_eq!(seek, t.try_into().unwrap())
     }
 
     #[test]
-    fn seek_to_string_start() {
-        assert_eq!(
-            &String::try_from(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Start
-                }
-            ).unwrap(),
-            "p,a,s,,,"
-        );
+    fn seek_try_from_relevance_ok() {
+        let seek = Seek {
+            sort_by: SortBy::Relevance,
+            dir: Direction::Ascending,
+            anchor: Anchor::StartQuery("foo".into()),
+        };
+
+        let t = (seek.sort_by, seek.dir, seek.anchor.clone());
+        assert_eq!(seek, t.try_into().unwrap())
     }
 
     #[test]
-    fn seek_to_string_end() {
-        assert_eq!(
-            &String::try_from(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending,
-                    anchor: Anchor::Start
-                }
-            ).unwrap(),
-            "p,d,s,,,"
-        );
-    }
-
-    #[test]
-    fn seek_to_string_before() {
-        assert_eq!(
-            &String::try_from(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::Before("abc".into(), 0),
-                }
-            ).unwrap(),
-            "p,a,b,abc,,0"
-        );
-    }
-
-    #[test]
-    fn seek_to_string_after() {
-        assert_eq!(
-            &String::try_from(
-                Seek {
-                    sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending,
-                    anchor: Anchor::After("abc".into(), 0)
-                }
-            ).unwrap(),
-            "p,a,a,abc,,0"
-        );
-    }
-
-    #[test]
-    fn string_to_seek_start() {
-        assert_eq!(
-            "p,a,s,,,".parse::<Seek>().unwrap(),
-            Seek {
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending,
-                anchor: Anchor::Start
-            }
-        );
-    }
-
-    #[test]
-    fn string_to_seek_end() {
-        assert_eq!(
-            "p,d,s,,,".parse::<Seek>().unwrap(),
-            Seek {
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Descending,
-                anchor: Anchor::Start
-            }
-        );
-    }
-
-    #[test]
-    fn string_to_seek_before() {
-        assert_eq!(
-            "p,a,b,abc,,0".parse::<Seek>().unwrap(),
-            Seek {
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending,
-                anchor: Anchor::Before("abc".into(), 0)
-            }
-        );
-    }
-
-    #[test]
-    fn string_to_seek_after() {
-        assert_eq!(
-            "p,a,a,abc,,0".parse::<Seek>().unwrap(),
-            Seek {
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending,
-                anchor: Anchor::After("abc".into(), 0)
-            }
-        );
-    }
-
-    #[test]
-    fn string_to_seek_err() {
-        assert!("$$$".parse::<Seek>().is_err());
+    fn seek_try_from_relevance_illegal() {
+        let t = (SortBy::Relevance, Direction::Ascending, Anchor::Start);
+        assert!(Seek::try_from(t).is_err())
     }
 }

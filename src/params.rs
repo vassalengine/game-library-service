@@ -1,4 +1,3 @@
-use base64::{Engine as _};
 use serde::Deserialize;
 use std::str;
 
@@ -7,35 +6,22 @@ use crate::pagination::{Anchor, Limit, Direction, SortBy, Seek, SeekError};
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct MaybeProjectsParams {
     pub q: Option<String>,
-    pub sort: Option<SortBy>,
-    pub order: Option<Direction>,
     pub from: Option<String>,
-    pub seek: Option<String>,
-    pub limit: Option<Limit>
-}
-
-impl MaybeProjectsParams {
-        // sort, order, query, from are incompatible with seek
-        // from is incompatible with query
-        !(
-            (
-                self.seek.is_some() &&
-                (
-                    self.sort.is_some() ||
-                    self.order.is_some() ||
-                    self.from.is_some() ||
-                    self.q.is_some()
-                )
-            )
-            ||
-            (self.from.is_some() && self.q.is_some())
-        )
-    }
+    pub sort_by: Option<SortBy>,
+    pub dir: Option<Direction>,
+    pub anchor: Option<Anchor>,
+    pub limit: Option<Limit>,
+//    pub facets: Option<Vec<Facet>>
 }
 
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(try_from = "MaybeProjectsParams")]
 pub struct ProjectsParams {
+/*
+    pub sort_by: Option<SortBy>,
+    pub dir: Option<Direction>,
+    pub anchor: Option<Anchor>,
+*/
     pub seek: Seek,
     pub limit: Option<Limit>
 }
@@ -44,63 +30,74 @@ pub struct ProjectsParams {
 pub enum Error {
     #[error("invalid combination {0:?}")]
     InvalidCombination(MaybeProjectsParams),
-    #[error("invalid base64 {0}")]
-    Base64Decode(#[from] base64::DecodeError),
-    #[error("invalid UTF-8 {0}")]
-    Utf8(#[from] std::str::Utf8Error),
     #[error("{0}")]
     Seek(#[from] SeekError)
 }
 
-fn decode_seek(enc: &str) -> Result<Seek, Error> {
-    // base64-decode the seek string
-    let buf = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(enc)?;
+impl TryFrom<MaybeProjectsParams> for Seek {
+    type Error = Error;
 
-    Ok(
-        str::from_utf8(&buf)?
-            .parse::<Seek>()?
-    )
-}
-
-fn convert_non_seek(m: MaybeProjectsParams) -> Seek {
-    let (sort_by, anchor) = match m.q {
-        Some(query) => (
-            m.sort.unwrap_or(SortBy::Relevance),
-            Anchor::StartQuery(query)
-        ),
-        None => (
-            m.sort.unwrap_or_default(),
-            match m.from {
-                // id 0 is unused and sorts before all other
-                // instances of the from string
-                Some(from) => Anchor::After(from, 0),
-                None => Anchor::Start
-            }
-        )
-    };
-
-    let dir = m.order.unwrap_or_else(|| sort_by.default_direction());
-
-    Seek { sort_by, dir, anchor }
+    fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
+        match m {
+            // all seek parts, nothing else
+            MaybeProjectsParams {
+                q: None,
+                from: None,
+                sort_by: Some(sort_by),
+                dir: Some(dir),
+                anchor: Some(anchor),
+                ..
+            } => Ok((sort_by, dir, anchor).try_into()?),
+            // query with optional sort_by, dir
+            MaybeProjectsParams {
+                q: Some(query),
+                from: None,
+                sort_by,
+                dir,
+                anchor: None,
+                ..
+            } => {
+                let sort_by = sort_by.unwrap_or(SortBy::Relevance);
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Ok((sort_by, dir, Anchor::StartQuery(query)).try_into()?)
+            },
+            // no query; optional sort_by, dir, from
+            MaybeProjectsParams {
+                q: None,
+                from,
+                sort_by,
+                dir,
+                anchor: None,
+                ..
+            } => {
+                let sort_by = sort_by.unwrap_or_default();
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Ok((
+                    sort_by,
+                    dir,
+                    match from {
+                        // id 0 is unused and sorts before all other
+                        // instances of the from string
+                        Some(from) => Anchor::After(from, 0),
+                        None => Anchor::Start
+                    }
+                ).try_into()?)
+            },
+            _ => Err(Error::InvalidCombination(m))
+        }
+    }
 }
 
 impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = Error;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        match m.is_valid() {
-            true => Ok(
-                ProjectsParams {
-                    limit: m.limit,
-                    seek: match m.seek {
-                        Some(enc) => decode_seek(&enc)?,
-                        None => convert_non_seek(m)
-                    }
-                }
-            ),
-            false => Err(Error::InvalidCombination(m))
-        }
+        Ok(
+            ProjectsParams {
+                limit: m.limit,
+                seek: m.try_into()?
+            }
+        )
     }
 }
 
@@ -109,103 +106,43 @@ mod test {
     use super::*;
 
     #[test]
-    fn maybe_projects_params_valid() {
-        let mpp = MaybeProjectsParams {
-            sort: Some(SortBy::ProjectName),
-            order: Some(Direction::Ascending),
-            ..Default::default()
+    fn maybe_projects_params_default_ok() {
+        let mpp = MaybeProjectsParams::default();
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None
         };
-        assert!(mpp.is_valid());
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
     }
 
     #[test]
-    fn maybe_projects_params_invald_seek_and_sort() {
-        let mpp = MaybeProjectsParams {
-            seek: Some("whatever".into()),
-            sort: Some(SortBy::ProjectName),
-            ..Default::default()
-        };
-        assert!(!mpp.is_valid());
-    }
-
-    #[test]
-    fn maybe_projects_params_invalid_seek_and_order() {
-        let mpp = MaybeProjectsParams {
-            seek: Some("whatever".into()),
-            order: Some(Direction::Ascending),
-            ..Default::default()
-        };
-        assert!(!mpp.is_valid());
-    }
-
-    #[test]
-    fn maybe_projects_params_invalid_seek_and_from() {
-        let mpp = MaybeProjectsParams {
-            seek: Some("whatever".into()),
-            from: Some("whatever".into()),
-            ..Default::default()
-        };
-        assert!(!mpp.is_valid());
-    }
-
-    #[test]
-    fn maybe_projects_params_invalid_seek_and_q() {
-        let mpp = MaybeProjectsParams {
-            seek: Some("whatever".into()),
-            q: Some("whatever".into()),
-            ..Default::default()
-        };
-        assert!(!mpp.is_valid());
-    }
-
-    #[test]
-    fn maybe_projects_params_invalid_from_and_q() {
+    fn maybe_projects_params_from_and_q_invalid() {
         let mpp = MaybeProjectsParams {
             from: Some("whatever".into()),
             q: Some("whatever".into()),
             ..Default::default()
         };
-        assert!(!mpp.is_valid());
-    }
 
-    #[test]
-    fn decode_seek_ok() {
-        assert_eq!(
-            decode_seek("cCxhLGEsYWJjLCww").unwrap(),
-            Seek {
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending,
-                anchor: Anchor::After("abc".into(), 0)
-            }
-        );
-    }
-
-    #[test]
-    fn decode_seek_bad_base64() {
         assert!(
             matches!(
-                decode_seek("garbage!!!").unwrap_err(),
-                Error::Base64Decode(_)
+                ProjectsParams::try_from(mpp).unwrap_err(),
+                Error::InvalidCombination(_)
             )
         );
     }
 
     #[test]
-    fn decode_seek_bad_utf8() {
-        // ____ decodes to FF FF FF, which is not valid UTF-8
-        assert!(
-            matches!(
-                decode_seek("____").unwrap_err(),
-                Error::Utf8(_)
-            )
-        );
-    }
-
-    #[test]
-    fn maybe_projects_params_try_from_ok() {
+    fn maybe_projects_params_seek_ok() {
         let mpp = MaybeProjectsParams {
-            sort: Some(SortBy::ProjectName),
-            order: Some(Direction::Ascending),
+            sort_by: Some(SortBy::ProjectName),
+            dir: Some(Direction::Ascending),
+            anchor: Some(Anchor::Start),
             ..Default::default()
         };
 
@@ -222,10 +159,10 @@ mod test {
     }
 
     #[test]
-    fn maybe_projects_params_try_from_invalid() {
+    fn maybe_projects_params_seek_incomplete() {
         let mpp = MaybeProjectsParams {
-            seek: Some("whatever".into()),
-            sort: Some(SortBy::ProjectName),
+            sort_by: Some(SortBy::ProjectName),
+            anchor: Some(Anchor::Start),
             ..Default::default()
         };
 
@@ -238,33 +175,78 @@ mod test {
     }
 
     #[test]
-    fn maybe_projects_params_try_from_bad_base64() {
+    fn maybe_projects_params_mixed_invalid() {
         let mpp = MaybeProjectsParams {
-            seek: Some("garbage!!!".into()),
+            sort_by: Some(SortBy::ProjectName),
+            anchor: Some(Anchor::Start),
+            dir: Some(Direction::Ascending),
+            from: Some("whatever".into()),
             ..Default::default()
         };
 
         assert!(
             matches!(
                 ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::Base64Decode(_)
+                Error::InvalidCombination(_)
             )
         );
     }
 
     #[test]
-    fn maybe_projects_params_try_from_bad_utf8() {
-        // _v7- decodes to FE FE FE, which is not valid UTF-8
+    fn maybe_projects_params_sort_by_dir_ok() {
         let mpp = MaybeProjectsParams {
-            seek: Some("_v7-".into()),
+            sort_by: Some(SortBy::ProjectName),
+            dir: Some(Direction::Ascending),
             ..Default::default()
         };
 
-        assert!(
-            matches!(
-                ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::Utf8(_)
-            )
-        );
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::ProjectName,
+                dir: Direction::Ascending,
+                anchor: Anchor::Start
+            },
+            limit: None
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_from_ok() {
+        let mpp = MaybeProjectsParams {
+            from: Some("whatever".into()),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::After("whatever".into(), 0)
+            },
+            limit: None
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_limit_ok() {
+        let mpp = MaybeProjectsParams {
+            limit: Limit::new(50),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: Limit::new(50)
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
     }
 }
