@@ -94,7 +94,6 @@ impl From<GetProjectsError> for AppError {
         match err {
             GetProjectsError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             GetProjectsError::MalformedQuery => AppError::MalformedQuery,
-            GetProjectsError::SeekError(e) => AppError::InternalError(e.to_string()),
             GetProjectsError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }

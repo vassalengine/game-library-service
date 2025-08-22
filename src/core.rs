@@ -70,8 +70,6 @@ pub enum GetProjectsError {
     #[error("Malformed query")]
     MalformedQuery,
     #[error("{0}")]
-    SeekError(#[from] pagination::SeekError),
-    #[error("{0}")]
     TimeError(#[from] time::Error)
 }
 

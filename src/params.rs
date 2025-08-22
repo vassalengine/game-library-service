@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::str;
 
-use crate::pagination::{Anchor, Limit, Direction, SortBy, Seek, SeekError};
+use crate::pagination::{Anchor, Facet, Limit, Direction, SortBy, Seek};
 
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct MaybeProjectsParams {
@@ -11,7 +11,15 @@ pub struct MaybeProjectsParams {
     pub dir: Option<Direction>,
     pub anchor: Option<Anchor>,
     pub limit: Option<Limit>,
-//    pub facets: Option<Vec<Facet>>
+    // facets
+    pub publisher: Option<String>,
+    pub year: Option<String>,
+    #[serde(default)]
+    pub tag: Vec<String>,
+    #[serde(default)]
+    pub owner: Vec<String>,
+    #[serde(default)]
+    pub player: Vec<String>
 }
 
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
@@ -23,81 +31,99 @@ pub struct ProjectsParams {
     pub anchor: Option<Anchor>,
 */
     pub seek: Seek,
+    pub facets: Vec<Facet>,
     pub limit: Option<Limit>
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    #[error("invalid combination {0:?}")]
-    InvalidCombination(MaybeProjectsParams),
-    #[error("{0}")]
-    Seek(#[from] SeekError)
-}
-
-impl TryFrom<MaybeProjectsParams> for Seek {
-    type Error = Error;
-
-    fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        match m {
-            // all seek parts, nothing else
-            MaybeProjectsParams {
-                q: None,
-                from: None,
-                sort_by: Some(sort_by),
-                dir: Some(dir),
-                anchor: Some(anchor),
-                ..
-            } => Ok((sort_by, dir, anchor).try_into()?),
-            // query with optional sort_by, dir
-            MaybeProjectsParams {
-                q: Some(query),
-                from: None,
-                sort_by,
-                dir,
-                anchor: None,
-                ..
-            } => {
-                let sort_by = sort_by.unwrap_or(SortBy::Relevance);
-                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
-                Ok((sort_by, dir, Anchor::StartQuery(query)).try_into()?)
-            },
-            // no query; optional sort_by, dir, from
-            MaybeProjectsParams {
-                q: None,
-                from,
-                sort_by,
-                dir,
-                anchor: None,
-                ..
-            } => {
-                let sort_by = sort_by.unwrap_or_default();
-                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
-                Ok((
-                    sort_by,
-                    dir,
-                    match from {
-                        // id 0 is unused and sorts before all other
-                        // instances of the from string
-                        Some(from) => Anchor::After(from, 0),
-                        None => Anchor::Start
-                    }
-                ).try_into()?)
-            },
-            _ => Err(Error::InvalidCombination(m))
-        }
-    }
+    #[error("invalid combination")]
+    InvalidCombination,
 }
 
 impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     type Error = Error;
 
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
-        Ok(
-            ProjectsParams {
-                limit: m.limit,
-                seek: m.try_into()?
-            }
-        )
+        let MaybeProjectsParams {
+            q,
+            from,
+            sort_by,
+            dir,
+            anchor,
+            limit,
+            publisher,
+            year,
+            tag,
+            owner,
+            player
+        } = m;
+
+        let seek = match (q, from, sort_by, dir, anchor) {
+            // all seek parts, nothing else
+            (None, None, Some(sort_by), Some(dir), Some(anchor)) => {
+                // Relevance goes with StartQuery, AfterQuery, BeforeQuery
+                match sort_by {
+                    SortBy::Relevance => match anchor {
+                        Anchor::StartQuery(..) |
+                        Anchor::AfterQuery(..) |
+                        Anchor::BeforeQuery(..) =>
+                            Seek { sort_by, dir, anchor },
+                        _ => return Err(Error::InvalidCombination)
+                    },
+                    _ => Seek { sort_by, dir, anchor }
+                }
+            },
+            // query with optional sort_by, dir
+            (Some(query), None, sort_by, dir, None) => {
+                let sort_by = sort_by.unwrap_or(SortBy::Relevance);
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Seek {
+                    sort_by,
+                    dir,
+                    anchor: Anchor::StartQuery(query)
+                }
+            },
+            // no query; optional sort_by, dir, from
+            (None, from, sort_by, dir, None) => {
+                let sort_by = sort_by.unwrap_or_default();
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Seek {
+                    sort_by,
+                    dir,
+                    anchor: match from {
+                        // id 0 is unused and sorts before all other
+                        // instances of the from string
+                        Some(from) => Anchor::After(from, 0),
+                        None => Anchor::Start
+                    }
+                }
+            },
+            _ => return Err(Error::InvalidCombination)
+        };
+
+        // collect the facets
+        let mut facets = Vec::with_capacity(
+            (publisher.is_some() as usize) +
+            (year.is_some() as usize) +
+            tag.len() +
+            owner.len() +
+            player.len()
+        );
+
+        if let Some(publisher) = publisher {
+            facets.push(Facet::Publisher(publisher));
+        }
+
+        if let Some(year) = year {
+            facets.push(Facet::Year(year));
+        }
+
+        facets.extend(tag.into_iter().map(Facet::Tag));
+        facets.extend(owner.into_iter().map(Facet::Owner));
+        facets.extend(player.into_iter().map(Facet::Owner));
+
+        Ok(ProjectsParams { limit, seek, facets })
     }
 }
 
@@ -115,7 +141,8 @@ mod test {
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start
             },
-            limit: None
+            limit: None,
+            facets: vec![]
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -129,11 +156,9 @@ mod test {
             ..Default::default()
         };
 
-        assert!(
-            matches!(
-                ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::InvalidCombination(_)
-            )
+        assert_eq!(
+            ProjectsParams::try_from(mpp).unwrap_err(),
+            Error::InvalidCombination
         );
     }
 
@@ -152,7 +177,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::Start
             },
-            limit: None
+            limit: None,
+            facets: vec![]
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -166,11 +192,9 @@ mod test {
             ..Default::default()
         };
 
-        assert!(
-            matches!(
-                ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::InvalidCombination(_)
-            )
+        assert_eq!(
+            ProjectsParams::try_from(mpp).unwrap_err(),
+            Error::InvalidCombination
         );
     }
 
@@ -184,11 +208,9 @@ mod test {
             ..Default::default()
         };
 
-        assert!(
-            matches!(
-                ProjectsParams::try_from(mpp).unwrap_err(),
-                Error::InvalidCombination(_)
-            )
+        assert_eq!(
+            ProjectsParams::try_from(mpp).unwrap_err(),
+            Error::InvalidCombination
         );
     }
 
@@ -206,7 +228,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::Start
             },
-            limit: None
+            limit: None,
+            facets: vec![]
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -225,7 +248,8 @@ mod test {
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::After("whatever".into(), 0)
             },
-            limit: None
+            limit: None,
+            facets: vec![]
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -244,7 +268,8 @@ mod test {
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start
             },
-            limit: Limit::new(50)
+            limit: Limit::new(50),
+            facets: vec![]
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);

@@ -254,12 +254,6 @@ impl SortBy {
     }
 }
 
-#[derive(Debug, thiserror::Error, Eq, PartialEq)]
-pub enum SeekError {
-    #[error("Relevance must be paired with a query anchor, not {0:?}")]
-    RelevanceMismatch(Anchor)
-}
-
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Seek {
     pub sort_by: SortBy,
@@ -273,26 +267,6 @@ impl Default for Seek {
             anchor: Anchor::Start,
             sort_by: SortBy::ProjectName,
             dir: Direction::Ascending
-        }
-    }
-}
-
-impl TryFrom<(SortBy, Direction, Anchor)> for Seek {
-    type Error = SeekError;
-
-    fn try_from(
-        (sort_by, dir, anchor): (SortBy, Direction, Anchor)
-    ) -> Result<Self, Self::Error>
-    {
-        // Relevance must be paired with StartQuery, AfterQuery, BeforeQuery
-        match sort_by {
-            SortBy::Relevance => match anchor {
-                Anchor::StartQuery(..) |
-                Anchor::AfterQuery(..) |
-                Anchor::BeforeQuery(..) => Ok(Seek { sort_by, dir, anchor }),
-                a => Err(SeekError::RelevanceMismatch(a))
-            },
-            _ => Ok(Seek { sort_by, dir, anchor })
         }
     }
 }
