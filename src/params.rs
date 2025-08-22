@@ -121,7 +121,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
 
         facets.extend(tag.into_iter().map(Facet::Tag));
         facets.extend(owner.into_iter().map(Facet::Owner));
-        facets.extend(player.into_iter().map(Facet::Owner));
+        facets.extend(player.into_iter().map(Facet::Player));
 
         Ok(ProjectsParams { limit, seek, facets })
     }
@@ -274,4 +274,115 @@ mod test {
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
     }
+
+    #[test]
+    fn maybe_projects_params_publisher_ok() {
+        let mpp = MaybeProjectsParams {
+            publisher: Some("abc".into()),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None,
+            facets: vec![ Facet::Publisher("abc".into()) ]
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_year_ok() {
+        let mpp = MaybeProjectsParams {
+            year: Some("1979".into()),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None,
+            facets: vec![ Facet::Year("1979".into()) ]
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_tag_ok() {
+        let mpp = MaybeProjectsParams {
+            tag: vec![ "x".into(), "y".into() ],
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None,
+            facets: vec![
+                Facet::Tag("x".into()),
+                Facet::Tag("y".into())
+            ]
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_owner_ok() {
+        let mpp = MaybeProjectsParams {
+            owner: vec![ "x".into(), "y".into() ],
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None,
+            facets: vec![
+                Facet::Owner("x".into()),
+                Facet::Owner("y".into())
+            ]
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_player_ok() {
+        let mpp = MaybeProjectsParams {
+            player: vec![ "x".into(), "y".into() ],
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::default(),
+                dir: SortBy::default().default_direction(),
+                anchor: Anchor::Start
+            },
+            limit: None,
+            facets: vec![
+                Facet::Player("x".into()),
+                Facet::Player("y".into())
+            ]
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+
 }
