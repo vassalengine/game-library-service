@@ -28,7 +28,7 @@ use crate::{
     input::{is_valid_package_name, slug_for, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
-    pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
+    pagination::{Anchor, Direction, Facet, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
     time::{self, nanos_to_rfc3339, rfc3339_to_nanos},
     upload::{Uploader, safe_filename, stream_to_writer},
@@ -121,7 +121,7 @@ where
     {
         let ProjectsParams { seek, limit, facets } = params;
         let (prev, next, projects, total) = self.get_projects_from(
-            seek, limit.unwrap_or_default()
+            seek, limit.unwrap_or_default(), &facets
         ).await?;
 
         let prev_page = prev.map(|prev| SeekLink::new(&prev, limit));
@@ -862,10 +862,12 @@ where
         }
     }
 
+// TODO: make this take function pointers?
     async fn get_projects_from(
         &self,
         seek: Seek,
-        limit: Limit
+        limit: Limit,
+        facets: &[Facet]
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
     {
         // unpack the seek
@@ -1541,7 +1543,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::Start
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1579,7 +1582,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::Start
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1617,7 +1621,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::After("a".into(), 1)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1664,7 +1669,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::After("h".into(), 8)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1711,7 +1717,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("e".into(), 5)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1757,7 +1764,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::Before("e".into(), 5)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1804,7 +1812,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("d".into(), 4)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1842,7 +1851,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::Before("g".into(), 7)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1880,7 +1890,8 @@ mod test {
                 dir: Direction::Ascending,
                 anchor: Anchor::After("g".into(), 7)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1918,7 +1929,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::After("d".into(), 4)
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1956,7 +1968,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::Start
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -1997,7 +2010,8 @@ mod test {
                 dir: Direction::Descending,
                 anchor: Anchor::Start
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -2038,7 +2052,8 @@ mod test {
                     1
                 )
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -2094,7 +2109,8 @@ mod test {
                     8
                 )
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -2150,7 +2166,8 @@ mod test {
                     5
                 )
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
@@ -2206,7 +2223,8 @@ mod test {
                     5
                 )
             },
-            Limit::new(3).unwrap()
+            Limit::new(3).unwrap(),
+            &[]
         ).await.unwrap();
 
         assert_eq!(
