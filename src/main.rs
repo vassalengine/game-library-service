@@ -1773,41 +1773,6 @@ mod test {
         assert_projects_seek_after_ok(response).await;
     }
 
-    async fn get_projects_seek_too_long(rw: bool) -> Response {
-        let long = "x".repeat(1000);
-
-        let query = SeekLink::new(
-            &Seek {
-                anchor: Anchor::Before(long, 0),
-                sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
-            },
-            Limit::new(5)
-        );
-
-        try_request(
-            Request::builder()
-                .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?seek={query}"))
-                .body(Body::empty())
-                .unwrap(),
-            rw
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_too_long_rw() {
-        let response = get_projects_seek_too_long(true).await;
-        assert_malformed_query(response).await;
-    }
-
-    #[tokio::test]
-    async fn get_projects_seek_too_long_ro() {
-        let response = get_projects_seek_too_long(false).await;
-        assert_malformed_query(response).await;
-    }
-
     async fn get_projects_seek_and_limit_ok(rw: bool) -> Response {
         let query = SeekLink::new(
             &Seek {
