@@ -4,6 +4,7 @@ use axum::{
     response::{Json, Redirect}
 };
 use axum_extra::{
+    extract::Query as MultiQuery,
     TypedHeader,
     headers::{ContentLength, ContentType}
 };
@@ -38,7 +39,7 @@ pub async fn root_get() -> &'static str {
 }
 
 pub async fn projects_get(
-    Wrapper(Query(params)): Wrapper<Query<ProjectsParams>>,
+    Wrapper(MultiQuery(params)): Wrapper<MultiQuery<ProjectsParams>>,
     State(core): State<CoreArc>
 ) -> Result<Json<Projects>, AppError>
 {

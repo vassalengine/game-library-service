@@ -8,6 +8,7 @@ use axum::{
 };
 use axum_extra::{
     TypedHeader,
+    extract::QueryRejection as MultiQueryRejection,
     headers::{
         Authorization,
         authorization::Bearer
@@ -251,6 +252,12 @@ impl From<JsonRejection> for AppError {
 
 impl From<QueryRejection> for AppError {
     fn from(_: QueryRejection) -> Self {
+       AppError::MalformedQuery
+    }
+}
+
+impl From<MultiQueryRejection> for AppError {
+    fn from(_: MultiQueryRejection) -> Self {
        AppError::MalformedQuery
     }
 }

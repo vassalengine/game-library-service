@@ -1460,13 +1460,13 @@ mod test {
     #[tokio::test]
     async fn get_projects_limit_empty_rw() {
         let response = get_projects_limit_empty(true).await;
-        assert_limit_out_of_range(response).await;
+        assert_get_projects_no_params_ok(response).await;
     }
 
     #[tokio::test]
     async fn get_projects_limit_empty_ro() {
         let response = get_projects_limit_empty(false).await;
-        assert_limit_out_of_range(response).await;
+        assert_get_projects_no_params_ok(response).await;
     }
 
     async fn get_projects_limit_not_a_number(rw: bool) -> Response {
