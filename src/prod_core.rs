@@ -119,9 +119,9 @@ where
         params: ProjectsParams
     ) -> Result<Projects, GetProjectsError>
     {
-        let ProjectsParams { seek, limit, facets } = params;
+        let ProjectsParams { seek, limit } = params;
         let (prev, next, projects, total) = self.get_projects_from(
-            seek, limit.unwrap_or_default(), &facets
+            seek, limit.unwrap_or_default()
         ).await?;
 
         let prev_page = prev.map(|prev| SeekLink::new(&prev, limit));
@@ -871,12 +871,11 @@ where
     async fn get_projects_from(
         &self,
         seek: Seek,
-        limit: Limit,
-        facets: &[Facet]
+        limit: Limit
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
     {
         // unpack the seek
-        let Seek { sort_by, dir, anchor, query } = seek;
+        let Seek { sort_by, dir, anchor, query, facets } = seek;
 
         // get the total number of responsive items
         let total = match query {
@@ -1015,7 +1014,13 @@ fn get_prev_for_before(
             Anchor::After(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: prev_anchor, sort_by, dir, query }))
+        Ok(Some(Seek {
+            anchor: prev_anchor,
+            sort_by,
+            dir,
+            query,
+            facets: vec![]
+        }))
     }
     else {
         // there are no pages in the forward direction
@@ -1048,7 +1053,13 @@ fn get_next_for_before(
             Anchor::After(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: next_anchor, sort_by, dir, query }))
+        Ok(Some(Seek {
+            anchor: next_anchor,
+            sort_by,
+            dir,
+            query,
+            facets: vec![]
+        }))
     }
 }
 
@@ -1080,7 +1091,13 @@ fn get_next_for_after(
             Anchor::Before(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: next_anchor, sort_by, dir, query }))
+        Ok(Some(Seek {
+            anchor: next_anchor,
+            sort_by,
+            dir,
+            query,
+            facets: vec![]
+        }))
     }
     else {
         // there are no pages in the forward direction
@@ -1113,7 +1130,13 @@ fn get_prev_for_after(
                 Anchor::Before(..) => unreachable!()
             };
 
-            Ok(Some(Seek { anchor: prev_anchor, sort_by, dir, query }))
+            Ok(Some(Seek {
+                anchor: prev_anchor,
+                sort_by,
+                dir,
+                query,
+                facets: vec![]
+            }))
         },
         Anchor::Before(..) => unreachable!()
     }
@@ -1520,10 +1543,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1546,7 +1569,8 @@ mod test {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1561,10 +1585,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1587,7 +1611,8 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1602,10 +1627,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::After("a".into(), 1),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1626,7 +1651,8 @@ mod test {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1638,7 +1664,8 @@ mod test {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1653,10 +1680,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::After("h".into(), 8),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1677,7 +1704,8 @@ mod test {
                     anchor: Anchor::Before("g".into(), 7),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1689,7 +1717,8 @@ mod test {
                     anchor: Anchor::After("e".into(), 5),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1704,10 +1733,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("e".into(), 5),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1728,7 +1757,8 @@ mod test {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1740,7 +1770,8 @@ mod test {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1754,10 +1785,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Before("e".into(), 5),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1778,7 +1809,8 @@ mod test {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1790,7 +1822,8 @@ mod test {
                     anchor: Anchor::After("f".into(), 6),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1805,10 +1838,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("d".into(), 4),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1831,7 +1864,8 @@ mod test {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1846,10 +1880,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Before("g".into(), 7),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1872,7 +1906,8 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1887,10 +1922,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::After("g".into(), 7),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1911,7 +1946,8 @@ mod test {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1928,10 +1964,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::After("d".into(), 4),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1952,7 +1988,8 @@ mod test {
                     anchor: Anchor::Before("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -1969,10 +2006,10 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -1998,7 +2035,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2013,10 +2051,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -2039,7 +2077,8 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2057,10 +2096,10 @@ mod test {
                     "1970-01-01T00:00:00.000000001Z".into(),
                     1
                 ),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -2084,7 +2123,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2099,7 +2139,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2117,10 +2158,10 @@ mod test {
                     "1970-01-01T00:00:00.000000008Z".into(),
                     8
                 ),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -2144,7 +2185,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2159,7 +2201,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2177,10 +2220,10 @@ mod test {
                     "1970-01-01T00:00:00.000000005Z".into(),
                     5
                 ),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -2204,7 +2247,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2219,7 +2263,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2237,10 +2282,10 @@ mod test {
                     "1970-01-01T00:00:00.000000006Z".into(),
                     5
                 ),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            Limit::new(3).unwrap(),
-            &[]
+            Limit::new(3).unwrap()
         ).await.unwrap();
 
         assert_eq!(
@@ -2264,7 +2309,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );
@@ -2279,7 +2325,8 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None
+                    query: None,
+                    facets: vec![]
                 }
             )
         );

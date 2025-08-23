@@ -31,7 +31,6 @@ pub struct ProjectsParams {
     pub anchor: Option<Anchor>,
 */
     pub seek: Seek,
-    pub facets: Vec<Facet>,
     pub limit: Option<Limit>
 }
 
@@ -59,46 +58,6 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             player
         } = m;
 
-        let seek = match (q, from, sort_by, dir, anchor) {
-            // all seek parts, nothing else
-            (None, None, Some(sort_by), Some(dir), Some(anchor)) => {
-                match sort_by {
-                    SortBy::Relevance =>
-                        // Relevance requires a query
-                        return Err(Error::InvalidCombination),
-                    _ => Seek { sort_by, dir, anchor, query: None }
-                }
-            },
-            // query with optional sort_by, dir
-            (Some(query), None, sort_by, dir, None) => {
-                let sort_by = sort_by.unwrap_or(SortBy::Relevance);
-                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
-                Seek {
-                    sort_by,
-                    dir,
-                    anchor: Anchor::Start,
-                    query: Some(query)
-                }
-            },
-            // no query; optional sort_by, dir, from
-            (None, from, sort_by, dir, None) => {
-                let sort_by = sort_by.unwrap_or_default();
-                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
-                Seek {
-                    sort_by,
-                    dir,
-                    anchor: match from {
-                        // id 0 is unused and sorts before all other
-                        // instances of the from string
-                        Some(from) => Anchor::After(from, 0),
-                        None => Anchor::Start
-                    },
-                    query: None
-                }
-            },
-            _ => return Err(Error::InvalidCombination)
-        };
-
         // collect the facets
         let mut facets = Vec::with_capacity(
             (publisher.is_some() as usize) +
@@ -120,7 +79,55 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         facets.extend(owner.into_iter().map(Facet::Owner));
         facets.extend(player.into_iter().map(Facet::Player));
 
-        Ok(ProjectsParams { limit, seek, facets })
+        let seek = match (q, from, sort_by, dir, anchor) {
+            // all seek parts, nothing else
+            (None, None, Some(sort_by), Some(dir), Some(anchor)) => {
+                match sort_by {
+                    SortBy::Relevance =>
+                        // Relevance requires a query
+                        return Err(Error::InvalidCombination),
+                    _ => Seek {
+                        sort_by,
+                        dir,
+                        anchor,
+                        query: None,
+                        facets
+                    }
+                }
+            },
+            // query with optional sort_by, dir
+            (Some(query), None, sort_by, dir, None) => {
+                let sort_by = sort_by.unwrap_or(SortBy::Relevance);
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Seek {
+                    sort_by,
+                    dir,
+                    anchor: Anchor::Start,
+                    query: Some(query),
+                    facets
+                }
+            },
+            // no query; optional sort_by, dir, from
+            (None, from, sort_by, dir, None) => {
+                let sort_by = sort_by.unwrap_or_default();
+                let dir = dir.unwrap_or_else(|| sort_by.default_direction());
+                Seek {
+                    sort_by,
+                    dir,
+                    anchor: match from {
+                        // id 0 is unused and sorts before all other
+                        // instances of the from string
+                        Some(from) => Anchor::After(from, 0),
+                        None => Anchor::Start
+                    },
+                    query: None,
+                    facets
+                }
+            },
+            _ => return Err(Error::InvalidCombination)
+        };
+
+        Ok(ProjectsParams { limit, seek })
     }
 }
 
@@ -137,10 +144,10 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            limit: None,
-            facets: vec![]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -174,10 +181,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            limit: None,
-            facets: vec![]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -226,10 +233,10 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            limit: None,
-            facets: vec![]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -247,10 +254,10 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::After("whatever".into(), 0),
-                query: None
+                query: None,
+                facets: vec![]
             },
-            limit: None,
-            facets: vec![]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -268,10 +275,10 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![]
             },
-            limit: Limit::new(50),
-            facets: vec![]
+            limit: Limit::new(50)
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -289,10 +296,10 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![ Facet::Publisher("abc".into()) ]
             },
-            limit: None,
-            facets: vec![ Facet::Publisher("abc".into()) ]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -310,10 +317,10 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![ Facet::Year("1979".into()) ]
             },
-            limit: None,
-            facets: vec![ Facet::Year("1979".into()) ]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -331,13 +338,13 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![
+                    Facet::Tag("x".into()),
+                    Facet::Tag("y".into())
+                ]
             },
-            limit: None,
-            facets: vec![
-                Facet::Tag("x".into()),
-                Facet::Tag("y".into())
-            ]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -355,13 +362,13 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![
+                    Facet::Owner("x".into()),
+                    Facet::Owner("y".into())
+                ]
             },
-            limit: None,
-            facets: vec![
-                Facet::Owner("x".into()),
-                Facet::Owner("y".into())
-            ]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -379,13 +386,13 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None
+                query: None,
+                facets: vec![
+                    Facet::Player("x".into()),
+                    Facet::Player("y".into())
+                ]
             },
-            limit: None,
-            facets: vec![
-                Facet::Player("x".into()),
-                Facet::Player("y".into())
-            ]
+            limit: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);

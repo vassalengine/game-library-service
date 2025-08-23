@@ -228,11 +228,27 @@ impl SortBy {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum Facet {
+    Publisher(String),
+    Year(String),
+/*
+    PlayersMin(u32),
+    PlayersMax(u32),
+    LengthMin(u32),
+    LengthMax(u32),
+*/
+    Tag(String),
+    Owner(String),
+    Player(String)
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Seek {
     pub sort_by: SortBy,
     pub dir: Direction,
     pub anchor: Anchor,
-    pub query: Option<String>
+    pub query: Option<String>,
+    pub facets: Vec<Facet>
 }
 
 impl Default for Seek {
@@ -241,7 +257,8 @@ impl Default for Seek {
             anchor: Anchor::Start,
             sort_by: SortBy::ProjectName,
             dir: Direction::Ascending,
-            query: None
+            query: None,
+            facets: vec![]
         }
     }
 }
@@ -255,7 +272,7 @@ impl SeekLink {
         limit: Option<Limit>
     ) -> SeekLink
     {
-        let Seek { sort_by, dir, anchor, query } = seek;
+        let Seek { sort_by, dir, anchor, query, facets } = seek;
 
         let anchor_s = anchor.to_string();
         let anchor = urlencoding::encode(&anchor_s);
@@ -287,21 +304,6 @@ pub struct Pagination {
     pub prev_page: Option<SeekLink>,
     pub next_page: Option<SeekLink>,
     pub total: i64
-}
-
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub enum Facet {
-    Publisher(String),
-    Year(String),
-/*
-    PlayersMin(u32),
-    PlayersMax(u32),
-    LengthMin(u32),
-    LengthMax(u32),
-*/
-    Tag(String),
-    Owner(String),
-    Player(String)
 }
 
 #[cfg(test)]
