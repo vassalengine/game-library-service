@@ -257,11 +257,7 @@ impl fmt::Display for Facet {
             Facet::Player(p) => ("player", p)
         };
 
-        write!(
-            f,
-            "{k}={}",
-            urlencoding::encode(v)
-        )
+        write!(f, "{k}={}", urlencoding::encode(v))
     }
 }
 
