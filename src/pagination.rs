@@ -108,12 +108,17 @@ impl From<Anchor> for String {
 impl fmt::Display for Anchor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Anchor::Start =>
-                write!(f, "s"),
-            Anchor::Before(field, id) =>
-                write!(f, "b\t{}\t{}", field, id),
-            Anchor::After(field, id) =>
-                write!(f, "a\t{}\t{}", field, id)
+            Anchor::Start => write!(f, "s"),
+            Anchor::Before(field, id) => write!(
+                f,
+                "{}",
+                urlencoding::encode(&format!("b\t{}\t{}", field, id))
+            ),
+            Anchor::After(field, id) => write!(
+                f,
+                "{}",
+                urlencoding::encode(&format!("a\t{}\t{}", field, id))
+            )
         }
     }
 }
@@ -242,6 +247,24 @@ pub enum Facet {
     Player(String)
 }
 
+impl fmt::Display for Facet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (k, v) = match self {
+            Facet::Publisher(p) => ("publisher", p),
+            Facet::Year(y) => ("year", y),
+            Facet::Tag(t) => ("tag", t),
+            Facet::Owner(o) => ("owner", o),
+            Facet::Player(p) => ("player", p)
+        };
+
+        write!(
+            f,
+            "{k}={}",
+            urlencoding::encode(v)
+        )
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Seek {
     pub sort_by: SortBy,
@@ -274,16 +297,15 @@ impl SeekLink {
     {
         let Seek { sort_by, dir, anchor, query, facets } = seek;
 
-        let anchor_s = anchor.to_string();
-        let anchor = urlencoding::encode(&anchor_s);
-
         let mut qv = vec![
             format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}")
         ];
 
         if let Some(q) = query {
-            qv.push(format!("query={q}"));
+            qv.push(format!("query={}", urlencoding::encode(q)));
         }
+
+        facets.iter().for_each(|f| qv.push(f.to_string()));
 
         if let Some(l) = limit {
             qv.push(format!("limit={l}"));
@@ -347,7 +369,11 @@ mod test {
     #[track_caller]
     fn assert_anchor_round_trip(a: Anchor) {
         assert_eq!(
-            Anchor::try_from(String::from(a.clone())).unwrap(),
+            Anchor::try_from(
+                urlencoding::decode(&a.to_string())
+                    .unwrap()
+                    .into_owned()
+            ).unwrap(),
             a
         );
     }
