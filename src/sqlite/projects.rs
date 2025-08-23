@@ -46,8 +46,7 @@ impl<'args, Sep> WhereExt<'args> for Separated<'_, 'args, Sqlite, Sep>
 where
     Sep: std::fmt::Display
 {
-    fn push_where(&mut self, f: &'args Facet) -> &mut Self
-    {
+    fn push_where(&mut self, f: &'args Facet) -> &mut Self {
         match f {
             Facet::Publisher(p) =>
                 self.push(" projects.game_publisher == ")
