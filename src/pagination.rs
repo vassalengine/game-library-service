@@ -301,7 +301,9 @@ impl SeekLink {
             qv.push(format!("query={}", urlencoding::encode(q)));
         }
 
-        facets.iter().for_each(|f| qv.push(f.to_string()));
+        for f in facets {
+            qv.push(f.to_string());
+        }
 
         if let Some(l) = limit {
             qv.push(format!("limit={l}"));
