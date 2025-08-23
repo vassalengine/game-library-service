@@ -58,6 +58,11 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             player
         } = m;
 
+        if sort_by == Some(SortBy::Relevance) && q.is_none() {
+            // Relevance requires a query
+            return Err(Error::InvalidCombination);
+        }
+
         // collect the facets
         let mut facets = Vec::with_capacity(
             (publisher.is_some() as usize) +
@@ -80,20 +85,13 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         facets.extend(player.into_iter().map(Facet::Player));
 
         let seek = match (q, from, sort_by, dir, anchor) {
-            // all seek parts, nothing else
-            (None, None, Some(sort_by), Some(dir), Some(anchor)) => {
-                match sort_by {
-                    SortBy::Relevance =>
-                        // Relevance requires a query
-                        return Err(Error::InvalidCombination),
-                    _ => Seek {
-                        sort_by,
-                        dir,
-                        anchor,
-                        query: None,
-                        facets
-                    }
-                }
+            // sort_by, dir, anchor
+            (None, None, Some(sort_by), Some(dir), Some(anchor)) => Seek {
+                sort_by,
+                dir,
+                anchor,
+                query: None,
+                facets
             },
             // query with optional sort_by, dir
             (Some(query), None, sort_by, dir, None) => {
@@ -107,7 +105,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                     facets
                 }
             },
-            // no query; optional sort_by, dir, from
+            // optional from, sort_by, dir
             (None, from, sort_by, dir, None) => {
                 let sort_by = sort_by.unwrap_or_default();
                 let dir = dir.unwrap_or_else(|| sort_by.default_direction());
