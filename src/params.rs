@@ -62,16 +62,11 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         let seek = match (q, from, sort_by, dir, anchor) {
             // all seek parts, nothing else
             (None, None, Some(sort_by), Some(dir), Some(anchor)) => {
-                // Relevance goes with StartQuery, AfterQuery, BeforeQuery
                 match sort_by {
-                    SortBy::Relevance => match anchor {
-                        Anchor::StartQuery(..) |
-                        Anchor::AfterQuery(..) |
-                        Anchor::BeforeQuery(..) =>
-                            Seek { sort_by, dir, anchor },
-                        _ => return Err(Error::InvalidCombination)
-                    },
-                    _ => Seek { sort_by, dir, anchor }
+                    SortBy::Relevance =>
+                        // Relevance requires a query
+                        return Err(Error::InvalidCombination),
+                    _ => Seek { sort_by, dir, anchor, query: None }
                 }
             },
             // query with optional sort_by, dir
@@ -81,7 +76,8 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                 Seek {
                     sort_by,
                     dir,
-                    anchor: Anchor::StartQuery(query)
+                    anchor: Anchor::Start,
+                    query: Some(query)
                 }
             },
             // no query; optional sort_by, dir, from
@@ -96,7 +92,8 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         // instances of the from string
                         Some(from) => Anchor::After(from, 0),
                         None => Anchor::Start
-                    }
+                    },
+                    query: None
                 }
             },
             _ => return Err(Error::InvalidCombination)
@@ -139,7 +136,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![]
@@ -175,7 +173,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![]
@@ -226,7 +225,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![]
@@ -246,7 +246,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::After("whatever".into(), 0)
+                anchor: Anchor::After("whatever".into(), 0),
+                query: None
             },
             limit: None,
             facets: vec![]
@@ -266,7 +267,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: Limit::new(50),
             facets: vec![]
@@ -286,7 +288,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![ Facet::Publisher("abc".into()) ]
@@ -306,7 +309,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![ Facet::Year("1979".into()) ]
@@ -326,7 +330,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![
@@ -349,7 +354,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![
@@ -372,7 +378,8 @@ mod test {
             seek: Seek {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             limit: None,
             facets: vec![
@@ -383,6 +390,4 @@ mod test {
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
     }
-
-
 }

@@ -806,59 +806,64 @@ where
         anchor: &Anchor,
         sort_by: SortBy,
         dir: Direction,
+        query: Option<String>,
         limit_extra: u32
     ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
-        match anchor {
-            Anchor::Start => Ok(
-                self.db.get_projects_end_window(
-                    sort_by,
-                    dir,
-                    limit_extra
-                ).await?
-            ),
-            Anchor::After(field, id) =>
-                self.get_projects_mid_window(
-                    sort_by,
-                    dir,
-                    field,
-                    *id,
-                    limit_extra
-                ).await,
-            Anchor::Before(field, id) =>
-                self.get_projects_mid_window(
-                    sort_by,
-                    dir.rev(),
-                    field,
-                    *id,
-                    limit_extra
-                ).await,
-            Anchor::StartQuery(query) => Ok(
-                self.db.get_projects_query_end_window(
-                    query,
-                    sort_by,
-                    dir,
-                    limit_extra
-                ).await?
-            ),
-            Anchor::AfterQuery(query, field, id) =>
-                self.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir,
-                    field,
-                    *id,
-                    limit_extra
-                ).await,
-            Anchor::BeforeQuery(query, field, id) =>
-                self.get_projects_query_mid_window(
-                    query,
-                    sort_by,
-                    dir.rev(),
-                    field,
-                    *id,
-                    limit_extra
-                ).await
+        match query {
+            None => match anchor {
+                Anchor::Start => Ok(
+                    self.db.get_projects_end_window(
+                        sort_by,
+                        dir,
+                        limit_extra
+                    ).await?
+                ),
+                Anchor::After(field, id) =>
+                    self.get_projects_mid_window(
+                        sort_by,
+                        dir,
+                        field,
+                        *id,
+                        limit_extra
+                    ).await,
+                Anchor::Before(field, id) =>
+                    self.get_projects_mid_window(
+                        sort_by,
+                        dir.rev(),
+                        field,
+                        *id,
+                        limit_extra
+                    ).await
+            },
+            Some(q) => match anchor {
+                Anchor::Start => Ok(
+                    self.db.get_projects_query_end_window(
+                        &q,
+                        sort_by,
+                        dir,
+                        limit_extra
+                    ).await?
+                ),
+                Anchor::After(field, id) =>
+                    self.get_projects_query_mid_window(
+                        &q,
+                        sort_by,
+                        dir,
+                        field,
+                        *id,
+                        limit_extra
+                    ).await,
+                Anchor::Before(field, id) =>
+                    self.get_projects_query_mid_window(
+                        &q,
+                        sort_by,
+                        dir.rev(),
+                        field,
+                        *id,
+                        limit_extra
+                    ).await
+            }
         }
     }
 
@@ -871,7 +876,13 @@ where
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
     {
         // unpack the seek
-        let Seek { sort_by, dir, anchor } = seek;
+        let Seek { sort_by, dir, anchor, query } = seek;
+
+        // get the total number of responsive items
+        let total = match query {
+            Some(ref q) => self.db.get_projects_query_count(&q).await,
+            _ => self.db.get_projects_count().await
+        }?;
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
@@ -881,6 +892,7 @@ where
             &anchor,
             sort_by,
             dir,
+            query.clone(),
             limit_extra
         ).await?;
 
@@ -889,24 +901,15 @@ where
             &anchor,
             sort_by,
             dir,
+            query,
             limit_extra,
             &mut projects
         )?;
 
-        // get the total number of responsive items
-        let total = match anchor {
-            Anchor::StartQuery(ref q) |
-            Anchor::AfterQuery(ref q, ..) |
-            Anchor::BeforeQuery(ref q, ..) =>
-                self.db.get_projects_query_count(q).await,
-            _ => self.db.get_projects_count().await
-        }?;
-
         // convert the rows to summaries
         let pi = projects.into_iter().map(ProjectSummary::try_from);
         let psums = match anchor {
-            Anchor::Before(..) |
-            Anchor::BeforeQuery(..) => pi.rev().collect::<Result<Vec<_>, _>>(),
+            Anchor::Before(..) => pi.rev().collect::<Result<Vec<_>, _>>(),
             _ => pi.collect::<Result<Vec<_>, _>>()
         }?;
 
@@ -988,6 +991,7 @@ fn get_prev_for_before(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
+    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<Option<Seek>, GetProjectsError>
@@ -1003,22 +1007,15 @@ fn get_prev_for_before(
         let last = projects.last().expect("element must exist");
 
         let prev_anchor = match anchor {
-            Anchor::BeforeQuery(ref q, ..) => Anchor::BeforeQuery(
-                q.clone(),
-                last.sort_field(sort_by)?,
-                last.project_id as u32
-            ),
             Anchor::Before(..) => Anchor::Before(
                 last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
             Anchor::Start |
-            Anchor::StartQuery(..) |
-            Anchor::After(..) |
-            Anchor::AfterQuery(..) => unreachable!()
+            Anchor::After(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: prev_anchor, sort_by, dir }))
+        Ok(Some(Seek { anchor: prev_anchor, sort_by, dir, query }))
     }
     else {
         // there are no pages in the forward direction
@@ -1030,6 +1027,7 @@ fn get_next_for_before(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
+    query: Option<String>,
     projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, GetProjectsError>
 {
@@ -1042,22 +1040,15 @@ fn get_next_for_before(
         let first = projects.first().expect("element must exist");
 
         let next_anchor = match anchor {
-            Anchor::BeforeQuery(ref q, ..) => Anchor::AfterQuery(
-                q.clone(),
-                first.sort_field(sort_by)?,
-                first.project_id as u32
-            ),
             Anchor::Before(..) => Anchor::After(
                 first.sort_field(sort_by)?,
                 first.project_id as u32
             ),
             Anchor::Start |
-            Anchor::After(..) |
-            Anchor::StartQuery(..) |
-            Anchor::AfterQuery(..) => unreachable!()
+            Anchor::After(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: next_anchor, sort_by, dir }))
+        Ok(Some(Seek { anchor: next_anchor, sort_by, dir, query }))
     }
 }
 
@@ -1065,6 +1056,7 @@ fn get_next_for_after(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
+    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<Option<Seek>, GetProjectsError>
@@ -1080,22 +1072,15 @@ fn get_next_for_after(
         let last = projects.last().expect("element must exist");
 
         let next_anchor = match anchor {
-            Anchor::StartQuery(ref q) |
-            Anchor::AfterQuery(ref q, ..) => Anchor::AfterQuery(
-                q.clone(),
-                last.sort_field(sort_by)?,
-                last.project_id as u32
-            ),
             Anchor::Start |
             Anchor::After(..) => Anchor::After(
                 last.sort_field(sort_by)?,
                 last.project_id as u32
             ),
-            Anchor::Before(..) |
-            Anchor::BeforeQuery(..) => unreachable!()
+            Anchor::Before(..) => unreachable!()
         };
 
-        Ok(Some(Seek { anchor: next_anchor, sort_by, dir }))
+        Ok(Some(Seek { anchor: next_anchor, sort_by, dir, query }))
     }
     else {
         // there are no pages in the forward direction
@@ -1107,39 +1092,30 @@ fn get_prev_for_after(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
+    query: Option<String>,
     projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, GetProjectsError>
 {
     // make the prev link
     match anchor {
         _ if projects.is_empty() => Ok(None),
-        Anchor::Start |
-        Anchor::StartQuery(_) => Ok(None),
-        Anchor::After(..) |
-        Anchor::AfterQuery(..) => {
+        Anchor::Start => Ok(None),
+        Anchor::After(..) => {
             // the previous page is before the first item
             let first = projects.first().expect("element must exist");
 
             let prev_anchor = match anchor {
-                Anchor::AfterQuery(ref q, ..) => Anchor::BeforeQuery(
-                    q.clone(),
-                    first.sort_field(sort_by)?,
-                    first.project_id as u32
-                ),
                 Anchor::After(..) => Anchor::Before(
                     first.sort_field(sort_by)?,
                     first.project_id as u32
                 ),
                 Anchor::Start |
-                    Anchor::StartQuery(..) |
-                Anchor::Before(..) |
-                Anchor::BeforeQuery(..) => unreachable!()
+                Anchor::Before(..) => unreachable!()
             };
 
-            Ok(Some(Seek { anchor: prev_anchor, sort_by, dir }))
+            Ok(Some(Seek { anchor: prev_anchor, sort_by, dir, query }))
         },
-        Anchor::Before(..) |
-        Anchor::BeforeQuery(..) => unreachable!()
+        Anchor::Before(..) => unreachable!()
     }
 }
 
@@ -1147,17 +1123,18 @@ fn get_links(
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
+    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<(Option<Seek>, Option<Seek>), GetProjectsError>
 {
     match anchor {
-        Anchor::Before(..) |
-        Anchor::BeforeQuery(..) => {
+        Anchor::Before(..) => {
             let prev = get_prev_for_before(
                 anchor,
                 sort_by,
                 dir,
+                query.clone(),
                 limit_extra,
                 projects
             )?;
@@ -1166,19 +1143,19 @@ fn get_links(
                 anchor,
                 sort_by,
                 dir,
+                query,
                 projects
             )?;
 
             Ok((prev, next))
         },
         Anchor::Start |
-        Anchor::StartQuery(..) |
-        Anchor::After(..) |
-        Anchor::AfterQuery(..) => {
+        Anchor::After(..) => {
             let next = get_next_for_after(
                 anchor,
                 sort_by,
                 dir,
+                query.clone(),
                 limit_extra,
                 projects
             )?;
@@ -1187,6 +1164,7 @@ fn get_links(
                 anchor,
                 sort_by,
                 dir,
+                query,
                 projects
             )?;
 
@@ -1541,7 +1519,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1566,7 +1545,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1580,7 +1560,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1605,7 +1586,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1619,7 +1601,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::After("a".into(), 1)
+                anchor: Anchor::After("a".into(), 1),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1642,7 +1625,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1653,7 +1637,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1667,7 +1652,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::After("h".into(), 8)
+                anchor: Anchor::After("h".into(), 8),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1690,7 +1676,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("g".into(), 7),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1701,7 +1688,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("e".into(), 5),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1715,7 +1703,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::Before("e".into(), 5)
+                anchor: Anchor::Before("e".into(), 5),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1738,7 +1727,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1749,7 +1739,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1762,7 +1753,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::Before("e".into(), 5)
+                anchor: Anchor::Before("e".into(), 5),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1785,7 +1777,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1796,7 +1789,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("f".into(), 6),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1810,7 +1804,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::Before("d".into(), 4)
+                anchor: Anchor::Before("d".into(), 4),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1835,7 +1830,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1849,7 +1845,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::Before("g".into(), 7)
+                anchor: Anchor::Before("g".into(), 7),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1874,7 +1871,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1888,7 +1886,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                anchor: Anchor::After("g".into(), 7)
+                anchor: Anchor::After("g".into(), 7),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1911,7 +1910,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -1927,7 +1927,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::After("d".into(), 4)
+                anchor: Anchor::After("d".into(), 4),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1950,7 +1951,8 @@ mod test {
                 Seek {
                     anchor: Anchor::Before("c".into(), 3),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -1966,7 +1968,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -1994,7 +1997,8 @@ mod test {
                         8
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -2008,7 +2012,8 @@ mod test {
             Seek {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                anchor: Anchor::Start
+                anchor: Anchor::Start,
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -2033,7 +2038,8 @@ mod test {
                 Seek {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -2050,7 +2056,8 @@ mod test {
                 anchor: Anchor::After(
                     "1970-01-01T00:00:00.000000001Z".into(),
                     1
-                )
+                ),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -2076,7 +2083,8 @@ mod test {
                         2
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -2090,7 +2098,8 @@ mod test {
                         4
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -2107,7 +2116,8 @@ mod test {
                 anchor: Anchor::After(
                     "1970-01-01T00:00:00.000000008Z".into(),
                     8
-                )
+                ),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -2133,7 +2143,8 @@ mod test {
                         7
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -2147,7 +2158,8 @@ mod test {
                         5
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -2164,7 +2176,8 @@ mod test {
                 anchor: Anchor::Before(
                     "1970-01-01T00:00:00.000000005Z".into(),
                     5
-                )
+                ),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -2190,7 +2203,8 @@ mod test {
                         2
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -2204,7 +2218,8 @@ mod test {
                         4
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Ascending
+                    dir: Direction::Ascending,
+                    query: None
                 }
             )
         );
@@ -2221,7 +2236,8 @@ mod test {
                 anchor: Anchor::Before(
                     "1970-01-01T00:00:00.000000006Z".into(),
                     5
-                )
+                ),
+                query: None
             },
             Limit::new(3).unwrap(),
             &[]
@@ -2247,7 +2263,8 @@ mod test {
                         8
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );
@@ -2261,7 +2278,8 @@ mod test {
                         6
                     ),
                     sort_by: SortBy::ModificationTime,
-                    dir: Direction::Descending
+                    dir: Direction::Descending,
+                    query: None
                 }
             )
         );

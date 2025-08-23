@@ -62,10 +62,7 @@ impl fmt::Display for Limit {
 pub enum Anchor {
     Start,
     Before(String, u32),
-    After(String, u32),
-    StartQuery(String),
-    BeforeQuery(String, String, u32),
-    AfterQuery(String, String, u32)
+    After(String, u32)
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
@@ -97,24 +94,6 @@ impl TryFrom<String> for Anchor {
                 },
                 _ => Err(AnchorError(v.clone()))
             },
-            "q" => match (s.next(), s.next()) {
-                (Some(q), None) => Ok(Anchor::StartQuery(q.into())),
-                _ => Err(AnchorError(v.clone()))
-            },
-            "p" => match (s.next(), s.next(), s.next(), s.next()) {
-                (Some(q), Some(f), Some(i), None) => {
-                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
-                    Ok(Anchor::BeforeQuery(q.into(), f.into(), i))
-                },
-                _ => Err(AnchorError(v.clone()))
-            },
-            "r" => match (s.next(), s.next(), s.next(), s.next()) {
-                (Some(q), Some(f), Some(i), None) => {
-                    let i = i.parse().map_err(|_| AnchorError(v.clone()))?;
-                    Ok(Anchor::AfterQuery(q.into(), f.into(), i))
-                },
-                _ => Err(AnchorError(v.clone()))
-            },
             _ => Err(AnchorError(v.clone()))
         }
     }
@@ -134,13 +113,7 @@ impl fmt::Display for Anchor {
             Anchor::Before(field, id) =>
                 write!(f, "b\t{}\t{}", field, id),
             Anchor::After(field, id) =>
-                write!(f, "a\t{}\t{}", field, id),
-            Anchor::StartQuery(query) =>
-                write!(f, "q\t{}", query),
-            Anchor::BeforeQuery(query, field, id) =>
-                write!(f, "p\t{}\t{}\t{}", query, field, id),
-            Anchor::AfterQuery(query, field, id) =>
-                write!(f, "r\t{}\t{}\t{}", query, field, id)
+                write!(f, "a\t{}\t{}", field, id)
         }
     }
 }
@@ -258,7 +231,8 @@ impl SortBy {
 pub struct Seek {
     pub sort_by: SortBy,
     pub dir: Direction,
-    pub anchor: Anchor
+    pub anchor: Anchor,
+    pub query: Option<String>
 }
 
 impl Default for Seek {
@@ -266,7 +240,8 @@ impl Default for Seek {
         Seek {
             anchor: Anchor::Start,
             sort_by: SortBy::ProjectName,
-            dir: Direction::Ascending
+            dir: Direction::Ascending,
+            query: None
         }
     }
 }
@@ -280,15 +255,24 @@ impl SeekLink {
         limit: Option<Limit>
     ) -> SeekLink
     {
-        let Seek { sort_by, dir, anchor } = seek;
+        let Seek { sort_by, dir, anchor, query } = seek;
+
         let anchor_s = anchor.to_string();
         let anchor = urlencoding::encode(&anchor_s);
-        SeekLink(
-            match limit {
-                Some(l) => format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}&limit={l}"),
-                None => format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}"),
-            }
-        )
+
+        let mut qv = vec![
+            format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}")
+        ];
+
+        if let Some(q) = query {
+            qv.push(format!("query={q}"));
+        }
+
+        if let Some(l) = limit {
+            qv.push(format!("limit={l}"));
+        }
+
+        SeekLink(qv.join("&"))
     }
 }
 
@@ -371,9 +355,6 @@ mod test {
         assert_anchor_round_trip(Anchor::Start);
         assert_anchor_round_trip(Anchor::Before("a".into(), 1));
         assert_anchor_round_trip(Anchor::After("a".into(), 1));
-        assert_anchor_round_trip(Anchor::StartQuery("a".into()));
-        assert_anchor_round_trip(Anchor::BeforeQuery("a".into(), "b".into(), 1));
-        assert_anchor_round_trip(Anchor::AfterQuery("a".into(), "b".into(), 1));
     }
 
     #[track_caller]

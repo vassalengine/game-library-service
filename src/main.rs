@@ -755,7 +755,8 @@ mod test {
                                 &Seek {
                                     anchor: Anchor::Before("project_a".into(), 0),
                                     sort_by: SortBy::ProjectName,
-                                    dir: Direction::Ascending
+                                    dir: Direction::Ascending,
+                                    query: None
                                 },
                                 params.limit
                             )
@@ -765,7 +766,8 @@ mod test {
                                 &Seek {
                                     anchor: Anchor::After("project_b".into(), 0),
                                     sort_by: SortBy::ProjectName,
-                                    dir: Direction::Ascending
+                                    dir: Direction::Ascending,
+                                    query: None
                                 },
                                 params.limit
                             )
@@ -1302,8 +1304,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
-
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1313,7 +1315,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1364,7 +1367,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
@@ -1374,7 +1378,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
@@ -1498,7 +1503,8 @@ mod test {
             &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Ascending,
+                query: None
             },
             None
         );
@@ -1530,7 +1536,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1540,7 +1547,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1568,7 +1576,8 @@ mod test {
             &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Descending
+                dir: Direction::Descending,
+                query: None
             },
             None
         );
@@ -1600,7 +1609,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1610,7 +1620,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1638,7 +1649,8 @@ mod test {
             &Seek {
                 anchor: Anchor::Before("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Ascending,
+                query: None
             },
             None
         );
@@ -1670,7 +1682,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1680,7 +1693,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1708,7 +1722,8 @@ mod test {
             &Seek {
                 anchor: Anchor::After("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Ascending,
+                query: None
             },
             None
         );
@@ -1740,7 +1755,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1750,7 +1766,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             None
                         )
@@ -1778,7 +1795,8 @@ mod test {
             &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Ascending,
+                query: None
             },
             Limit::new(5)
         );
@@ -1810,7 +1828,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
@@ -1820,7 +1839,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
@@ -1848,7 +1868,8 @@ mod test {
             &Seek {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
-                dir: Direction::Ascending
+                dir: Direction::Ascending,
+                query: None
             },
             Limit::new(5)
         );
@@ -1880,7 +1901,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
@@ -1890,7 +1912,8 @@ mod test {
                             &Seek {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
-                                dir: Direction::Ascending
+                                dir: Direction::Ascending,
+                                query: None
                             },
                             Limit::new(5)
                         )
