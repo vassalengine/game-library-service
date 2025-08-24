@@ -1,4 +1,5 @@
 use const_format::formatcp;
+use itertools::Itertools;
 use sqlx::{
     Encode, Executor, QueryBuilder, Type,
     query_builder::Separated,
@@ -12,16 +13,17 @@ use crate::{
 
 // TODO: put a QueryBuilder into the db object for reuse?
 
-/*
-impl fmt::Display for WhereValue<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Facet {
+    fn join_key(&self) -> u8 {
         match self {
-            WhereValue::Text(s) => write!(f, "{}", s),
-            WhereValue::Integer(i) => write!(f, "{}", i)
+            Facet::Publisher(_) => 0,
+            Facet::Year(_) => 1,
+            Facet::Tag(_) => 2,
+            Facet::Owner(_) => 3,
+            Facet::Player(_) => 4
         }
     }
 }
-*/
 
 trait JoinExt {
     fn push_join(&mut self, f: &Facet) -> &mut Self;
@@ -134,7 +136,7 @@ FROM projects
         "
     );
 
-    for f in facets {
+    for f in facets.iter().unique_by(|f| f.join_key()) {
         qb.push_join(f);
     }
 
@@ -314,7 +316,7 @@ where
 {
     let mut qb = QueryBuilder::new(WINDOW_SELECT);
 
-    for f in facets {
+    for f in facets.iter().unique_by(|f| f.join_key()) {
         qb.push_join(f);
     }
 
@@ -479,7 +481,7 @@ where
 {
     let mut qb = QueryBuilder::new(WINDOW_SELECT);
 
-    for f in facets {
+    for f in facets.iter().unique_by(|f| f.join_key()) {
         qb.push_join(f);
     }
 
