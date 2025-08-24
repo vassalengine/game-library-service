@@ -13,6 +13,13 @@ use crate::{
 
 // TODO: put a QueryBuilder into the db object for reuse?
 
+fn fts5_quote(s: &str) -> String {
+    // Wrapping a query in double quotes ensures that it is interpreted as
+    // a string in the FTS5 query langauge, but then internal double quotes
+    // must also be escaped with an extra double quote.
+    format!("\"{}\"", s.replace("\"", "\"\""))
+}
+
 impl Facet {
     fn join_key(&self) -> u8 {
         match self {
@@ -26,12 +33,6 @@ impl Facet {
     }
 }
 
-fn fts5_quote(s: &str) -> String {
-    // Wrapping a query in double quotes ensures that it is interpreted as
-    // a string in the FTS5 query langauge, but then internal double quotes
-    // must also be escaped with an extra double quote.
-    format!("\"{}\"", s.replace("\"", "\"\""))
-}
 
 trait JoinExt {
     fn push_join(&mut self, f: &Facet) -> &mut Self;
