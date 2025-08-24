@@ -135,11 +135,6 @@ pub struct FlagRow {
 
 pub enum MidField<'a> {
     Timestamp(i64),
-    Text(&'a str)
-}
-
-pub enum QueryMidField<'a> {
-    Timestamp(i64),
     Weight(f64),
     Text(&'a str)
 }
@@ -210,19 +205,10 @@ pub trait DatabaseClient {
 
     fn get_projects_mid_window(
         &self,
-        _sort_by: SortBy,
-        _dir: Direction,
-        _field: MidField<'_>,
-        _id: u32,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
-    fn get_projects_facet_mid_window(
-        &self,
         _facets: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
-        _field: QueryMidField<'_>,
+        _field: MidField<'_>,
         _id: u32,
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;

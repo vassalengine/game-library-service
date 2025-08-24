@@ -23,7 +23,7 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
-    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     image,
     input::{is_valid_package_name, slug_for, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
@@ -739,6 +739,7 @@ where
 
     async fn get_projects_mid_window(
         &self,
+        facets: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         field: &str,
@@ -752,49 +753,19 @@ where
                 rfc3339_to_nanos(field)
                     .map_err(|_| GetProjectsError::MalformedQuery)?
             ),
+            SortBy::Relevance => MidField::Weight(
+                field.parse::<f64>()
+                    .map_err(|_| GetProjectsError::MalformedQuery)?
+            ),
             _ => MidField::Text(field)
         };
 
         Ok(
             self.db.get_projects_mid_window(
+                facets,
                 sort_by,
                 dir,
                 mf,
-                id,
-                limit
-            ).await?
-        )
-    }
-
-    async fn get_projects_query_mid_window(
-        &self,
-        query: &str,
-        sort_by: SortBy,
-        dir: Direction,
-        field: &str,
-        id: u32,
-        limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
-    {
-        let qmf = match sort_by {
-            SortBy::CreationTime |
-            SortBy::ModificationTime => QueryMidField::Timestamp(
-                rfc3339_to_nanos(field)
-                    .map_err(|_| GetProjectsError::MalformedQuery)?
-            ),
-            SortBy::Relevance => QueryMidField::Weight(
-                field.parse::<f64>()
-                    .map_err(|_| GetProjectsError::MalformedQuery)?
-            ),
-            _ => QueryMidField::Text(field)
-        };
-
-        Ok(
-            self.db.get_projects_facet_mid_window(
-                &[Facet::Query(query.into())],
-                sort_by,
-                dir,
-                qmf,
                 id,
                 limit
             ).await?
@@ -810,61 +781,38 @@ where
         limit_extra: u32
     ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
-        match query {
-            None => match anchor {
-                Anchor::Start => Ok(
-                    self.db.get_projects_end_window(
-                        &[],
-                        sort_by,
-                        dir,
-                        limit_extra
-                    ).await?
-                ),
-                Anchor::After(field, id) =>
-                    self.get_projects_mid_window(
-                        sort_by,
-                        dir,
-                        field,
-                        *id,
-                        limit_extra
-                    ).await,
-                Anchor::Before(field, id) =>
-                    self.get_projects_mid_window(
-                        sort_by,
-                        dir.rev(),
-                        field,
-                        *id,
-                        limit_extra
-                    ).await
-            },
-            Some(q) => match anchor {
-                Anchor::Start => Ok(
-                    self.db.get_projects_end_window(
-                        &[Facet::Query(q)],
-                        sort_by,
-                        dir,
-                        limit_extra
-                    ).await?
-                ),
-                Anchor::After(field, id) =>
-                    self.get_projects_query_mid_window(
-                        &q,
-                        sort_by,
-                        dir,
-                        field,
-                        *id,
-                        limit_extra
-                    ).await,
-                Anchor::Before(field, id) =>
-                    self.get_projects_query_mid_window(
-                        &q,
-                        sort_by,
-                        dir.rev(),
-                        field,
-                        *id,
-                        limit_extra
-                    ).await
-            }
+        let facets = match query {
+            Some(q) => &vec![Facet::Query(q)],
+            None => &vec![]
+        };
+
+        match anchor {
+            Anchor::Start => Ok(
+                self.db.get_projects_end_window(
+                    facets,
+                    sort_by,
+                    dir,
+                    limit_extra
+                ).await?
+            ),
+            Anchor::After(field, id) =>
+                self.get_projects_mid_window(
+                    facets,
+                    sort_by,
+                    dir,
+                    field,
+                    *id,
+                    limit_extra
+                ).await,
+            Anchor::Before(field, id) =>
+                self.get_projects_mid_window(
+                    facets,
+                    sort_by,
+                    dir.rev(),
+                    field,
+                    *id,
+                    limit_extra
+                ).await
         }
     }
 

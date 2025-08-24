@@ -14,7 +14,7 @@ mod tags;
 mod users;
 
 use crate::{
-    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, QueryMidField, ReleaseRow},
+    db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, Facet, SortBy},
@@ -125,6 +125,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_mid_window(
         &self,
+        facets: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         field: MidField<'_>,
@@ -135,6 +136,16 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         match field {
             MidField::Timestamp(f) => projects::get_projects_mid_window(
                 &self.0,
+                facets,
+                sort_by,
+                dir,
+                &f,
+                id,
+                limit
+            ).await,
+            MidField::Weight(f) => projects::get_projects_mid_window(
+                &self.0,
+                facets,
                 sort_by,
                 dir,
                 &f,
@@ -142,46 +153,6 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
                 limit
             ).await,
             MidField::Text(f) => projects::get_projects_mid_window(
-                &self.0,
-                sort_by,
-                dir,
-                &f,
-                id,
-                limit
-            ).await
-        }
-    }
-
-    async fn get_projects_facet_mid_window(
-        &self,
-        facets: &[Facet],
-        sort_by: SortBy,
-        dir: Direction,
-        field: QueryMidField<'_>,
-        id: u32,
-        limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
-    {
-        match field {
-            QueryMidField::Timestamp(f) => projects::get_projects_facet_mid_window(
-                &self.0,
-                facets,
-                sort_by,
-                dir,
-                &f,
-                id,
-                limit
-            ).await,
-            QueryMidField::Weight(f) => projects::get_projects_facet_mid_window(
-                &self.0,
-                facets,
-                sort_by,
-                dir,
-                &f,
-                id,
-                limit
-            ).await,
-            QueryMidField::Text(f) => projects::get_projects_facet_mid_window(
                 &self.0,
                 facets,
                 sort_by,
