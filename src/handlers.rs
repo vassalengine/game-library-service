@@ -1,6 +1,6 @@
 use axum::{
     body::Bytes,
-    extract::{Path, Query, Request, State},
+    extract::{Path, Request, State},
     response::{Json, Redirect}
 };
 use axum_extra::{
