@@ -26,9 +26,9 @@ INSERT INTO projects_data (
   image
 )
 VALUES
-  (1, 1, "a", "a", "abc xyz", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (1, 1, "a", "a", "abc xyz", "", "abc", "", "", NULL, NULL, NULL, NULL, "", NULL),
   (2, 2, "b", "b", "pdq", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
-  (3, 3, "c", "c", "abc", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL),
+  (3, 3, "c", "c", "abc", "", "abc", "", "", NULL, NULL, NULL, NULL, "", NULL),
   (4, 4, "d", "d", "abc", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL);
 
 INSERT INTO projects_revisions (
@@ -66,7 +66,7 @@ INSERT INTO projects (
   revision
 )
 VALUES
-  (1, "a", "a", "a", 0, "abc xyz", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
+  (1, "a", "a", "a", 0, "abc xyz", "", "", "abc", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
   (2, "b", "b", "b", 0, "pdq", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
-  (3, "c", "c", "c", 0, "abc", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
+  (3, "c", "c", "c", 0, "abc", "", "", "abc", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
   (4, "d", "d", "d", 0, "abc", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1);

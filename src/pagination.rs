@@ -234,6 +234,7 @@ impl SortBy {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Facet {
+    Query(String),
     Publisher(String),
     Year(String),
 /*
@@ -250,6 +251,7 @@ pub enum Facet {
 impl fmt::Display for Facet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (k, v) = match self {
+            Facet::Query(q) => ("q", q),
             Facet::Publisher(p) => ("publisher", p),
             Facet::Year(y) => ("year", y),
             Facet::Tag(t) => ("tag", t),

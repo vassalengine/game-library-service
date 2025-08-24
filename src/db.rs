@@ -154,23 +154,10 @@ pub trait DatabaseClient {
         &self,
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 
-    fn get_projects_query_count(
-        &self,
-        _query: &str
-    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
-
     fn get_projects_facet_count(
         &self,
         _facets: &[Facet]
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
-
-/*
-    fn get_projects_facet_query_count(
-        &self,
-        _facets: &[(&str, &str, &WhereValue<'_>)],
-        _query: &str
-    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
-*/
 
    fn get_user_id(
         &self,
@@ -224,14 +211,6 @@ pub trait DatabaseClient {
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
-    fn get_projects_query_end_window(
-        &self,
-        _query: &str,
-        _sort_by: SortBy,
-        _dir: Direction,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
     fn get_projects_facet_end_window(
         &self,
         _facets: &[Facet],
@@ -239,17 +218,6 @@ pub trait DatabaseClient {
         _dir: Direction,
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
-/*
-    fn get_projects_facet_query_end_window(
-        &self,
-        _facets: &[(&str, &str, &WhereValue<'_>)],
-        _query: &str,
-        _sort_by: SortBy,
-        _dir: Direction,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-*/
 
     fn get_projects_mid_window(
         &self,
@@ -260,38 +228,15 @@ pub trait DatabaseClient {
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
-    fn get_projects_query_mid_window(
-        &self,
-        _query: &str,
-        _sort_by: SortBy,
-        _dir: Direction,
-        _field: QueryMidField<'_>,
-        _id: u32,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
     fn get_projects_facet_mid_window(
         &self,
         _facets: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
-        _field: MidField<'_>,
-        _id: u32,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
-/*
-    fn get_projects_facet_query_mid_window(
-        &self,
-        _facets: &[(&str, &str, &WhereValue<'_>)],
-        _query: &str,
-        _sort_by: SortBy,
-        _dir: Direction,
         _field: QueryMidField<'_>,
         _id: u32,
         _limit: u32
     ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-*/
 
     fn create_project(
         &self,

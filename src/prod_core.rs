@@ -790,8 +790,8 @@ where
         };
 
         Ok(
-            self.db.get_projects_query_mid_window(
-                query,
+            self.db.get_projects_facet_mid_window(
+                &[Facet::Query(query.into())],
                 sort_by,
                 dir,
                 qmf,
@@ -838,8 +838,8 @@ where
             },
             Some(q) => match anchor {
                 Anchor::Start => Ok(
-                    self.db.get_projects_query_end_window(
-                        &q,
+                    self.db.get_projects_facet_end_window(
+                        &[Facet::Query(q)],
                         sort_by,
                         dir,
                         limit_extra
@@ -879,7 +879,7 @@ where
 
         // get the total number of responsive items
         let total = match query {
-            Some(ref q) => self.db.get_projects_query_count(&q).await,
+            Some(ref q) => self.db.get_projects_facet_count(&[Facet::Query(q.clone())]).await,
             _ => self.db.get_projects_count().await
         }?;
 
