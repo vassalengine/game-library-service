@@ -811,7 +811,6 @@ where
         }
     }
 
-// TODO: make this take function pointers?
     async fn get_projects_from(
         &self,
         seek: Seek,
