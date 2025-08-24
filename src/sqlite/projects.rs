@@ -100,9 +100,9 @@ pub async fn get_projects_count<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match facets.len() {
-        0 => {
-            Ok(
+    Ok(
+        match facets.len() {
+            0 => {
                 sqlx::query_scalar!(
                     "
 SELECT COUNT(1)
@@ -111,14 +111,13 @@ FROM projects
                 )
                 .fetch_one(ex)
                 .await?
-            )
-        },
-        1 if matches!(facets[0], Facet::Query(_)) => {
-            // pure queries avoid joining on the projects table
-            let Facet::Query(ref q) = facets[0] else { unreachable!() };
+            },
+            1 if matches!(facets[0], Facet::Query(_)) => {
+                // pure queries avoid joining on the projects table
+                let Facet::Query(ref q) = facets[0] else { unreachable!() };
 
-            let query = fts5_quote(&q);
-            Ok(
+                let query = fts5_quote(&q);
+
                 sqlx::query_scalar!(
                     "
 SELECT COUNT(1)
@@ -129,35 +128,33 @@ WHERE projects_fts MATCH ?
                 )
                 .fetch_one(ex)
                 .await?
-            )
-        },
-        _ => {
-            let mut qb = QueryBuilder::new(
-                "
+            },
+            _ => {
+                let mut qb = QueryBuilder::new(
+                    "
 SELECT COUNT(1)
 FROM projects
-                "
-            );
+                    "
+                );
 
-            for f in facets.iter().unique_by(|f| f.join_key()) {
-                qb.push_join(f);
-            }
+                for f in facets.iter().unique_by(|f| f.join_key()) {
+                    qb.push_join(f);
+                }
 
-            qb.push(" WHERE ");
+                qb.push(" WHERE ");
 
-            let mut qbs = qb.separated(" AND ");
-            for f in facets {
-                qbs.push_where(f);
-            }
+                let mut qbs = qb.separated(" AND ");
+                for f in facets {
+                    qbs.push_where(f);
+                }
 
-            Ok(
                 qb
                     .build_query_scalar()
                     .fetch_one(ex)
                     .await?
-            )
+            }
         }
-    }
+    )
 }
 
 impl SortBy {
