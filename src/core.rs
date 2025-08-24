@@ -14,7 +14,6 @@ use crate::{
     model::{Flags, Owner, Package, Projects, ProjectData, Project, Release, User, Users},
     module,
     params::ProjectsParams,
-    pagination,
     time,
     upload,
     version::{self, Version}
