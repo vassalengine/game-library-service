@@ -225,6 +225,13 @@ impl Direction {
     }
 }
 
+fn fts5_quote(s: &str) -> String {
+    // Wrapping a query in double quotes ensures that it is interpreted as
+    // a string in the FTS5 query langauge, but then internal double quotes
+    // must also be escaped with an extra double quote.
+    format!("\"{}\"", s.replace("\"", "\"\""))
+}
+
 const SUMMARY_FIELDS: &str = "
     projects.project_id,
     projects.name,
@@ -319,13 +326,6 @@ where
             .fetch_all(ex)
             .await?
     )
-}
-
-fn fts5_quote(s: &str) -> String {
-    // Wrapping a query in double quotes ensures that it is interpreted as
-    // a string in the FTS5 query langauge, but then internal double quotes
-    // must also be escaped with an extra double quote.
-    format!("\"{}\"", s.replace("\"", "\"\""))
 }
 
 pub async fn get_projects_query_end_window<'e, E>(
