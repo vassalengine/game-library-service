@@ -153,7 +153,7 @@ FROM projects
                 // pure queries avoid joining on the projects table
                 let Facet::Query(ref q) = facets[0] else { unreachable!() };
 
-                let query = fts5_quote(&q);
+                let query = fts5_quote(q);
 
                 sqlx::query_scalar!(
                     "
