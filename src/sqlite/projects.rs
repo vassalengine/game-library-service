@@ -99,29 +99,6 @@ FROM projects
     )
 }
 
-/*
-pub async fn get_projects_tag_count<'e, E>(
-    ex: E,
-    tag: &str
-) -> Result<i64, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_scalar!(
-            "
-SELECT COUNT(1)
-FROM tags
-WHERE tag = ?
-            ",
-            tag
-        )
-        .fetch_one(ex)
-        .await?
-    )
-}
-*/
-
 pub async fn get_projects_facet_count<'e, E>(
     ex: E,
     facets: &[Facet]
