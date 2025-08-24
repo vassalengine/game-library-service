@@ -814,6 +814,7 @@ where
             None => match anchor {
                 Anchor::Start => Ok(
                     self.db.get_projects_end_window(
+                        &[],
                         sort_by,
                         dir,
                         limit_extra
@@ -838,7 +839,7 @@ where
             },
             Some(q) => match anchor {
                 Anchor::Start => Ok(
-                    self.db.get_projects_facet_end_window(
+                    self.db.get_projects_end_window(
                         &[Facet::Query(q)],
                         sort_by,
                         dir,

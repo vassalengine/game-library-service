@@ -114,23 +114,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_end_window(
         &self,
-        sort_by: SortBy,
-        dir: Direction,
-        limit: u32
-    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
-    {
-        projects::get_projects_end_window(&self.0, sort_by, dir, limit).await
-    }
-
-    async fn get_projects_facet_end_window(
-        &self,
         facets: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        projects::get_projects_facet_end_window(&self.0, facets, sort_by, dir, limit).await
+        projects::get_projects_end_window(&self.0, facets, sort_by, dir, limit).await
     }
 
     async fn get_projects_mid_window(

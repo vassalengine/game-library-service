@@ -220,30 +220,6 @@ FROM projects
 
 pub async fn get_projects_end_window<'e, E>(
     ex: E,
-    sort_by: SortBy,
-    dir: Direction,
-    limit: u32
-) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        QueryBuilder::new(formatcp!("{WINDOW_SELECT} ORDER BY "))
-            .push(sort_by.field())
-            .push(" ")
-            .push(dir.dir())
-            .push(", project_id ")
-            .push(dir.dir())
-            .push(" LIMIT ")
-            .push_bind(limit)
-            .build_query_as::<ProjectSummaryRow>()
-            .fetch_all(ex)
-            .await?
-    )
-}
-
-pub async fn get_projects_facet_end_window<'e, E>(
-    ex: E,
     facets: &[Facet],
     sort_by: SortBy,
     dir: Direction,
@@ -252,39 +228,54 @@ pub async fn get_projects_facet_end_window<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let mut qb = QueryBuilder::new(
-        if facets.iter().any(|f| matches!(f, Facet::Query(_))) {
-            WINDOW_SELECT_FTS
-        }
-        else {
-            WINDOW_SELECT
-        }
-    );
-
-    for f in facets.iter().unique_by(|f| f.join_key()) {
-        qb.push_join(f);
-    }
-
-    qb.push(" WHERE ");
-
-    let mut qbs = qb.separated(" AND ");
-    for f in facets {
-        qbs.push_where(f);
-    }
-
     Ok(
-        qb
-            .push(" ORDER BY ")
-            .push(sort_by.field())
-            .push(" ")
-            .push(dir.dir())
-            .push(", projects.project_id ")
-            .push(dir.dir())
-            .push(" LIMIT ")
-            .push_bind(limit)
-            .build_query_as::<ProjectSummaryRow>()
-            .fetch_all(ex)
-            .await?
+        match facets.len() {
+            0 => QueryBuilder::new(formatcp!("{WINDOW_SELECT} ORDER BY "))
+                .push(sort_by.field())
+                .push(" ")
+                .push(dir.dir())
+                .push(", project_id ")
+                .push(dir.dir())
+                .push(" LIMIT ")
+                .push_bind(limit)
+                .build_query_as::<ProjectSummaryRow>()
+                .fetch_all(ex)
+                .await?,
+            _ => {
+                let mut qb = QueryBuilder::new(
+                    if facets.iter().any(|f| matches!(f, Facet::Query(_))) {
+                        WINDOW_SELECT_FTS
+                    }
+                    else {
+                        WINDOW_SELECT
+                    }
+                );
+
+                for f in facets.iter().unique_by(|f| f.join_key()) {
+                    qb.push_join(f);
+                }
+
+                qb.push(" WHERE ");
+
+                let mut qbs = qb.separated(" AND ");
+                for f in facets {
+                    qbs.push_where(f);
+                }
+
+                qb
+                    .push(" ORDER BY ")
+                    .push(sort_by.field())
+                    .push(" ")
+                    .push(dir.dir())
+                    .push(", projects.project_id ")
+                    .push(dir.dir())
+                    .push(" LIMIT ")
+                    .push_bind(limit)
+                    .build_query_as::<ProjectSummaryRow>()
+                    .fetch_all(ex)
+                    .await?
+            }
+        }
     )
 }
 
@@ -512,6 +503,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Ascending,
                 3
@@ -525,6 +517,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Ascending,
                 3
@@ -538,6 +531,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Ascending,
                 5
@@ -551,6 +545,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Descending,
                 3
@@ -564,6 +559,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Descending,
                 3
@@ -577,6 +573,7 @@ mod test {
         assert_projects_window(
             get_projects_end_window(
                 &pool,
+                &[],
                 SortBy::ProjectName,
                 Direction::Descending,
                 5
@@ -678,7 +675,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_facet_end_window_asc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -692,7 +689,7 @@ mod test {
    #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_facet_end_window_asc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -706,7 +703,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_facet_end_window_asc_past_end(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -720,7 +717,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_facet_end_window_desc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -734,7 +731,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_facet_end_window_desc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -748,7 +745,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_facet_end_window_desc_past_start(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Publisher("abc".into())],
                 SortBy::ProjectName,
@@ -858,7 +855,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_query_end_window_asc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -872,7 +869,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_end_window_asc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -886,7 +883,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_end_window_asc_past_end(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -900,7 +897,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_query_end_window_desc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -914,7 +911,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_end_window_desc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -928,7 +925,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_end_window_desc_past_start(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[Facet::Query("abc".into())],
                 SortBy::ProjectName,
@@ -1038,7 +1035,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_query_facet_end_window_asc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),
@@ -1055,7 +1052,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_facet_end_window_asc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),
@@ -1072,7 +1069,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_facet_end_window_asc_past_end(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),
@@ -1089,7 +1086,7 @@ mod test {
     #[sqlx::test]
     async fn get_projects_query_facet_end_window_desc_empty(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),
@@ -1106,7 +1103,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_facet_end_window_desc_not_all(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),
@@ -1123,7 +1120,7 @@ mod test {
     #[sqlx::test(fixtures("users", "proj_facet_window"))]
     async fn get_projects_query_facet_end_window_desc_past_start(pool: Pool) {
         assert_projects_window(
-            get_projects_facet_end_window(
+            get_projects_end_window(
                 &pool,
                 &[
                     Facet::Query("abc".into()),

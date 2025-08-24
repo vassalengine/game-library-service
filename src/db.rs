@@ -202,13 +202,6 @@ pub trait DatabaseClient {
 
     fn get_projects_end_window(
         &self,
-        _sort_by: SortBy,
-        _dir: Direction,
-        _limit: u32
-    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
-
-    fn get_projects_facet_end_window(
-        &self,
         _facets: &[Facet],
         _sort_by: SortBy,
         _dir: Direction,
