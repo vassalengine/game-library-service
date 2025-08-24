@@ -94,34 +94,30 @@ where
 }
 
 pub async fn get_projects_count<'e, E>(
-    ex: E
-) -> Result<i64, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    Ok(
-        sqlx::query_scalar!(
-            "
-SELECT COUNT(1)
-FROM projects
-            "
-        )
-        .fetch_one(ex)
-        .await?
-    )
-}
-
-pub async fn get_projects_facet_count<'e, E>(
     ex: E,
     facets: &[Facet]
 ) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    match &facets[0] {
-        Facet::Query(q) if facets.len() == 1 => {
-            // pure queries avoid join on the projects table
-            let query = fts5_quote(q);
+    match facets.len() {
+        0 => {
+            Ok(
+                sqlx::query_scalar!(
+                    "
+SELECT COUNT(1)
+FROM projects
+                    "
+                )
+                .fetch_one(ex)
+                .await?
+            )
+        },
+        1 if matches!(facets[0], Facet::Query(_)) => {
+            // pure queries avoid joining on the projects table
+            let Facet::Query(ref q) = facets[0] else { unreachable!() };
+
+            let query = fts5_quote(&q);
             Ok(
                 sqlx::query_scalar!(
                     "
@@ -422,7 +418,7 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_projects_count_ok(pool: Pool) {
-        assert_eq!(get_projects_count(&pool).await.unwrap(), 2);
+        assert_eq!(get_projects_count(&pool, &[]).await.unwrap(), 2);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -430,7 +426,7 @@ mod test {
         let facets = [
             Facet::Query("Another".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 1);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -438,7 +434,7 @@ mod test {
         let facets = [
             Facet::Query("xxx".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 0);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -446,7 +442,7 @@ mod test {
         let facets = [
             Facet::Publisher("XYZ".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 1);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -454,7 +450,7 @@ mod test {
         let facets = [
             Facet::Publisher("zzz".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 0);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -463,7 +459,7 @@ mod test {
             Facet::Publisher("XYZ".into()),
             Facet::Year("1993".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 1);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
@@ -472,7 +468,7 @@ mod test {
             Facet::Publisher("Test Game Company".into()),
             Facet::Owner("bob".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 1);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -481,7 +477,7 @@ mod test {
             Facet::Query("Another".into()),
             Facet::Publisher("XYZ".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 1);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -490,7 +486,7 @@ mod test {
             Facet::Query("xxx".into()),
             Facet::Publisher("XYZ".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 0);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 0);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
@@ -499,7 +495,7 @@ mod test {
             Facet::Query("Another".into()),
             Facet::Publisher("zzz".into())
         ];
-        assert_eq!(get_projects_facet_count(&pool, &facets).await.unwrap(), 0);
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 0);
     }
 
     #[track_caller]

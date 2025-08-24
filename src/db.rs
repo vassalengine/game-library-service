@@ -152,10 +152,6 @@ pub trait DatabaseClient {
 
     fn get_projects_count(
         &self,
-    ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
-
-    fn get_projects_facet_count(
-        &self,
         _facets: &[Facet]
     ) -> impl Future<Output = Result<i64, DatabaseError>> + Send;
 

@@ -37,17 +37,10 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_count(
         &self,
+        facets: &[Facet]
     ) -> Result<i64, DatabaseError>
     {
-        projects::get_projects_count(&self.0).await
-    }
-
-    async fn get_projects_facet_count(
-        &self,
-        wheres: &[Facet]
-    ) -> Result<i64, DatabaseError>
-    {
-        projects::get_projects_facet_count(&self.0, wheres).await
+        projects::get_projects_count(&self.0, facets).await
     }
 
     async fn get_user_id(
@@ -131,13 +124,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_facet_end_window(
         &self,
-        wheres: &[Facet],
+        facets: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         limit: u32
     ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
     {
-        projects::get_projects_facet_end_window(&self.0, wheres, sort_by, dir, limit).await
+        projects::get_projects_facet_end_window(&self.0, facets, sort_by, dir, limit).await
     }
 
     async fn get_projects_mid_window(
@@ -171,7 +164,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
 
     async fn get_projects_facet_mid_window(
         &self,
-        wheres: &[Facet],
+        facets: &[Facet],
         sort_by: SortBy,
         dir: Direction,
         field: QueryMidField<'_>,
@@ -182,7 +175,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         match field {
             QueryMidField::Timestamp(f) => projects::get_projects_facet_mid_window(
                 &self.0,
-                wheres,
+                facets,
                 sort_by,
                 dir,
                 &f,
@@ -191,7 +184,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             ).await,
             QueryMidField::Weight(f) => projects::get_projects_facet_mid_window(
                 &self.0,
-                wheres,
+                facets,
                 sort_by,
                 dir,
                 &f,
@@ -200,7 +193,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             ).await,
             QueryMidField::Text(f) => projects::get_projects_facet_mid_window(
                 &self.0,
-                wheres,
+                facets,
                 sort_by,
                 dir,
                 &f,

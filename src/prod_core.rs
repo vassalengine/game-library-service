@@ -878,10 +878,15 @@ where
         let Seek { sort_by, dir, anchor, query, facets } = seek;
 
         // get the total number of responsive items
-        let total = match query {
-            Some(ref q) => self.db.get_projects_facet_count(&[Facet::Query(q.clone())]).await,
-            _ => self.db.get_projects_count().await
-        }?;
+        let facets = match query {
+            Some(ref q) => &[
+                &[Facet::Query(q.clone())],
+                facets.as_slice()
+            ].concat(),
+            None => &facets
+        };
+
+        let total = self.db.get_projects_count(facets).await?;
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
