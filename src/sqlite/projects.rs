@@ -33,20 +33,56 @@ impl Facet {
     }
 }
 
-
-trait JoinExt {
-    fn push_join(&mut self, f: &Facet) -> &mut Self;
+trait JoinsExt {
+    fn joins(&self) -> impl Iterator<Item = &'static str>;
 }
 
-impl JoinExt for QueryBuilder<'_, Sqlite> {
-    fn push_join(&mut self, f: &Facet) -> &mut Self {
-        match f {
-            Facet::Query(_) => self.push(" JOIN projects_fts ON projects.project_id = projects_fts.rowid "),
-            Facet::Tag(_) => self.push(" JOIN tags ON projects.project_id = tags.project_id "),
-            Facet::Owner(_) => self.push(" JOIN owners ON projects.project_id = owners.project_id JOIN users ON owners.user_id = users.user_id "),
-            Facet::Player(_) => self.push(" JOIN players ON projects.project_id = players.project_id JOIN users ON owners.user_id = users.user_id "),
-            _ => self
-        }
+impl JoinsExt for &[Facet] {
+    fn joins(&self) -> impl Iterator<Item = &'static str> {
+        let mut has_owner = false;
+        let mut has_player = false;
+
+        let mut fi = self.iter()
+            .filter(|f| matches!(
+                f,
+                Facet::Query(_) |
+                Facet::Tag(_) |
+                Facet::Owner(_) |
+                Facet::Player(_)
+            ))
+            .unique_by(|f| f.join_key());
+
+        std::iter::from_fn(move || match fi.next() {
+            Some(f) => match f {
+                Facet::Query(_) => Some(" JOIN projects_fts ON projects.project_id = projects_fts.rowid "),
+                Facet::Tag(_) => Some(" JOIN tags ON projects.project_id = tags.project_id "),
+                Facet::Owner(_) => {
+                    has_owner = true;
+                    Some(" JOIN owners ON projects.project_id = owners.project_id ")
+                },
+                Facet::Player(_) => {
+                    has_player = true;
+                    Some(" JOIN players ON projects.project_id = players.project_id ")
+                },
+                _ => unreachable!() // filtered out already
+            },
+            None => match (has_owner, has_player) {
+                (true, true) => {
+                    has_owner = false;
+                    has_player = false;
+                    Some(" JOIN users ON owners.user_id = users.user_id AND players.user_id = users.user_id ")
+                },
+                (true, false) => {
+                    has_owner = false;
+                    Some(" JOIN users ON owners.user_id = users.user_id ")
+                },
+                (false, true) => {
+                    has_player = false;
+                    Some(" JOIN users ON players.user_id = users.user_id ")
+                },
+                (false, false) => None
+            }
+        })
     }
 }
 
@@ -138,8 +174,8 @@ FROM projects
                     "
                 );
 
-                for f in facets.iter().unique_by(|f| f.join_key()) {
-                    qb.push_join(f);
+                for j in facets.joins() {
+                    qb.push(j);
                 }
 
                 qb.push(" WHERE ");
@@ -252,8 +288,8 @@ where
                     }
                 );
 
-                for f in facets.iter().unique_by(|f| f.join_key()) {
-                    qb.push_join(f);
+                for j in facets.joins() {
+                    qb.push(j);
                 }
 
                 qb.push(" WHERE ");
@@ -330,8 +366,8 @@ where
                     }
                 );
 
-                for f in facets.iter().unique_by(|f| f.join_key()) {
-                    qb.push_join(f);
+                for j in facets.joins() {
+                    qb.push(j);
                 }
 
                 qb.push(" WHERE ");
@@ -473,6 +509,42 @@ mod test {
             Facet::Publisher("zzz".into())
         ];
         assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 0);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "tags"))]
+    async fn get_projects_facet_count_tag(pool: Pool) {
+        let facets = [
+            Facet::Tag("a".into())
+        ];
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 2);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "two_owners"))]
+    async fn get_projects_facet_count_owner(pool: Pool) {
+        let facets = [
+            Facet::Owner("bob".into())
+        ];
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 2);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "players"))]
+    async fn get_projects_facet_count_player(pool: Pool) {
+        let facets = [
+            Facet::Player("bob".into())
+        ];
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "tags", "two_owners", "players"))]
+    async fn get_projects_facet_count_many(pool: Pool) {
+        let facets = [
+            Facet::Query("Trademarked".into()),
+            Facet::Publisher("Test Game Company".into()),
+            Facet::Tag("a".into()),
+            Facet::Owner("bob".into()),
+            Facet::Player("bob".into())
+        ];
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[track_caller]
