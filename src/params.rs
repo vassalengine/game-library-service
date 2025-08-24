@@ -65,12 +65,21 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
 
         // collect the facets
         let mut facets = Vec::with_capacity(
+            (q.is_some() as usize) +
             (publisher.is_some() as usize) +
             (year.is_some() as usize) +
             tag.len() +
             owner.len() +
             player.len()
         );
+
+        let has_query = match q {
+            Some(q) => {
+                facets.push(Facet::Query(q));
+                true
+            },
+            None => false
+        };
 
         if let Some(publisher) = publisher {
             facets.push(Facet::Publisher(publisher));
@@ -84,29 +93,28 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         facets.extend(owner.into_iter().map(Facet::Owner));
         facets.extend(player.into_iter().map(Facet::Player));
 
-        let seek = match (q, from, sort_by, dir, anchor) {
+        // assemble the Seek
+        let seek = match (has_query, from, sort_by, dir, anchor) {
             // sort_by, dir, anchor
-            (None, None, Some(sort_by), Some(dir), Some(anchor)) => Seek {
+            (false, None, Some(sort_by), Some(dir), Some(anchor)) => Seek {
                 sort_by,
                 dir,
                 anchor,
-                query: None,
                 facets
             },
             // query with optional sort_by, dir
-            (Some(query), None, sort_by, dir, None) => {
+            (true, None, sort_by, dir, None) => {
                 let sort_by = sort_by.unwrap_or(SortBy::Relevance);
                 let dir = dir.unwrap_or_else(|| sort_by.default_direction());
                 Seek {
                     sort_by,
                     dir,
                     anchor: Anchor::Start,
-                    query: Some(query),
                     facets
                 }
             },
             // optional from, sort_by, dir
-            (None, from, sort_by, dir, None) => {
+            (false, from, sort_by, dir, None) => {
                 let sort_by = sort_by.unwrap_or_default();
                 let dir = dir.unwrap_or_else(|| sort_by.default_direction());
                 Seek {
@@ -118,14 +126,13 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
                         Some(from) => Anchor::After(from, 0),
                         None => Anchor::Start
                     },
-                    query: None,
                     facets
                 }
             },
             _ => return Err(Error::InvalidCombination)
         };
 
-        Ok(ProjectsParams { limit, seek })
+        Ok(ProjectsParams { seek, limit })
     }
 }
 
@@ -142,7 +149,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             limit: None
@@ -179,7 +185,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             limit: None
@@ -231,7 +236,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             limit: None
@@ -252,7 +256,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::After("whatever".into(), 0),
-                query: None,
                 facets: vec![]
             },
             limit: None
@@ -273,7 +276,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             limit: Limit::new(50)
@@ -294,7 +296,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![ Facet::Publisher("abc".into()) ]
             },
             limit: None
@@ -315,7 +316,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![ Facet::Year("1979".into()) ]
             },
             limit: None
@@ -336,7 +336,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![
                     Facet::Tag("x".into()),
                     Facet::Tag("y".into())
@@ -360,7 +359,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![
                     Facet::Owner("x".into()),
                     Facet::Owner("y".into())
@@ -384,7 +382,6 @@ mod test {
                 sort_by: SortBy::default(),
                 dir: SortBy::default().default_direction(),
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![
                     Facet::Player("x".into()),
                     Facet::Player("y".into())

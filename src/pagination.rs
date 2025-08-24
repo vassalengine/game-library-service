@@ -268,7 +268,6 @@ pub struct Seek {
     pub sort_by: SortBy,
     pub dir: Direction,
     pub anchor: Anchor,
-    pub query: Option<String>,
     pub facets: Vec<Facet>
 }
 
@@ -278,7 +277,6 @@ impl Default for Seek {
             anchor: Anchor::Start,
             sort_by: SortBy::ProjectName,
             dir: Direction::Ascending,
-            query: None,
             facets: vec![]
         }
     }
@@ -293,15 +291,11 @@ impl SeekLink {
         limit: Option<Limit>
     ) -> SeekLink
     {
-        let Seek { sort_by, dir, anchor, query, facets } = seek;
+        let Seek { sort_by, dir, anchor, facets } = seek;
 
         let mut qv = vec![
             format!("?sort_by={sort_by}&dir={dir}&anchor={anchor}")
         ];
-
-        if let Some(q) = query {
-            qv.push(format!("query={}", urlencoding::encode(q)));
-        }
 
         for f in facets {
             qv.push(f.to_string());

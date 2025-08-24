@@ -756,7 +756,6 @@ mod test {
                                     anchor: Anchor::Before("project_a".into(), 0),
                                     sort_by: SortBy::ProjectName,
                                     dir: Direction::Ascending,
-                                    query: None,
                                     facets: vec![]
                                 },
                                 params.limit
@@ -768,7 +767,6 @@ mod test {
                                     anchor: Anchor::After("project_b".into(), 0),
                                     sort_by: SortBy::ProjectName,
                                     dir: Direction::Ascending,
-                                    query: None,
                                     facets: vec![]
                                 },
                                 params.limit
@@ -1307,7 +1305,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1319,7 +1316,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1372,7 +1368,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)
@@ -1384,7 +1379,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)
@@ -1510,7 +1504,6 @@ mod test {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                query: None,
                 facets: vec![]
             },
             None
@@ -1544,7 +1537,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1556,7 +1548,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1586,7 +1577,6 @@ mod test {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
-                query: None,
                 facets: vec![]
             },
             None
@@ -1620,7 +1610,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1632,7 +1621,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1662,7 +1650,6 @@ mod test {
                 anchor: Anchor::Before("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                query: None,
                 facets: vec![]
             },
             None
@@ -1696,7 +1683,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1708,7 +1694,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1738,7 +1723,6 @@ mod test {
                 anchor: Anchor::After("xyz".into(), 0),
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                query: None,
                 facets: vec![]
             },
             None
@@ -1772,7 +1756,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1784,7 +1767,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             None
@@ -1814,7 +1796,6 @@ mod test {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                query: None,
                 facets: vec![]
             },
             Limit::new(5)
@@ -1848,7 +1829,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)
@@ -1860,7 +1840,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)
@@ -1890,7 +1869,6 @@ mod test {
                 anchor: Anchor::Start,
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
-                query: None,
                 facets: vec![]
             },
             Limit::new(5)
@@ -1924,7 +1902,6 @@ mod test {
                                 anchor: Anchor::Before("project_a".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)
@@ -1936,7 +1913,6 @@ mod test {
                                 anchor: Anchor::After("project_b".into(), 0),
                                 sort_by: SortBy::ProjectName,
                                 dir: Direction::Ascending,
-                                query: None,
                                 facets: vec![]
                             },
                             Limit::new(5)

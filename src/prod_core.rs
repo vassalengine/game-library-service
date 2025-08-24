@@ -774,18 +774,13 @@ where
 
     async fn get_projects_window(
         &self,
+        facets: &[Facet],
         anchor: &Anchor,
         sort_by: SortBy,
         dir: Direction,
-        query: Option<String>,
         limit_extra: u32
     ) -> Result<Vec<ProjectSummaryRow>, GetProjectsError>
     {
-        let facets = match query {
-            Some(q) => &vec![Facet::Query(q)],
-            None => &vec![]
-        };
-
         match anchor {
             Anchor::Start => Ok(
                 self.db.get_projects_end_window(
@@ -824,37 +819,29 @@ where
     ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
     {
         // unpack the seek
-        let Seek { sort_by, dir, anchor, query, facets } = seek;
+        let Seek { sort_by, dir, anchor, facets } = seek;
 
         // get the total number of responsive items
-        let facets = match query {
-            Some(ref q) => &[
-                &[Facet::Query(q.clone())],
-                facets.as_slice()
-            ].concat(),
-            None => &facets
-        };
-
-        let total = self.db.get_projects_count(facets).await?;
+        let total = self.db.get_projects_count(&facets).await?;
 
         // try to get one extra so we can tell if we're at an endpoint
         let limit_extra = limit.get() as u32 + 1;
 
         // get the window
         let mut projects = self.get_projects_window(
+            &facets,
             &anchor,
             sort_by,
             dir,
-            query.clone(),
             limit_extra
         ).await?;
 
         // get the prev, next links
         let (prev, next) = get_links(
+            &facets,
             &anchor,
             sort_by,
             dir,
-            query,
             limit_extra,
             &mut projects
         )?;
@@ -941,10 +928,10 @@ where
 }
 
 fn get_prev_for_before(
+    facets: &[Facet],
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<Option<Seek>, GetProjectsError>
@@ -972,8 +959,7 @@ fn get_prev_for_before(
             anchor: prev_anchor,
             sort_by,
             dir,
-            query,
-            facets: vec![]
+            facets: facets.into()
         }))
     }
     else {
@@ -983,10 +969,10 @@ fn get_prev_for_before(
 }
 
 fn get_next_for_before(
+    facets: &[Facet],
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    query: Option<String>,
     projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, GetProjectsError>
 {
@@ -1011,17 +997,16 @@ fn get_next_for_before(
             anchor: next_anchor,
             sort_by,
             dir,
-            query,
-            facets: vec![]
+            facets: facets.into()
         }))
     }
 }
 
 fn get_next_for_after(
+    facets: &[Facet],
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<Option<Seek>, GetProjectsError>
@@ -1049,8 +1034,7 @@ fn get_next_for_after(
             anchor: next_anchor,
             sort_by,
             dir,
-            query,
-            facets: vec![]
+            facets: facets.into()
         }))
     }
     else {
@@ -1060,10 +1044,10 @@ fn get_next_for_after(
 }
 
 fn get_prev_for_after(
+    facets: &[Facet],
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    query: Option<String>,
     projects: &[ProjectSummaryRow]
 ) -> Result<Option<Seek>, GetProjectsError>
 {
@@ -1088,8 +1072,7 @@ fn get_prev_for_after(
                 anchor: prev_anchor,
                 sort_by,
                 dir,
-                query,
-                facets: vec![]
+                facets: facets.into()
             }))
         },
         Anchor::Before(..) => unreachable!()
@@ -1097,10 +1080,10 @@ fn get_prev_for_after(
 }
 
 fn get_links(
+    facets: &[Facet],
     anchor: &Anchor,
     sort_by: SortBy,
     dir: Direction,
-    query: Option<String>,
     limit_extra: u32,
     projects: &mut Vec<ProjectSummaryRow>
 ) -> Result<(Option<Seek>, Option<Seek>), GetProjectsError>
@@ -1108,19 +1091,19 @@ fn get_links(
     match anchor {
         Anchor::Before(..) => {
             let prev = get_prev_for_before(
+                facets,
                 anchor,
                 sort_by,
                 dir,
-                query.clone(),
                 limit_extra,
                 projects
             )?;
 
             let next = get_next_for_before(
+                facets,
                 anchor,
                 sort_by,
                 dir,
-                query,
                 projects
             )?;
 
@@ -1129,19 +1112,19 @@ fn get_links(
         Anchor::Start |
         Anchor::After(..) => {
             let next = get_next_for_after(
+                facets,
                 anchor,
                 sort_by,
                 dir,
-                query.clone(),
                 limit_extra,
                 projects
             )?;
 
             let prev = get_prev_for_after(
+                facets,
                 anchor,
                 sort_by,
                 dir,
-                query,
                 projects
             )?;
 
@@ -1497,7 +1480,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1523,7 +1505,6 @@ mod test {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1539,7 +1520,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1565,7 +1545,6 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1581,7 +1560,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::After("a".into(), 1),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1605,7 +1583,6 @@ mod test {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1618,7 +1595,6 @@ mod test {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1634,7 +1610,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::After("h".into(), 8),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1658,7 +1633,6 @@ mod test {
                     anchor: Anchor::Before("g".into(), 7),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1671,7 +1645,6 @@ mod test {
                     anchor: Anchor::After("e".into(), 5),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1687,7 +1660,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("e".into(), 5),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1711,7 +1683,6 @@ mod test {
                     anchor: Anchor::Before("b".into(), 2),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1724,7 +1695,6 @@ mod test {
                     anchor: Anchor::After("d".into(), 4),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1739,7 +1709,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Before("e".into(), 5),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1763,7 +1732,6 @@ mod test {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1776,7 +1744,6 @@ mod test {
                     anchor: Anchor::After("f".into(), 6),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1792,7 +1759,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::Before("d".into(), 4),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1818,7 +1784,6 @@ mod test {
                     anchor: Anchor::After("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1834,7 +1799,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Before("g".into(), 7),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1860,7 +1824,6 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1876,7 +1839,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Ascending,
                 anchor: Anchor::After("g".into(), 7),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1900,7 +1862,6 @@ mod test {
                     anchor: Anchor::Before("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1918,7 +1879,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::After("d".into(), 4),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1942,7 +1902,6 @@ mod test {
                     anchor: Anchor::Before("c".into(), 3),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -1960,7 +1919,6 @@ mod test {
                 sort_by: SortBy::ModificationTime,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -1989,7 +1947,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2005,7 +1962,6 @@ mod test {
                 sort_by: SortBy::ProjectName,
                 dir: Direction::Descending,
                 anchor: Anchor::Start,
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -2031,7 +1987,6 @@ mod test {
                     anchor: Anchor::After("h".into(), 8),
                     sort_by: SortBy::ProjectName,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2050,7 +2005,6 @@ mod test {
                     "1970-01-01T00:00:00.000000001Z".into(),
                     1
                 ),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -2077,7 +2031,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2093,7 +2046,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2112,7 +2064,6 @@ mod test {
                     "1970-01-01T00:00:00.000000008Z".into(),
                     8
                 ),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -2139,7 +2090,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2155,7 +2105,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2174,7 +2123,6 @@ mod test {
                     "1970-01-01T00:00:00.000000005Z".into(),
                     5
                 ),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -2201,7 +2149,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2217,7 +2164,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Ascending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2236,7 +2182,6 @@ mod test {
                     "1970-01-01T00:00:00.000000006Z".into(),
                     5
                 ),
-                query: None,
                 facets: vec![]
             },
             Limit::new(3).unwrap()
@@ -2263,7 +2208,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
@@ -2279,7 +2223,6 @@ mod test {
                     ),
                     sort_by: SortBy::ModificationTime,
                     dir: Direction::Descending,
-                    query: None,
                     facets: vec![]
                 }
             )
