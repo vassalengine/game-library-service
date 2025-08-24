@@ -156,11 +156,10 @@ WHERE projects_fts MATCH ?
     )
 }
 
-/*
 pub async fn get_projects_facet_query_count<'e, E>(
     ex: E,
-    facets: &[(&str, &str, &WhereValue<'_>)],
     query: &str,
+    facets: &[Facet]
 ) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
@@ -176,15 +175,18 @@ ON projects_fts.rowid = projects.project_id
         "
     );
 
-    // TODO: limit fields here
-
-    add_joins_projects(&mut qb, facets);
+    for f in facets.iter().unique_by(|f| f.join_key()) {
+        qb.push_join(f);
+    }
 
     qb.push(" WHERE projects_fts MATCH ")
         .push_bind(query)
         .push(" AND ");
 
-    add_wheres(&mut qb, facets);
+    let mut qbs = qb.separated(" AND ");
+    for f in facets {
+        qbs.push_where(f);
+    }
 
     Ok(
         qb
@@ -193,7 +195,6 @@ ON projects_fts.rowid = projects.project_id
             .await?
     )
 }
-*/
 
 impl SortBy {
     fn field(&self) -> &'static str {
@@ -359,11 +360,10 @@ WHERE projects_fts MATCH
     )
 }
 
-/*
 pub async fn get_projects_facet_query_end_window<'e, E>(
     ex: E,
-    facets: &[(&str, &str, &WhereValue<'_>)],
     query: &str,
+    facets: &[Facet],
     sort_by: SortBy,
     dir: Direction,
     limit: u32
@@ -377,13 +377,18 @@ ON projects.project_id = fts.rowid
             "
         ));
 
-    add_joins_fts(&mut qb, facets);
+    for f in facets.iter().unique_by(|f| f.join_key()) {
+        qb.push_join(f);
+    }
 
     qb.push(" WHERE projects_fts MATCH ")
         .push_bind(fts5_quote(query))
-        .push(" WHERE ");
+        .push(" AND ");
 
-    add_wheres(&mut qb, facets);
+    let mut qbs = qb.separated(" AND ");
+    for f in facets {
+        qbs.push_where(f);
+    }
 
     Ok(
         qb
@@ -400,7 +405,6 @@ ON projects.project_id = fts.rowid
             .await?
     )
 }
-*/
 
 pub async fn get_projects_mid_window<'e, 'f, E, F>(
     ex: E,
