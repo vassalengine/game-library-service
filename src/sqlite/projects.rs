@@ -735,7 +735,10 @@ mod test {
     async fn get_projects_end_window_asc_empty(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                3
             ).await,
             &[]
         );
@@ -745,7 +748,10 @@ mod test {
     async fn get_projects_end_window_asc_not_all(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                3
             ).await,
             &["a", "b", "c"]
         );
@@ -755,7 +761,10 @@ mod test {
     async fn get_projects_end_window_asc_past_end(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, 5
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                5
             ).await,
             &["a", "b", "c", "d"]
         );
@@ -765,7 +774,10 @@ mod test {
     async fn get_projects_end_window_desc_empty(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                3
             ).await,
             &[]
         );
@@ -775,7 +787,10 @@ mod test {
     async fn get_projects_end_window_desc_not_all(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                3
             ).await,
             &["d", "c", "b"]
         );
@@ -785,7 +800,10 @@ mod test {
     async fn get_projects_end_window_desc_past_start(pool: Pool) {
         assert_projects_window(
             get_projects_end_window(
-                &pool, SortBy::ProjectName, Direction::Descending, 5
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                5
             ).await,
             &["d", "c", "b", "a"]
         );
@@ -795,7 +813,12 @@ mod test {
     async fn get_projects_mid_window_asc_empty(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"a", 1, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                &"a",
+                1,
+                3
             ).await,
             &[]
         );
@@ -805,7 +828,12 @@ mod test {
     async fn get_projects_mid_window_asc_not_all(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"b", 2, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                &"b",
+                2,
+                3
             ).await,
             &["c", "d"]
         );
@@ -815,7 +843,12 @@ mod test {
     async fn get_projects_mid_window_asc_past_end(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Ascending, &"d", 4, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Ascending,
+                &"d",
+                4,
+                3
             ).await,
             &[]
         );
@@ -825,7 +858,12 @@ mod test {
     async fn get_projects_mid_window_desc_empty(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"a", 1, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                &"a",
+                1,
+                3
             ).await,
             &[]
         );
@@ -835,7 +873,12 @@ mod test {
     async fn get_projects_mid_window_desc_not_all(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"b", 2, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                &"b",
+                2,
+                3
             ).await,
             &["a"]
         );
@@ -845,7 +888,12 @@ mod test {
     async fn get_projects_mid_window_desc_past_start(pool: Pool) {
         assert_projects_window(
             get_projects_mid_window(
-                &pool, SortBy::ProjectName, Direction::Descending, &"d", 4, 3
+                &pool,
+                SortBy::ProjectName,
+                Direction::Descending,
+                &"d",
+                4,
+                3
             ).await,
             &["c", "b", "a"]
         );
