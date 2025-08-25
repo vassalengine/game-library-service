@@ -854,8 +854,17 @@ where
             &mut projects
         )?;
 
-        // convert the rows to summaries
-        let pi = projects.into_iter().map(ProjectSummary::try_from);
+        // get the tags
+        let tags = try_join_all(
+            projects.iter()
+                .map(|p| self.db.get_tags(Project(p.project_id)))
+        ).await?;
+
+        // convert the rows and tags to summaries
+        let pi = projects.into_iter()
+            .zip(tags)
+            .map(ProjectSummary::try_from);
+
         let psums = match anchor {
             Anchor::Before(..) => pi.rev().collect::<Result<Vec<_>, _>>(),
             _ => pi.collect::<Result<Vec<_>, _>>()
@@ -1282,10 +1291,13 @@ impl ProjectSummaryRow {
     }
 }
 
-impl TryFrom<ProjectSummaryRow> for ProjectSummary {
+impl TryFrom<(ProjectSummaryRow, Vec<String>)> for ProjectSummary {
     type Error = time::Error;
 
-    fn try_from(r: ProjectSummaryRow) -> Result<Self, Self::Error> {
+    fn try_from(
+        (r, tags): (ProjectSummaryRow, Vec<String>)
+    ) -> Result<Self, Self::Error>
+    {
         Ok(
             ProjectSummary {
                 name: r.name,
@@ -1294,7 +1306,7 @@ impl TryFrom<ProjectSummaryRow> for ProjectSummary {
                 revision: r.revision,
                 created_at: nanos_to_rfc3339(r.created_at)?,
                 modified_at: nanos_to_rfc3339(r.modified_at)?,
-                tags: vec![],
+                tags,
                 game: GameData {
                     title: r.game_title,
                     title_sort_key: r.game_title_sort,
