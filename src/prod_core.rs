@@ -815,7 +815,15 @@ where
         &self,
         seek: Seek,
         limit: Limit
-    ) -> Result<(Option<Seek>, Option<Seek>, Vec<ProjectSummary>, i64), GetProjectsError>
+    ) -> Result<
+        (
+            Option<Seek>,
+            Option<Seek>,
+            Vec<ProjectSummary>,
+            i64
+        ),
+        GetProjectsError
+    >
     {
         // unpack the seek
         let Seek { sort_by, dir, anchor, facets } = seek;
