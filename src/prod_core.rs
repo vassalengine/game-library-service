@@ -120,6 +120,7 @@ where
     ) -> Result<Projects, GetProjectsError>
     {
         let ProjectsParams { seek, limit } = params;
+
         let (prev, next, projects, total) = self.get_projects_from(
             seek, limit.unwrap_or_default()
         ).await?;
