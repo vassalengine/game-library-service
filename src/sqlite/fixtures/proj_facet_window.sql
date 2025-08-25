@@ -70,3 +70,12 @@ VALUES
   (2, "b", "b", "b", 0, "pdq", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
   (3, "c", "c", "c", 0, "abc", "", "", "abc", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1),
   (4, "d", "d", "d", 0, "abc", "", "", "", "", NULL, NULL, NULL, NULL, "", NULL, 0, 1, 1);
+
+INSERT INTO tags (project_id, tag)
+VALUES (1, "a");
+
+INSERT INTO owners (user_id, project_id)
+VALUES (1, 1);
+
+INSERT INTO players (user_id, project_id)
+VALUES (1, 1);

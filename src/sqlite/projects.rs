@@ -1313,4 +1313,46 @@ mod test {
             &["c", "a"]
         );
     }
+
+    #[sqlx::test(fixtures("users", "proj_facet_window"))]
+    async fn get_projects_facet_end_window_many(pool: Pool) {
+        assert_projects_window(
+            get_projects_end_window(
+                &pool,
+                &[
+                    Facet::Query("abc".into()),
+                    Facet::Publisher("abc".into()),
+                    Facet::Tag("a".into()),
+                    Facet::Owner("bob".into()),
+                    Facet::Player("bob".into())
+                ],
+                SortBy::ProjectName,
+                Direction::Ascending,
+                5
+            ).await,
+            &["a"]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "proj_facet_window"))]
+    async fn get_projects_facet_mid_window_many(pool: Pool) {
+        assert_projects_window(
+            get_projects_mid_window(
+                &pool,
+                &[
+                    Facet::Query("abc".into()),
+                    Facet::Publisher("abc".into()),
+                    Facet::Tag("a".into()),
+                    Facet::Owner("bob".into()),
+                    Facet::Player("bob".into())
+                ],
+                SortBy::ProjectName,
+                Direction::Descending,
+                &"b",
+                2,
+                5
+            ).await,
+            &["a"]
+        );
+    }
 }
