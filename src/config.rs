@@ -19,5 +19,6 @@ pub struct Config {
     pub bucket_base_dir: String,
     pub upload_dir: String,
     pub upload_timeout: u64,
-    pub log_headers: bool
+    pub log_headers: bool,
+    pub admins: Vec<String>
 }

@@ -75,7 +75,8 @@ where
 impl<S> FromRequestParts<S> for Admin
 where
     S: Send + Sync,
-    DecodingKey: FromRef<S>
+    DecodingKey: FromRef<S>,
+    Vec<User>: FromRef<S>
 {
     type Rejection = AppError;
 
@@ -87,12 +88,26 @@ where
         // check that the requester is authorized
         let user = User::from_request_parts(parts, state).await?;
 
-// TODO
-        match user.0 {
-            5 => Ok(Admin(user.0)),
-            _ => Err(AppError::Unauthorized)
-        }
+        let admins = get_admins(parts, state).await;
+
+        admins.binary_search(&user)
+            .and(Ok(Admin(user.0)))
+            .or(Err(AppError::Unauthorized))
     }
+}
+
+async fn get_admins<S>(
+    parts: &mut Parts,
+    state: &S
+) -> Vec<User>
+where
+    S: Send + Sync,
+    Vec<User>: FromRef<S>
+{
+    State::<Vec<User>>::from_request_parts(parts, state)
+        .await
+        .unwrap_infallible()
+        .0
 }
 
 async fn get_state<S>(
@@ -540,7 +555,8 @@ mod test {
     fn make_state(core: impl Core + Send + Sync + 'static) -> AppState {
         AppState {
             key: DecodingKey::from_secret(KEY),
-            core: Arc::new(core) as CoreArc
+            core: Arc::new(core) as CoreArc,
+            admins: vec![]
         }
     }
 

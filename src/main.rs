@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post}
 };
 use chrono::Utc;
+use futures_util::future::try_join_all;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::{
@@ -58,7 +59,7 @@ mod version;
 use crate::{
     app::AppState,
     config::Config,
-    core::CoreArc,
+    core::{Core, CoreArc},
     prod_core::ProdCore,
     errors::AppError,
     jwt::DecodingKey,
@@ -340,6 +341,8 @@ enum StartupError {
     #[error("{0}")]
     Database(#[from] sqlx::Error),
     #[error("{0}")]
+    AdminUsernameError(#[from] core::GetIdError),
+    #[error("{0}")]
     Io(#[from] io::Error),
     #[error("{0}")]
     BucketUploader(#[from] upload::BucketUploaderError),
@@ -400,9 +403,16 @@ async fn run() -> Result<(), StartupError> {
         upload_dir
     };
 
+    let mut admins = try_join_all(
+        config.admins.iter().map(|username| core.get_user_id(username))
+    ).await?;
+
+    admins.sort();
+
     let state = AppState {
         key: DecodingKey::from_secret(config.jwt_key.as_bytes()),
-        core: Arc::new(core) as CoreArc
+        core: Arc::new(core) as CoreArc,
+        admins
     };
 
     let app: Router = routes(
@@ -1007,7 +1017,8 @@ mod test {
     fn test_state() -> AppState {
         AppState {
             key: DecodingKey::from_secret(KEY),
-            core: Arc::new(TestCore {}) as CoreArc
+            core: Arc::new(TestCore {}) as CoreArc,
+            admins: vec![User(5)]
         }
     }
 

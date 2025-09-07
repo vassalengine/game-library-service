@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::Pagination;
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
 pub struct User(pub i64);
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
