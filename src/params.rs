@@ -95,7 +95,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
         // assemble the Seek
         let seek = match (has_query, from, sort_by, dir, anchor) {
             // sort_by, dir, anchor
-            (false, None, Some(sort_by), Some(dir), Some(anchor)) => Seek {
+            (_, None, Some(sort_by), Some(dir), Some(anchor)) => Seek {
                 sort_by,
                 dir,
                 anchor,
@@ -138,6 +138,8 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use http::uri::Uri;
 
     #[test]
     fn maybe_projects_params_default_ok() {
@@ -390,5 +392,36 @@ mod test {
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+// TODO: remove this once axum_extra accepts our patch
+    fn query_try_from_uri(
+        uri: &Uri
+    ) -> Result<ProjectsParams, serde_html_form::de::Error>
+    {
+        let query = uri.query().unwrap_or_default();
+        let params = serde_html_form::from_str(query)?;
+        Ok(params)
+    }
+
+    #[test]
+    fn maybe_projects_params_sort_by_dir_anchor_query_ok() {
+        let uri: Uri = "http://example.com?sort_by=t&dir=a&anchor=a%09battle+for+fallujah%3A+april+2004%09446&q=Battle&limit=50".parse().unwrap();
+
+        let exp = ProjectsParams {
+            seek: Seek {
+                sort_by: SortBy::GameTitle,
+                dir: Direction::Ascending,
+                anchor: Anchor::After("battle for fallujah: april 2004".into(), 446),
+                facets: vec![Facet::Query("Battle".into())]
+            },
+            limit: Limit::new(50)
+        };
+
+// TODO: use this once axum_extra accepts our patch
+//        let Query(act): Query<ProjectsParams> = Query::try_from_uri(&uri).unwrap();
+        let act = query_try_from_uri(&uri).unwrap();
+
+        assert_eq!(act, exp);
     }
 }
