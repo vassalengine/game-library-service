@@ -112,13 +112,13 @@ impl fmt::Display for Anchor {
             Anchor::Start => write!(f, "s"),
             Anchor::Before(field, id) => write!(
                 f,
-                "{}",
-                urlencoding::encode(&format!("b\t{}\t{}", field, id))
+                "b%09{}%09{id}",
+                urlencoding::Encoded(field)
             ),
             Anchor::After(field, id) => write!(
                 f,
-                "{}",
-                urlencoding::encode(&format!("a\t{}\t{}", field, id))
+                "a%09{}%09{id}",
+                urlencoding::Encoded(field)
             )
         }
     }
@@ -260,7 +260,7 @@ impl fmt::Display for Facet {
             Facet::Player(p) => ("player", p)
         };
 
-        write!(f, "{k}={}", urlencoding::encode(v))
+        write!(f, "{k}={}", urlencoding::Encoded(v))
     }
 }
 
