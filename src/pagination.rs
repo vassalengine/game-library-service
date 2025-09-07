@@ -264,7 +264,7 @@ impl fmt::Display for Facet {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seek {
     pub sort_by: SortBy,
     pub dir: Direction,

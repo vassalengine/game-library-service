@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::str;
 
 use crate::pagination::{Anchor, Facet, Limit, Direction, SortBy, Seek};
 
