@@ -188,7 +188,7 @@ fn unpack_limited_error(e: Box<dyn Error + Sync + Send>) -> io::Error {
         Ok(e) => *e,
         Err(e) => match e.downcast::<LengthLimitError>() {
             Ok(e) => io::Error::new(io::ErrorKind::FileTooLarge, e),
-            Err(e) => io::Error::new(io::ErrorKind::Other, e)
+            Err(e) => io::Error::other(e)
         }
     }
 }
