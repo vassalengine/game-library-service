@@ -497,7 +497,7 @@ where
     {
         let now = self.now_nanos()?;
 
-        // MIME type should be an images
+        // MIME type should be an image
         if !image::mime_type_ok(content_type) {
             return Err(AddImageError::BadMimeType);
         }
