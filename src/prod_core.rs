@@ -6,7 +6,6 @@ use futures::Stream;
 use futures_util::future::try_join_all;
 use mime::Mime;
 use once_cell::sync::Lazy;
-use regex::Regex;
 use std::{
     future::Future,
     io,
@@ -25,7 +24,7 @@ use crate::{
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     image,
-    input::{is_valid_package_name, slug_for, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Facet, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -1193,19 +1192,12 @@ impl From<InvalidProjectName> for CreateProjectError {
 }
 
 fn is_valid_project_name(name: &str) -> bool {
-   static PAT: Lazy<Regex> = Lazy::new(||
-        Regex::new("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
-            .expect("bad regex")
-    );
-
-    PAT.is_match(name)
-
-/*
-    // project names must not be overlong
+    // project names must be 5 to 64 characters long
     // project names must contain only L, M, N, P, Z category characters
     // reject project names with leading or trailing whitespace
     // reject project names with consecutive whitespace
     !(
+        name.len() < 5 ||
         name.len() > 64 ||
         name != name.trim() ||
         name.chars().find(|c|
@@ -1219,8 +1211,6 @@ fn is_valid_project_name(name: &str) -> bool {
         ).is_some() ||
         name.has_consecutive_whitespace()
     )
-*/
-
 }
 
 fn check_project_name(name: &str) -> Result<(), InvalidProjectName> {
@@ -2835,5 +2825,17 @@ mod test {
         assert_eq!(title_sort_key("A la Jeu"), "a la jeu");
         assert_eq!(title_sort_key("A las Una"), "a las una");
         assert_eq!(title_sort_key("A Last"), "last, a");
+    }
+
+    #[test]
+    fn test_is_valid_project_name() {
+        assert!(!is_valid_project_name(""));
+        assert!(!is_valid_project_name("abcd"));
+        assert!(is_valid_project_name("abcde"));
+        assert!(is_valid_project_name("ab de"));
+        assert!(!is_valid_project_name(&"x".repeat(65)));
+        assert!(!is_valid_project_name(" x "));
+        assert!(!is_valid_project_name("x  x"));
+        assert!(!is_valid_project_name("x💩x"));
     }
 }
