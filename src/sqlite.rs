@@ -439,10 +439,19 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         proj: Project,
         img_name: &str,
         url: &str,
+        content_type: &str,
         now: i64
     ) -> Result<(), DatabaseError>
     {
-        images::add_image_url(&self.0, owner, proj, img_name, url, now).await
+        images::add_image_url(
+            &self.0,
+            owner,
+            proj,
+            img_name,
+            url,
+            content_type,
+            now
+        ).await
     }
 
     async fn get_tags(

@@ -69,6 +69,7 @@ async fn update_image_row<'e, E>(
     proj: Project,
     img_name: &str,
     url: &str,
+    content_type: &str,
     now: i64
 ) -> Result<(), DatabaseError>
 where
@@ -80,19 +81,22 @@ INSERT INTO images (
     project_id,
     filename,
     url,
+    content_type,
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(project_id, filename)
 DO UPDATE
 SET url = excluded.url,
+    content_type = excluded.content_type,
     published_at = excluded.published_at,
     published_by = excluded.published_by
         ",
         proj.0,
         img_name,
         url,
+        content_type,
         now,
         owner.0
     )
@@ -108,6 +112,7 @@ async fn create_image_revision_row<'e, E>(
     proj: Project,
     img_name: &str,
     url: &str,
+    content_type: &str,
     now: i64
 ) -> Result<(), DatabaseError>
 where
@@ -119,14 +124,16 @@ INSERT INTO image_revisions (
     project_id,
     filename,
     url,
+    content_type,
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
         ",
         proj.0,
         img_name,
         url,
+        content_type,
         now,
         owner.0
     )
@@ -142,6 +149,7 @@ pub async fn add_image_url<'a, A>(
     proj: Project,
     img_name: &str,
     url: &str,
+    content_type: &str,
     now: i64,
 ) -> Result<(), DatabaseError>
 where
@@ -156,6 +164,7 @@ where
         proj,
         img_name,
         url,
+        content_type,
         now
     ).await?;
 
@@ -166,6 +175,7 @@ where
         proj,
         img_name,
         url,
+        content_type,
         now
     ).await?;
 
@@ -301,6 +311,7 @@ mod test {
             Project(42),
             "image.png",
             "https://example.com/image.png",
+            "image/png",
             1703980420641538067
         ).await.unwrap();
 
@@ -321,6 +332,7 @@ mod test {
                     Project(42),
                     "image.png",
                     "https://example.com/image.png",
+                    "image/png",
                     0
                 ).await.unwrap_err(),
                 DatabaseError::SqlxError(_)
@@ -339,6 +351,7 @@ mod test {
                     Project(0),
                     "image.png",
                     "https://example.com/image.png",
+                    "image/png",
                     0
                 ).await.unwrap_err(),
                 DatabaseError::SqlxError(_)

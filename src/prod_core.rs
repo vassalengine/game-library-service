@@ -556,7 +556,14 @@ where
         .await?;
 
         // update record
-        self.db.add_image_url(owner, proj, filename, &url, now).await?;
+        self.db.add_image_url(
+            owner,
+            proj,
+            filename,
+            &url,
+            content_type.as_ref(),
+            now
+        ).await?;
 
         Ok(())
     }

@@ -399,6 +399,7 @@ pub trait DatabaseClient {
         _proj: Project,
         _img_name: &str,
         _url: &str,
+        _content_type: &str,
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
