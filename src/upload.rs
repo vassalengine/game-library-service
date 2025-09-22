@@ -102,11 +102,21 @@ where
 pub trait Uploader {
     fn upload<R>(
         &self,
-        _filename: &str,
-        _reader: R
+        filename: &str,
+        reader: R
     ) -> impl Future<Output = Result<String, UploadError>> + Send
     where
         R: AsyncRead + Unpin + Send;
+
+    fn upload_with_content_type<R, C>(
+        &self,
+        filename: &str,
+        reader: R,
+        content_type: C
+    ) -> impl Future<Output = Result<String, UploadError>> + Send
+    where
+        R: AsyncRead + Unpin + Send,
+        C: AsRef<str> + Send;
 }
 
 pub struct LocalUploader {
@@ -117,7 +127,7 @@ impl Uploader for LocalUploader {
     async fn upload<R>(
         &self,
         filename: &str,
-        mut _reader: R
+        _reader: R
     ) -> Result<String, UploadError>
     where
         R: AsyncRead + Unpin + Send
@@ -128,6 +138,19 @@ impl Uploader for LocalUploader {
                 self.uploads_directory
             )
         )
+    }
+
+    async fn upload_with_content_type<R, C>(
+        &self,
+        filename: &str,
+        reader: R,
+        _content_type: C
+    ) -> Result<String, UploadError>
+    where
+        R: AsyncRead + Unpin + Send,
+        C: AsRef<str> + Send
+    {
+        self.upload(filename, reader).await
     }
 }
 
@@ -199,6 +222,26 @@ impl Uploader for BucketUploader {
         let path = format!("{0}/{filename}", self.base_dir);
 // TODO: check return code?
         self.bucket.put_object_stream(&mut reader, &path).await?;
+        Ok(format!("{0}/{path}", self.base_url))
+    }
+
+    async fn upload_with_content_type<R, C>(
+        &self,
+        filename: &str,
+        mut reader: R,
+        content_type: C
+    ) -> Result<String, UploadError>
+    where
+        R: AsyncRead + Unpin + Send,
+        C: AsRef<str> + Send
+    {
+        let path = format!("{0}/{filename}", self.base_dir);
+// TODO: check return code?
+        self.bucket.put_object_stream_with_content_type(
+            &mut reader,
+            &path,
+            content_type
+        ).await?;
         Ok(format!("{0}/{path}", self.base_url))
     }
 }

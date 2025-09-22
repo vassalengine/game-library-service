@@ -548,10 +548,10 @@ where
 
         file.rewind().await?;
 
-// TODO: do we need to set content-type on upload?
-        let url = self.uploader.upload(
+        let url = self.uploader.upload_with_content_type(
             &bucket_path,
-            &mut file
+            &mut file,
+            content_type
         )
         .await?;
 
@@ -1362,6 +1362,19 @@ mod test {
         ) -> Result<String, UploadError>
         where
             R: AsyncRead + Unpin + Send
+        {
+            unreachable!();
+        }
+
+        async fn upload_with_content_type<R, C>(
+            &self,
+            _filename: &str,
+            _reader: R,
+            _content_type: C
+        ) -> Result<String, UploadError>
+        where
+            R: AsyncRead + Unpin + Send,
+            C: AsRef<str> + Send
         {
             unreachable!();
         }
