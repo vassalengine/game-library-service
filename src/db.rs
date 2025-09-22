@@ -358,6 +358,7 @@ pub trait DatabaseClient {
         _filename: &str,
         _size: i64,
         _sha256: &str,
+        _content_type: &str,
         _requires: Option<&str>,
         _url: &str,
         _now: i64

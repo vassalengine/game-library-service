@@ -369,6 +369,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         filename: &str,
         size: i64,
         sha256: &str,
+        content_type: &str,
         requires: Option<&str>,
         url: &str,
         now: i64
@@ -382,6 +383,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             filename,
             size,
             sha256,
+            content_type,
             requires,
             url,
             now

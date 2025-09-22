@@ -438,6 +438,7 @@ async fn create_file_row<'e, E>(
     filename: &str,
     size: i64,
     sha256: &str,
+    content_type: &str,
     requires: Option<&str>,
     url: &str,
     now: i64
@@ -453,17 +454,19 @@ INSERT INTO files (
     filename,
     size,
     sha256,
+    content_type,
     requires,
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ",
         release.0,
         url,
         filename,
         size,
         sha256,
+        content_type,
         requires,
         now,
         owner.0
@@ -577,6 +580,7 @@ pub async fn add_file_url<'a, A>(
     filename: &str,
     size: i64,
     sha256: &str,
+    content_type: &str,
     requires: Option<&str>,
     url: &str,
     now: i64
@@ -594,6 +598,7 @@ where
         filename,
         size,
         sha256,
+        content_type,
         requires,
         url,
         now

@@ -416,6 +416,8 @@ where
 
         info!("finished upload of temp file {}", file.file_path().display());
 
+        let content_type = "";
+
         // update record
         self.db.add_file_url(
             owner,
@@ -424,6 +426,7 @@ where
             filename,
             size as i64,
             &sha256,
+            content_type,
             requires.as_deref(),
             &url,
             now
