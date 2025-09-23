@@ -165,8 +165,7 @@ pub enum BucketUploaderError {
 pub struct BucketUploader {
     bucket: Bucket,
     base_url: String,
-    base_dir: String,
-    put_headers: HeaderMap
+    base_dir: String
 }
 
 impl BucketUploader {
@@ -193,17 +192,19 @@ impl BucketUploader {
                 None
             )?
         )?
-        .with_path_style();
+        .with_path_style()
+        .with_extra_headers(
+            HeaderMap::from_iter([(
+                HeaderName::from_static("x-amz-acl"),
+                HeaderValue::from_static("public-read")
+            )])
+        )?;
 
         Ok(
             BucketUploader {
-                bucket: *bucket,
+                bucket,
                 base_url: base_url.into(),
-                base_dir: base_dir.into(),
-                put_headers: HeaderMap::from_iter([(
-                    HeaderName::from_static("x-amz-acl"),
-                    HeaderValue::from_static("public-read")
-                )])
+                base_dir: base_dir.into()
             }
         )
     }
@@ -220,10 +221,7 @@ impl Uploader for BucketUploader {
     {
         let path = format!("{0}/{filename}", self.base_dir);
 // TODO: check return code?
-        self.bucket.put_object_stream_builder(&path)
-            .with_headers(self.put_headers.clone())
-            .execute_stream(&mut reader)
-            .await?;
+        self.bucket.put_object_stream(&mut reader, &path).await?;
         Ok(format!("{0}/{path}", self.base_url))
     }
 
@@ -239,11 +237,11 @@ impl Uploader for BucketUploader {
     {
         let path = format!("{0}/{filename}", self.base_dir);
 // TODO: check return code?
-        self.bucket.put_object_stream_builder(&path)
-            .with_headers(self.put_headers.clone())
-            .with_content_type(&content_type)
-            .execute_stream(&mut reader)
-            .await?;
+        self.bucket.put_object_stream_with_content_type(
+            &mut reader,
+            &path,
+            content_type
+        ).await?;
         Ok(format!("{0}/{path}", self.base_url))
     }
 }
