@@ -348,6 +348,7 @@ where
         proj: Project,
         release: Release,
         filename: &str,
+        content_type: Option<&Mime>,
         content_length: Option<u64>,
         stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
     ) -> Result<(), AddFileError>

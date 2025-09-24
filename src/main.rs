@@ -970,6 +970,7 @@ mod test {
             _proj: Project,
             _release: Release,
             _filename: &str,
+            _content_type: Option<&Mime>,
             _content_length: Option<u64>,
             stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
         ) -> Result<(), AddFileError>

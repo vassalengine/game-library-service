@@ -223,6 +223,7 @@ pub async fn file_post(
     Owned(owner, proj): Owned,
     ProjectPackageRelease(_, _, release): ProjectPackageRelease,
     Path((_, _, _, filename)): Path<(String, String, String, String)>,
+    content_type: Option<TypedHeader<ContentType>>,
     content_length: Option<TypedHeader<ContentLength>>,
     State(core): State<CoreArc>,
     request: Request
@@ -239,6 +240,7 @@ pub async fn file_post(
             proj,
             release,
             &filename,
+            content_type.map(|h| h.0.into()).as_ref(),
             content_length,
             into_stream(request, limit)
         ).await?
