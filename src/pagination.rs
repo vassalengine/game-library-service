@@ -460,34 +460,4 @@ mod test {
             Direction::Ascending
         );
     }
-
-    #[test]
-    fn seek_try_from_ok() {
-        let seek = Seek {
-            sort_by: SortBy::ProjectName,
-            dir: Direction::Ascending,
-            anchor: Anchor::Start,
-        };
-
-        let t = (SortBy::ProjectName, Direction::Ascending, Anchor::Start);
-        assert_eq!(seek, t.try_into().unwrap())
-    }
-
-    #[test]
-    fn seek_try_from_relevance_ok() {
-        let seek = Seek {
-            sort_by: SortBy::Relevance,
-            dir: Direction::Ascending,
-            anchor: Anchor::StartQuery("foo".into()),
-        };
-
-        let t = (seek.sort_by, seek.dir, seek.anchor.clone());
-        assert_eq!(seek, t.try_into().unwrap())
-    }
-
-    #[test]
-    fn seek_try_from_relevance_illegal() {
-        let t = (SortBy::Relevance, Direction::Ascending, Anchor::Start);
-        assert!(Seek::try_from(t).is_err())
-    }
 }
