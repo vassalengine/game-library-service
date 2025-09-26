@@ -184,6 +184,7 @@ impl From<DeleteReleaseError> for AppError {
 impl From<AddFileError> for AppError {
     fn from(err: AddFileError) -> Self {
         match err {
+            AddFileError::BadMimeType => AppError::BadMimeType,
             AddFileError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
             AddFileError::InvalidFilename => AppError::MalformedQuery,
             AddFileError::IOError(e) => AppError::InternalError(e.to_string()),

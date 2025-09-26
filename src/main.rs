@@ -38,12 +38,12 @@ use tracing_subscriber::{
 
 mod app;
 mod config;
+mod content_type;
 mod core;
 mod db;
 mod errors;
 mod extractors;
 mod handlers;
-mod image;
 mod input;
 mod jwt;
 mod model;

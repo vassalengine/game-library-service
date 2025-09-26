@@ -12,7 +12,9 @@ use std::{
     path::{Path, PathBuf}
 };
 use tokio::io::{
+    AsyncRead,
     AsyncReadExt,
+    AsyncSeek,
     AsyncSeekExt
 };
 use tracing::info;
@@ -21,9 +23,9 @@ use unicode_normalization::UnicodeNormalization;
 use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
+    content_type::{infer_image_type, infer_file_type, supported_image_type},
     core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
-    image,
     input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
@@ -386,12 +388,45 @@ where
             )?;
         }
 
+        // try to infer the MIME type
+        let ext = filename.rsplit_once('.').map(|(_, ext)| ext);
+        let buf = get_magic(&mut file).await?;
+        let inferred_type = infer_file_type(ext, &buf)
+            .map_err(|_| AddFileError::BadMimeType)?;
+
+        let content_type = match (&inferred_type, content_type) {
+            // we detected the MIME type
+            (Some(it), _) => &it,
+            // stated type can be inferred but we didn't detect it
+            (None, Some(ct)) if infer::is_mime_supported(ct.as_ref()) =>
+                return Err(AddFileError::BadMimeType),
+            // stated type cannot be inferred, use it
+            (None, Some(ct)) => ct,
+            // default to application/octet_stream
+            (None, None) => &mime::APPLICATION_OCTET_STREAM
+        };
+
+        // We've already verified that any of vlog, vmdx, vmod, vsav
+        // is a ZIP archive by this point, and that any ZIP archive
+        // has one of those extensions or zip.
+
         // check uploaded file for moduledata
-        let requires = self.check_version_and_get_requires(
-            file.file_path(),
-            filename,
-            release
-        ).await?;
+        let requires = match ext {
+            Some(ext @ "vlog") |
+            Some(ext @ "vmdx") |
+            Some(ext @ "vmod") |
+            Some(ext @ "vsav") => {
+                file.rewind().await?;
+
+                self.check_version_and_get_requires(
+                    file.file_path(),
+                    filename,
+                    ext,
+                    release
+                ).await?
+            },
+            _ => None
+        };
 
         info!("checked version of temp file {}", file.file_path().display());
 
@@ -408,10 +443,10 @@ where
 
         info!("starting to upload temp file {}", file.file_path().display());
 
-// TODO: do we need to set content-type on upload?
-        let url = self.uploader.upload(
+        let url = self.uploader.upload_with_content_type(
             &bucket_path,
-            &mut file
+            &mut file,
+            content_type.as_ref()
         )
         .await?;
 
@@ -427,7 +462,7 @@ where
             filename,
             size as i64,
             &sha256,
-            content_type,
+            content_type.as_ref(),
             requires.as_deref(),
             &url,
             now
@@ -501,7 +536,7 @@ where
         let now = self.now_nanos()?;
 
         // MIME type should be an image
-        if !image::mime_type_ok(content_type) {
+        if !supported_image_type(content_type) {
             return Err(AddImageError::BadMimeType);
         }
 
@@ -541,12 +576,10 @@ where
         file.rewind().await?;
 
         // check actual MIME type
-        let mut buf = vec![0; 16];
-        file.read_exact(&mut buf).await?;
-
-        if !image::check_magic(filename, &buf) {
-            return Err(AddImageError::BadMimeType);
-        }
+        let ext = filename.rsplit_once('.').map(|(_, ext)| ext);
+        let buf = get_magic(&mut file).await?;
+        let content_type = infer_image_type(ext, &buf)
+            .map_err(|_| AddImageError::BadMimeType)?;
 
 // TODO: check dimensions? resize?
 
@@ -555,7 +588,7 @@ where
         let url = self.uploader.upload_with_content_type(
             &bucket_path,
             &mut file,
-            content_type
+            content_type.as_ref()
         )
         .await?;
 
@@ -887,11 +920,10 @@ where
         &self,
         tempfile: P,
         filename: &str,
+        ext: &str,
         release: Release
     ) -> Result<Option<String>, AddFileError>
     {
-        let ext = Path::new(filename).extension().unwrap_or_default();
-
         match dump_moduledata(tempfile).await {
             Ok(md) => {
                 // we got moduledata
@@ -1338,6 +1370,16 @@ impl TryFrom<FlagRow> for Flag {
     }
 }
 
+async fn get_magic<F>(file: &mut F) -> Result<[u8; 64], io::Error>
+where
+    F: AsyncRead + AsyncSeek + Unpin
+{
+    file.rewind().await?;
+    let mut buf = [0; 64];
+    file.read_exact(&mut buf).await?;
+    Ok(buf)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1377,15 +1419,14 @@ mod test {
             unreachable!();
         }
 
-        async fn upload_with_content_type<R, C>(
+        async fn upload_with_content_type<R>(
             &self,
             _filename: &str,
             _reader: R,
-            _content_type: C
+            _content_type: &str
         ) -> Result<String, UploadError>
         where
-            R: AsyncRead + Unpin + Send,
-            C: AsRef<str> + Send
+            R: AsyncRead + Unpin + Send
         {
             unreachable!();
         }

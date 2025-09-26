@@ -203,6 +203,8 @@ impl From<db::DatabaseError> for DeleteReleaseError {
 
 #[derive(Debug, Error)]
 pub enum AddFileError {
+    #[error("Bad MIME type")]
+    BadMimeType,
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
     #[error("Invalid filename")]
@@ -233,6 +235,7 @@ impl PartialEq for AddFileError {
             (Self::ModuleError(l), Self::ModuleError(r)) => l == r,
             (Self::TimeError(l), Self::TimeError(r)) => l == r,
             (Self::UploadError(l), Self::UploadError(r)) => l == r,
+            (Self::BadMimeType, Self::BadMimeType) |
             (Self::InvalidFilename, Self::InvalidFilename) |
             (Self::TooLarge, Self::TooLarge) => true,
             (_, _) => false

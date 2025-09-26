@@ -108,15 +108,14 @@ pub trait Uploader {
     where
         R: AsyncRead + Unpin + Send;
 
-    fn upload_with_content_type<R, C>(
+    fn upload_with_content_type<R>(
         &self,
         filename: &str,
         reader: R,
-        content_type: C
+        content_type: &str
     ) -> impl Future<Output = Result<String, UploadError>> + Send
     where
-        R: AsyncRead + Unpin + Send,
-        C: AsRef<str> + Send;
+        R: AsyncRead + Unpin + Send;
 }
 
 pub struct LocalUploader {
@@ -140,15 +139,14 @@ impl Uploader for LocalUploader {
         )
     }
 
-    async fn upload_with_content_type<R, C>(
+    async fn upload_with_content_type<R>(
         &self,
         filename: &str,
         reader: R,
-        _content_type: C
+        _content_type: &str
     ) -> Result<String, UploadError>
     where
-        R: AsyncRead + Unpin + Send,
-        C: AsRef<str> + Send
+        R: AsyncRead + Unpin + Send
     {
         self.upload(filename, reader).await
     }
@@ -225,15 +223,14 @@ impl Uploader for BucketUploader {
         Ok(format!("{0}/{path}", self.base_url))
     }
 
-    async fn upload_with_content_type<R, C>(
+    async fn upload_with_content_type<R>(
         &self,
         filename: &str,
         mut reader: R,
-        content_type: C
+        content_type: &str
     ) -> Result<String, UploadError>
     where
-        R: AsyncRead + Unpin + Send,
-        C: AsRef<str> + Send
+        R: AsyncRead + Unpin + Send
     {
         let path = format!("{0}/{filename}", self.base_dir);
 // TODO: check return code?
