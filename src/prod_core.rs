@@ -452,8 +452,6 @@ where
 
         info!("finished upload of temp file {}", file.file_path().display());
 
-        let content_type = "";
-
         // update record
         self.db.add_file_url(
             owner,
