@@ -66,6 +66,14 @@ fn check_pdf(buf: &[u8]) -> Result<Mime, BadMimeType>
     }
 }
 
+fn check_ours(buf: &[u8]) -> Result<Mime, BadMimeType>
+{
+    match infer::archive::is_zip(buf) {
+        true => Ok(mime::APPLICATION_OCTET_STREAM),
+        false => Err(BadMimeType)
+    }
+}
+
 fn check_zip(buf: &[u8]) -> Result<Mime, BadMimeType>
 {
     match infer::archive::is_zip(buf) {
@@ -106,7 +114,7 @@ pub fn infer_file_type(
         Some("vlog") |
         Some("vmdx") |
         Some("vmod") |
-        Some("vsav") |
+        Some("vsav") => check_ours(buf).map(Some),
         Some("zip") => check_zip(buf).map(Some),
         Some(ext) => check_other(ext, buf),
         None => Ok(None)
@@ -184,6 +192,19 @@ mod test {
                 assert_eq!(ch(rbuf), Err(BadMimeType));
             }
         }
+    }
+
+    #[test]
+    fn check_ours_ok() {
+        assert_eq!(
+            check_ours(&ZIP),
+            Ok(mime::APPLICATION_OCTET_STREAM)
+        );
+    }
+
+    #[test]
+    fn check_ours_err() {
+        assert_eq!(check_ours(&[]), Err(BadMimeType));
     }
 
     #[test]
@@ -281,7 +302,7 @@ mod test {
         for ext in tests {
             assert_eq!(
                 infer_file_type(Some(ext), &ZIP),
-                Ok(Some(APPLICATION_ZIP.clone()))
+                Ok(Some(mime::APPLICATION_OCTET_STREAM))
             );
 
             assert_eq!(
