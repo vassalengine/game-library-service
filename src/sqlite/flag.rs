@@ -88,6 +88,7 @@ JOIN users
 ON flags.user_id = users.user_id
 JOIN projects
 ON flags.project_id = projects.project_id
+WHERE closed_at IS NULL
 ORDER BY flags.flag_id
             "
         )
