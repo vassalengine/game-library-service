@@ -133,10 +133,13 @@ where
     sqlx::query!(
         "
 UPDATE flags
-SET closed_at = ?
+SET
+    closed_at = ?,
+    closed_by = ?
 WHERE flag_id = ?
         ",
         now,
+        admin.0,
         flag.0
     )
     .execute(ex)
