@@ -1377,6 +1377,7 @@ impl TryFrom<FlagRow> for FlagData {
     fn try_from(r: FlagRow) -> Result<Self, Self::Error> {
         Ok(
             FlagData {
+                flag_id: r.flag_id,
                 project: r.project,
                 slug: urlencoding::encode(&r.slug).into(),
                 flag: r.flag,

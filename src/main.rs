@@ -1006,6 +1006,7 @@ mod test {
                 Flags {
                     flags: vec![
                         FlagData {
+                            flag_id: 1,
                             project: "a_project".into(),
                             slug: "a_project".into(),
                             flagged_by: "bob".into(),
@@ -4538,6 +4539,7 @@ mod test {
             Flags {
                 flags: vec![
                     FlagData {
+                        flag_id: 1,
                         project: "a_project".into(),
                         slug: "a_project".into(),
                         flagged_by: "bob".into(),

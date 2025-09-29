@@ -143,6 +143,7 @@ impl TryFrom<&str> for FlagTag {
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FlagData {
+    pub flag_id: i64,
     pub project: String,
     pub slug: String,
     pub flag: FlagTag,

@@ -100,6 +100,7 @@ where
             FlagRow,
             "
 SELECT
+    flags.flag_id,
     projects.name AS project,
     projects.slug,
     flags.flag,
