@@ -24,10 +24,10 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     content_type::{infer_image_type, infer_file_type, supported_image_type},
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{FileData, Flag, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{Admin, FileData, Flag, FlagData, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Facet, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -603,6 +603,16 @@ where
         Ok(())
     }
 
+    async fn get_flag_id(
+         &self,
+        flag: i64
+    ) -> Result<Flag, GetIdError>
+    {
+        self.db.get_flag_id(flag)
+            .await?
+            .ok_or(GetIdError::NotFound)
+    }
+
     async fn add_flag(
         &self,
         reporter: User,
@@ -614,6 +624,16 @@ where
         Ok(self.db.add_flag(reporter, proj, flag, now).await?)
     }
 
+    async fn close_flag(
+        &self,
+        admin: Admin,
+        flag: Flag
+    ) -> Result<(), CloseFlagError>
+    {
+        let now = self.now_nanos()?;
+        Ok(self.db.close_flag(admin, flag, now).await?)
+    }
+
     async fn get_flags(
         &self
     ) -> Result<Flags, GetFlagsError>
@@ -623,7 +643,7 @@ where
                 flags: self.db.get_flags()
                     .await?
                     .into_iter()
-                    .map(Flag::try_from)
+                    .map(FlagData::try_from)
                     .collect::<Result<Vec<_>, _>>()?
             }
         )
@@ -1351,12 +1371,12 @@ impl TryFrom<(ProjectSummaryRow, Vec<String>)> for ProjectSummary {
     }
 }
 
-impl TryFrom<FlagRow> for Flag {
+impl TryFrom<FlagRow> for FlagData {
     type Error = GetFlagsError;
 
     fn try_from(r: FlagRow) -> Result<Self, Self::Error> {
         Ok(
-            Flag {
+            FlagData {
                 project: r.project,
                 slug: urlencoding::encode(&r.slug).into(),
                 flag: r.flag,

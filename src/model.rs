@@ -111,6 +111,9 @@ pub struct Projects {
     pub meta: Pagination
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+pub struct Flag(pub i64);
+
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("flag tag {0} unknown")]
 pub struct FlagTagError(pub String);
@@ -139,7 +142,7 @@ impl TryFrom<&str> for FlagTag {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Flag {
+pub struct FlagData {
     pub project: String,
     pub slug: String,
     pub flag: FlagTag,
@@ -150,7 +153,7 @@ pub struct Flag {
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Flags {
-    pub flags: Vec<Flag>
+    pub flags: Vec<FlagData>
 }
 
 #[cfg(test)]

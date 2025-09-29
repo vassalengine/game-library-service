@@ -6,7 +6,7 @@ use sqlx::{
 use crate::{
     db::{DatabaseError, FlagRow},
     input::FlagPost,
-    model::{FlagTag, Project, User}
+    model::{Admin, Flag, FlagTag, Project, User}
 };
 
 impl<'a> From<&'a FlagPost> for (u32, Option<&'a str>) {
@@ -29,6 +29,29 @@ impl From<i64> for FlagTag {
             _ => FlagTag::Other
         }
     }
+}
+
+pub async fn get_flag_id<'e, E>(
+    ex: E,
+    flag: i64
+) -> Result<Option<Flag>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT flag_id
+FROM flags
+WHERE flag_id = ?
+LIMIT 1
+            ",
+            flag
+        )
+        .fetch_optional(ex)
+        .await?
+        .map(Flag)
+    )
 }
 
 pub async fn add_flag<'e, E>(
@@ -95,6 +118,30 @@ ORDER BY flags.flag_id
         .fetch_all(ex)
         .await?
     )
+}
+
+pub async fn close_flag<'e, E>(
+    ex: E,
+    admin: Admin,
+    flag: Flag,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE flags
+SET closed_at = ?
+WHERE flag_id = ?
+        ",
+        now,
+        flag.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

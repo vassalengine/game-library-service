@@ -11,7 +11,7 @@ use thiserror::Error;
 use crate::{
     db,
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Flags, Owner, Package, Projects, ProjectData, Project, Release, User, Users},
+    model::{Admin, Flag, Flags, Owner, Package, Projects, ProjectData, Project, Release, User, Users},
     module,
     params::ProjectsParams,
     time,
@@ -311,6 +311,14 @@ pub enum AddFlagError {
 }
 
 #[derive(Debug, Error, PartialEq)]
+pub enum CloseFlagError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error)
+}
+
+#[derive(Debug, Error, PartialEq)]
 pub enum GetFlagsError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError),
@@ -587,12 +595,29 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn get_flag_id(
+         &self,
+        _flag: i64
+    ) -> Result<Flag, GetIdError>
+    {
+        unimplemented!();
+    }
+
     async fn add_flag(
         &self,
         _reporter: User,
         _proj: Project,
         _flag: &FlagPost
     ) -> Result<(), AddFlagError>
+    {
+        unimplemented!();
+    }
+
+    async fn close_flag(
+        &self,
+        _admin: Admin,
+        _flag: Flag
+    ) -> Result<(), CloseFlagError>
     {
         unimplemented!();
     }

@@ -6,7 +6,7 @@ use axum::{
     extract::{ConnectInfo, Request},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing::{get, post}
+    routing::{get, patch, post}
 };
 use chrono::Utc;
 use futures_util::future::try_join_all;
@@ -301,6 +301,10 @@ fn routes(
                 "/admin/flags",
                 get(handlers::admin_flags_get)
             )
+            .route(
+                "/admin/flags/{flag}",
+                patch(handlers::admin_flag_close)
+            )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
             .route(
                 "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
@@ -504,7 +508,7 @@ mod test {
         core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         input::{FlagPost, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, RangePost},
         jwt::{self, EncodingKey},
-        model::{Flag, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+        model::{FlagData, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -1001,7 +1005,7 @@ mod test {
             Ok(
                 Flags {
                     flags: vec![
-                        Flag {
+                        FlagData {
                             project: "a_project".into(),
                             slug: "a_project".into(),
                             flagged_by: "bob".into(),
@@ -4533,7 +4537,7 @@ mod test {
             body_as::<Flags>(response).await,
             Flags {
                 flags: vec![
-                    Flag {
+                    FlagData {
                         project: "a_project".into(),
                         slug: "a_project".into(),
                         flagged_by: "bob".into(),

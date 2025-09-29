@@ -22,7 +22,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     jwt::{self, Claims, DecodingKey},
-    model::{Admin, Owned, Owner, Package, Project, Release, User}
+    model::{Admin, Flag, Owned, Owner, Package, Project, Release, User}
 };
 
 impl<S> FromRequestParts<S> for Claims
@@ -253,6 +253,34 @@ where
             true => Ok(Owned(Owner(user.0), proj)),
             false =>  Err(AppError::Forbidden)
         }
+    }
+}
+
+impl<S> FromRequestParts<S> for Flag
+where
+    S: Send + Sync,
+    CoreArc: FromRef<S>
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S
+    ) -> Result<Self, Self::Rejection>
+    {
+        let (flag, ) = get_path_iter(parts, state)
+            .await?
+            .next_tuple()
+            .ok_or(AppError::InternalError("empty path iter".into()))?;
+
+        let core = get_state(parts, state).await;
+
+        // flag id must be an integer
+        let flag = flag.parse::<i64>()
+            .or(Err(AppError::NotFound))?;
+
+        // look up the flag id
+        Ok(core.get_flag_id(flag).await?)
     }
 }
 

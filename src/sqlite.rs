@@ -16,7 +16,7 @@ mod users;
 use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{GalleryImage, Owner, Package, Project, Release, User, Users},
+    model::{Admin, Flag, GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, Facet, SortBy},
     version::Version
 };
@@ -488,6 +488,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         images::get_gallery_at(&self.0, proj, date).await
     }
 
+    async fn get_flag_id(
+        &self,
+        flag: i64
+    ) -> Result<Option<Flag>, DatabaseError>
+    {
+        flag::get_flag_id(&self.0, flag).await
+    }
+
     async fn add_flag(
         &self,
         reporter: User,
@@ -496,6 +504,15 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), DatabaseError> {
         flag::add_flag(&self.0, reporter, proj, flag, now).await
+    }
+
+    async fn close_flag(
+        &self,
+        admin: Admin,
+        flag: Flag,
+        now: i64
+    ) -> Result<(), DatabaseError> {
+        flag::close_flag(&self.0, admin, flag, now).await
     }
 
     async fn get_flags(

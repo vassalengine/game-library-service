@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{FlagTag, GalleryImage, Owner, Package, Project, Release, User, Users},
+    model::{Admin, Flag, FlagTag, GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, Facet, SortBy},
     version::Version
 };
@@ -426,11 +426,23 @@ pub trait DatabaseClient {
         _date: i64
     ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
 
+    fn get_flag_id(
+        &self,
+        _flag: i64
+    ) -> impl Future<Output = Result<Option<Flag>, DatabaseError>> + Send;
+
     fn add_flag(
         &self,
         _reporter: User,
         _proj: Project,
         _flag: &FlagPost,
+        _now: i64
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
+    fn close_flag(
+        &self,
+        _admin: Admin,
+        _flag: Flag,
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 

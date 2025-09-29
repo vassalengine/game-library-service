@@ -20,7 +20,7 @@ use crate::{
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, Flags, Owned, ProjectData, Project, Projects, Users, User},
+    model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Users, User},
     params::ProjectsParams,
 };
 
@@ -305,6 +305,15 @@ pub async fn flag_post(
 ) -> Result<(), AppError>
 {
     Ok(core.add_flag(requester, proj, &flag).await?)
+}
+
+pub async fn admin_flag_close(
+    admin: Admin,
+    flag: Flag,
+    State(core): State<CoreArc>
+) -> Result<(), AppError>
+{
+    Ok(core.close_flag(admin, flag).await?)
 }
 
 pub async fn admin_flags_get(
