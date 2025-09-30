@@ -152,6 +152,8 @@ WHERE flag_id = ?
 mod test {
     use super::*;
 
+    type Pool = sqlx::Pool<Sqlite>;
+
     #[test]
     fn tuple_from_flag_post_inappropriate() {
         let (t, m): (u32, Option<&str>) = (&FlagPost::Inappropriate).into();
@@ -176,5 +178,36 @@ mod test {
         let f = FlagPost::Other("x".into());
         let (t, m): (u32, Option<&str>) = (&f).into();
         assert_eq!((t, m), (3, Some("x")));
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn add_flag_ok(pool: Pool) {
+        assert_eq!(
+            get_flags(&pool).await.unwrap(),
+            []
+        );
+
+        add_flag(
+            &pool,
+            User(1),
+            Project(42),
+            &FlagPost::Spam,
+            1702569006419538068
+        ).await.unwrap();
+
+        assert_eq!(
+            get_flags(&pool).await.unwrap(),
+            [
+                FlagRow {
+                    flag_id: 1,
+                    project: "test_game".into(),
+                    slug: "test_game".into(),
+                    flag: FlagTag::Spam,
+                    flagged_at: 1702569006419538068,
+                    flagged_by: "bob".into(),
+                    message: None
+                }
+            ]
+        );
     }
 }
