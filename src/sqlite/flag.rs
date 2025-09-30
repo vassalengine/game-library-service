@@ -210,4 +210,39 @@ mod test {
             ]
         );
     }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn add_flag_not_a_user(pool: Pool) {
+        // This should not happen; the User passed in should be good.
+        assert!(
+            matches!(
+                add_flag(
+                    &pool,
+                    User(0),
+                    Project(42),
+                    &FlagPost::Spam,
+                    1702569006419538068
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects"))]
+    async fn add_flag_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert!(
+            matches!(
+                add_flag(
+                    &pool,
+                    User(1),
+                    Project(0),
+                    &FlagPost::Spam,
+                    1702569006419538068
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
+
 }
