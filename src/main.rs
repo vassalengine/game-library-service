@@ -6,7 +6,7 @@ use axum::{
     extract::{ConnectInfo, Request},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing::{get, patch, post}
+    routing::{get, patch, post, put}
 };
 use chrono::Utc;
 use futures_util::future::try_join_all;
@@ -182,142 +182,125 @@ fn routes(
     upload_timeout: u64
 ) -> Router<AppState> {
     // set up our routes under api
-    let api_router = if read_only {
-        Router::new()
-            .route(
-                "/projects",
-                get(handlers::projects_get)
-            )
-            .route(
-                "/projects/{proj}",
-                get(handlers::project_get)
-                .post(handlers::forbidden)
-                .patch(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/{revision}",
-                get(handlers::project_revision_get)
-            )
-            .route(
-                "/projects/{proj}/owners",
-                get(handlers::owners_get)
-                .put(handlers::forbidden)
-                .delete(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/players",
-                get(handlers::players_get)
-                .put(handlers::forbidden)
-                .delete(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/packages/{pkg_name}",
+    let api_router = Router::new()
+        .route(
+            "/projects",
+            get(handlers::projects_get)
+        )
+        .route(
+            "/projects/{proj}",
+            if read_only {
                 post(handlers::forbidden)
                 .patch(handlers::forbidden)
-                .delete(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}",
-                post(handlers::forbidden)
-                .delete(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
-                post(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/images/{img_name}",
-                get(handlers::image_get)
-                .post(handlers::forbidden)
-            )
-            .route(
-                "/projects/{proj}/images/{img_name}/{revision}",
-                get(handlers::image_revision_get)
-            )
-            .route(
-                "/projects/{proj}/flag",
-                post(handlers::forbidden)
-            )
-            .route(
-                "/admin/flags",
-                get(handlers::admin_flags_get)
-            )
-            .route(
-                "/admin/flags/{flag}",
-                patch(handlers::forbidden)
-            )
-            .layer(TimeoutLayer::new(Duration::from_secs(10)))
-    }
-    else {
-        Router::new()
-            .route(
-                "/projects",
-                get(handlers::projects_get)
-            )
-            .route(
-                "/projects/{proj}",
-                get(handlers::project_get)
-                .post(handlers::project_post)
+            }
+            else {
+                post(handlers::project_post)
                 .patch(handlers::project_patch)
-            )
-            .route(
-                "/projects/{proj}/{revision}",
-                get(handlers::project_revision_get)
-            )
-            .route(
-                "/projects/{proj}/owners",
-                get(handlers::owners_get)
-                .put(handlers::owners_add)
+            }
+            .get(handlers::project_get)
+        )
+        .route(
+            "/projects/{proj}/{revision}",
+            get(handlers::project_revision_get)
+        )
+        .route(
+            "/projects/{proj}/owners",
+            if read_only {
+                put(handlers::forbidden)
+                .delete(handlers::forbidden)
+            }
+            else {
+                put(handlers::owners_add)
                 .delete(handlers::owners_remove)
-            )
-            .route(
-                "/projects/{proj}/players",
-                get(handlers::players_get)
-                .put(handlers::players_add)
+            }
+            .get(handlers::owners_get)
+        )
+        .route(
+            "/projects/{proj}/players",
+            if read_only {
+                put(handlers::forbidden)
+                .delete(handlers::forbidden)
+            }
+            else {
+                put(handlers::players_add)
                 .delete(handlers::players_remove)
-            )
-            .route(
-                "/projects/{proj}/packages/{pkg_name}",
+            }
+            .get(handlers::players_get)
+        )
+        .route(
+            "/projects/{proj}/packages/{pkg_name}",
+            if read_only {
+                post(handlers::forbidden)
+                .patch(handlers::forbidden)
+                .delete(handlers::forbidden)
+            }
+            else {
                 post(handlers::package_post)
                 .patch(handlers::package_patch)
                 .delete(handlers::package_delete)
-            )
-            .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}",
+            }
+        )
+        .route(
+            "/projects/{proj}/packages/{pkg_name}/{version}",
+            if read_only {
+                post(handlers::forbidden)
+                .delete(handlers::forbidden)
+            }
+            else {
 // FIXME: release_version_post?
                 post(handlers::release_post)
                 .delete(handlers::release_delete)
-            )
-            .route(
-                "/projects/{proj}/images/{img_name}",
-                get(handlers::image_get)
-                .post(handlers::image_post)
-            )
-            .route(
-                "/projects/{proj}/images/{img_name}/{revision}",
-                get(handlers::image_revision_get)
-            )
-            .route(
-                "/projects/{proj}/flag",
+            }
+        )
+        .route(
+            "/projects/{proj}/images/{img_name}",
+            if read_only {
+                post(handlers::forbidden)
+            }
+            else {
+                post(handlers::image_post)
+            }
+            .get(handlers::image_get)
+        )
+        .route(
+            "/projects/{proj}/images/{img_name}/{revision}",
+            get(handlers::image_revision_get)
+        )
+        .route(
+            "/projects/{proj}/flag",
+            if read_only {
+                post(handlers::forbidden)
+            }
+            else {
                 post(handlers::flag_post)
-            )
-            .route(
-                "/admin/flags",
-                get(handlers::admin_flags_get)
-            )
-            .route(
-                "/admin/flags/{flag}",
+            }
+        )
+        .route(
+            "/admin/flags",
+            get(handlers::admin_flags_get)
+        )
+        .route(
+            "/admin/flags/{flag}",
+            if read_only {
+                patch(handlers::forbidden)
+            }
+            else {
                 patch(handlers::admin_flag_close)
-            )
-            .layer(TimeoutLayer::new(Duration::from_secs(10)))
-            .route(
-                "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+            }
+        )
+        .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        .route(
+            "/projects/{proj}/packages/{pkg_name}/{version}/{file}",
+            if read_only {
+                post(handlers::forbidden)
+            }
+            else {
                 post(handlers::file_post)
                     .layer(TimeoutLayer::new(
                         Duration::from_secs(upload_timeout))
                     )
-            )
-    };
+            }
+        );
 
     // set up things wrapped around our routes
     Router::new()
