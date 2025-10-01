@@ -620,6 +620,7 @@ mod test {
     use super::*;
 
     use once_cell::sync::Lazy;
+    use std::slice;
 
     use crate::sqlite::project::get_project_row;
 
@@ -730,10 +731,10 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn get_releases_at_some(pool: Pool) {
         assert_eq!(
-            get_releases_at(&pool, Package(1), 1702137399180282477)
+            &get_releases_at(&pool, Package(1), 1702137399180282477)
                 .await
                 .unwrap(),
-            [ RR_1_2_3.clone() ]
+            slice::from_ref(&*RR_1_2_3)
         );
     }
 
@@ -813,13 +814,13 @@ mod test {
         };
 
         assert_eq!(
-            get_releases(&pool, pkg).await.unwrap(),
-            [ rr.clone() ]
+            &get_releases(&pool, pkg).await.unwrap(),
+            slice::from_ref(&rr)
         );
 
         assert_eq!(
-            get_releases_at(&pool, pkg, 1699804206419538067).await.unwrap(),
-            [ rr ]
+            &get_releases_at(&pool, pkg, 1699804206419538067).await.unwrap(),
+            slice::from_ref(&rr)
         );
 
         assert_eq!(

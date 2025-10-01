@@ -419,7 +419,6 @@ where
 
                 self.check_version_and_get_requires(
                     file.file_path(),
-                    filename,
                     ext,
                     release
                 ).await?
@@ -936,7 +935,6 @@ where
     async fn check_version_and_get_requires<P: AsRef<Path>>(
         &self,
         tempfile: P,
-        filename: &str,
         ext: &str,
         release: Release
     ) -> Result<Option<String>, AddFileError>

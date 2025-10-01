@@ -154,6 +154,7 @@ mod test {
     use super::*;
 
     use once_cell::sync::Lazy;
+    use std::slice;
 
     type Pool = sqlx::Pool<Sqlite>;
 
@@ -263,20 +264,16 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "flags"))]
     async fn get_flags_ok(pool: Pool) {
         assert_eq!(
-            get_flags(&pool).await.unwrap(),
-            [
-                FLAG_ONE.clone()
-            ]
+            &get_flags(&pool).await.unwrap(),
+            slice::from_ref(&*FLAG_ONE)
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "flags"))]
     async fn close_flag_ok(pool: Pool) {
         assert_eq!(
-            get_flags(&pool).await.unwrap(),
-            [
-                FLAG_ONE.clone()
-            ]
+            &get_flags(&pool).await.unwrap(),
+            slice::from_ref(&*FLAG_ONE)
         );
 
         close_flag(

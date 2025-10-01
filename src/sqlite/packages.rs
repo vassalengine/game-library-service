@@ -483,6 +483,8 @@ where
 mod test {
     use super::*;
 
+    use std::slice;
+
     use crate::sqlite::project::get_project_row;
 
     type Pool = sqlx::Pool<Sqlite>;
@@ -605,13 +607,13 @@ mod test {
         };
 
         assert_eq!(
-            get_packages(&pool, proj).await.unwrap(),
-            [ pr.clone() ]
+            &get_packages(&pool, proj).await.unwrap(),
+            slice::from_ref(&pr)
         );
 
         assert_eq!(
-            get_packages_at(&pool, proj, 1699804206419538067).await.unwrap(),
-            [ pr.clone() ]
+            &get_packages_at(&pool, proj, 1699804206419538067).await.unwrap(),
+            slice::from_ref(&pr)
         );
 
         assert_eq!(

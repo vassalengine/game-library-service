@@ -168,11 +168,13 @@ mod test {
 
     #[test]
     fn check_types() {
-        let tests: [(
-            &[u8],
+        type Test<'a> = (
+            &'a [u8],
             fn(buf: &[u8]) -> Result<Mime, BadMimeType>,
             Mime
-        ); 7] = [
+        );
+
+        let tests: [Test; 7] = [
             (&AVIF, check_avif, IMAGE_AVIF.clone()),
             (&GIF, check_gif, mime::IMAGE_GIF),
             (&JPEG, check_jpeg, mime::IMAGE_JPEG),
