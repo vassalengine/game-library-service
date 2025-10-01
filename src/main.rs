@@ -242,6 +242,10 @@ fn routes(
                 "/admin/flags",
                 get(handlers::admin_flags_get)
             )
+            .route(
+                "/admin/flags/{flag}",
+                patch(handlers::forbidden)
+            )
             .layer(TimeoutLayer::new(Duration::from_secs(10)))
     }
     else {
