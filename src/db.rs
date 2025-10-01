@@ -123,7 +123,7 @@ pub struct FileRow {
     pub published_by: String
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct FlagRow {
     pub flag_id: i64,
     pub project: String,

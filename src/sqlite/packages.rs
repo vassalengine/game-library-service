@@ -7,7 +7,10 @@ use crate::{
     db::{DatabaseError, PackageRow, map_unique},
     input::{PackageDataPatch, PackageDataPost, slug_for},
     model::{Owner, Package,  Project},
-    sqlite::project::update_project_non_project_data
+    sqlite::{
+        require_one_modified,
+        project::update_project_non_project_data
+    }
 };
 
 pub async fn get_packages<'e, E>(
@@ -320,9 +323,9 @@ where
         .push_bind(pkg.0)
         .build()
         .execute(ex)
-        .await?;
-
-    Ok(())
+        .await
+        .map_err(DatabaseError::from)
+        .and_then(require_one_modified)
 }
 
 async fn update_package_revision_row<'e, E>(
@@ -421,9 +424,9 @@ WHERE package_id = ?
         pkg.0
     )
     .execute(ex)
-    .await?;
-
-    Ok(())
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 async fn retire_package_history_row<'e, E>(
@@ -448,9 +451,9 @@ WHERE package_id = ?
         pkg.0
     )
     .execute(ex)
-    .await?;
-
-    Ok(())
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 pub async fn delete_package<'a, A>(

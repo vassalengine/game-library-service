@@ -10,7 +10,10 @@ use crate::{
     db::{DatabaseError, ProjectRow, map_unique},
     input::{ProjectDataPatch, ProjectDataPost},
     model::{Owner, Project, User},
-    sqlite::users::add_owner
+    sqlite::{
+        require_one_modified,
+        users::add_owner
+    }
 };
 
 pub async fn get_project_id<'e, E>(
@@ -384,9 +387,9 @@ where
         .push_bind(proj.0)
         .build()
         .execute(ex)
-        .await?;
-
-    Ok(())
+        .await
+        .map_err(DatabaseError::from)
+        .and_then(require_one_modified)
 }
 
 pub async fn update_project<'a, A>(

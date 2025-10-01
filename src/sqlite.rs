@@ -1,6 +1,6 @@
 use sqlx::{
     Database,
-    sqlite::Sqlite
+    sqlite::{Sqlite, SqliteQueryResult}
 };
 
 mod flag;
@@ -519,5 +519,14 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         &self
     ) -> Result<Vec<FlagRow>, DatabaseError> {
         flag::get_flags(&self.0).await
+    }
+}
+
+pub fn require_one_modified(r: SqliteQueryResult) -> Result<(), DatabaseError> {
+    if r.rows_affected() == 1 {
+        Ok(())
+    }
+    else {
+        Err(DatabaseError::NotFound)
     }
 }

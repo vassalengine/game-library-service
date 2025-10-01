@@ -7,7 +7,10 @@ use std::cmp::Ordering;
 use crate::{
     db::{DatabaseError, FileRow, ReleaseRow, map_unique},
     model::{Owner, Package, Project, Release},
-    sqlite::project::update_project_non_project_data,
+    sqlite::{
+        require_one_modified,
+        project::update_project_non_project_data
+    },
     version::Version
 };
 
@@ -513,9 +516,9 @@ WHERE release_id = ?
         rel.0
     )
     .execute(ex)
-    .await?;
-
-    Ok(())
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 async fn retire_release_history_row<'e, E>(
@@ -540,9 +543,9 @@ WHERE release_id = ?
         rel.0
     )
     .execute(ex)
-    .await?;
-
-    Ok(())
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 pub async fn delete_release<'a, A>(

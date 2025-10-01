@@ -5,6 +5,7 @@ use sqlx::{
 
 use crate::{
     db::{DatabaseError, FlagRow},
+    sqlite::require_one_modified,
     input::FlagPost,
     model::{Admin, Flag, FlagTag, Project, User}
 };
@@ -143,14 +144,16 @@ WHERE flag_id = ?
         flag.0
     )
     .execute(ex)
-    .await?;
-
-    Ok(())
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use once_cell::sync::Lazy;
 
     type Pool = sqlx::Pool<Sqlite>;
 
@@ -245,4 +248,77 @@ mod test {
         );
     }
 
+    static FLAG_ONE: Lazy<FlagRow> = Lazy::new(||
+        FlagRow {
+            flag_id: 1,
+            project: "test_game".into(),
+            slug: "test_game".into(),
+            flag: FlagTag::Spam,
+            flagged_at: 1699804206419538067,
+            flagged_by: "bob".into(),
+            message: None
+        }
+    );
+
+    #[sqlx::test(fixtures("users", "projects", "flags"))]
+    async fn get_flags_ok(pool: Pool) {
+        assert_eq!(
+            get_flags(&pool).await.unwrap(),
+            [
+                FLAG_ONE.clone()
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "flags"))]
+    async fn close_flag_ok(pool: Pool) {
+        assert_eq!(
+            get_flags(&pool).await.unwrap(),
+            [
+                FLAG_ONE.clone()
+            ]
+        );
+
+        close_flag(
+            &pool,
+            Admin(1),
+            Flag(1),
+            1702569006419538068
+        ).await.unwrap();
+
+        assert_eq!(
+            get_flags(&pool).await.unwrap(),
+            []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "flags"))]
+    async fn close_flag_not_a_flag(pool: Pool) {
+        // This should not happen; the Flag passed in should be good.
+        assert_eq!(
+            close_flag(
+                 &pool,
+                 Admin(1),
+                 Flag(0),
+                 1702569006419538068
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "flags"))]
+    async fn close_flag_not_a_user(pool: Pool) {
+        // This should not happen; the Admin passed in should be good.
+        assert!(
+            matches!(
+                close_flag(
+                    &pool,
+                    Admin(0),
+                    Flag(1),
+                    1702569006419538068
+                ).await.unwrap_err(),
+                DatabaseError::SqlxError(_)
+            )
+        );
+    }
 }
