@@ -509,10 +509,10 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
         input::{FlagPost, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, RangePost},
         jwt::{self, EncodingKey},
-        model::{FlagData, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+        model::{Admin, Flag, FlagData, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
         params::ProjectsParams
     };
@@ -992,12 +992,32 @@ mod test {
             }
         }
 
+        async fn get_flag_id(
+            &self,
+            flag: i64
+        ) -> Result<Flag, GetIdError>
+        {
+            match flag {
+                1 => Ok(Flag(1)),
+                _ => Err(GetIdError::NotFound)
+            }
+        }
+
         async fn add_flag(
             &self,
             _reporter: User,
             _proj: Project,
             _flag: &FlagPost
         ) -> Result<(), AddFlagError>
+        {
+            Ok(())
+        }
+
+        async fn close_flag(
+            &self,
+            _admin: Admin,
+            _flag: Flag
+        ) -> Result<(), CloseFlagError>
         {
             Ok(())
         }
@@ -4590,5 +4610,104 @@ mod test {
     async fn get_admin_flags_unauth_ro() {
         let response = get_admin_flags_unauth(false).await;
         assert_unauthorized(response).await;
+    }
+
+    async fn patch_admin_flags_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/admin/flags/1"))
+                .header(AUTHORIZATION, token(5))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_ok_rw() {
+        let response = patch_admin_flags_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_ok_ro() {
+        let response = patch_admin_flags_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_admin_flags_not_a_flag(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/admin/flags/2"))
+                .header(AUTHORIZATION, token(5))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_not_a_flag_rw() {
+        let response = patch_admin_flags_not_a_flag(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_not_a_flag_ro() {
+        let response = patch_admin_flags_not_a_flag(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_admin_flags_bad_id(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/admin/flags/not_an_id"))
+                .header(AUTHORIZATION, token(5))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_bad_id_rw() {
+        let response = patch_admin_flags_bad_id(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_bad_id_ro() {
+        let response = patch_admin_flags_bad_id(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_admin_flags_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(&format!("{API_V1}/admin/flags/1"))
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_unauth_rw() {
+        let response = patch_admin_flags_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_admin_flags_unauth_ro() {
+        let response = patch_admin_flags_unauth(false).await;
+        assert_forbidden(response).await;
     }
 }
