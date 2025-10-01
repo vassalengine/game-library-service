@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use futures::Stream;
 use futures_util::future::try_join_all;
 use mime::Mime;
-use once_cell::sync::Lazy;
 use std::{
     future::Future,
     io,
@@ -396,7 +395,7 @@ where
 
         let content_type = match (&inferred_type, content_type) {
             // we detected the MIME type
-            (Some(it), _) => &it,
+            (Some(it), _) => it,
             // stated type can be inferred but we didn't detect it
             (None, Some(ct)) if infer::is_mime_supported(ct.as_ref()) =>
                 return Err(AddFileError::BadMimeType),
@@ -1261,7 +1260,7 @@ fn is_valid_project_name(name: &str) -> bool {
         name.len() < 5 ||
         name.len() > 64 ||
         name != name.trim() ||
-        name.chars().find(|c|
+        name.chars().any(|c|
             ![
                 GeneralCategoryGroup::Letter,
                 GeneralCategoryGroup::Mark,
@@ -1269,7 +1268,7 @@ fn is_valid_project_name(name: &str) -> bool {
                 GeneralCategoryGroup::Punctuation,
                 GeneralCategoryGroup::Separator
             ].contains(&c.general_category_group())
-        ).is_some() ||
+        ) ||
         name.has_consecutive_whitespace()
     )
 }
@@ -1403,6 +1402,7 @@ where
 mod test {
     use super::*;
 
+    use once_cell::sync::Lazy;
     use tokio::io::AsyncRead;
 
     use crate::{
@@ -1514,7 +1514,7 @@ mod test {
     #[test]
     fn check_package_name_untrimmed() {
         assert_eq!(
-            check_package_name(&" x ").unwrap_err(),
+            check_package_name(" x ").unwrap_err(),
             InvalidPackageName
         );
     }
@@ -1522,7 +1522,7 @@ mod test {
     #[test]
     fn check_package_name_consecutive_whitespace() {
         assert_eq!(
-            check_package_name(&"x  x").unwrap_err(),
+            check_package_name("x  x").unwrap_err(),
             InvalidPackageName
         );
     }
@@ -2744,7 +2744,7 @@ mod test {
         };
 
         let cdata = PackageDataPost {
-            name: data.name.into(),
+            name: data.name,
             description: data.description.clone(),
             sort_key: 1
         };

@@ -317,7 +317,7 @@ pub async fn admin_flag_close(
 }
 
 pub async fn admin_flags_get(
-    admin: Admin,
+    _admin: Admin,
     State(core): State<CoreArc>
 ) -> Result<Json<Flags>, AppError>
 {

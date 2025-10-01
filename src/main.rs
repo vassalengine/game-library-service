@@ -1201,7 +1201,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/"))
+                .uri(format!("{API_V1}/"))
                 .body(Body::empty())
                 .unwrap(),
             true
@@ -1230,7 +1230,7 @@ mod test {
         let response = try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects"))
+                .uri(format!("{API_V1}/projects"))
                 .header(ACCEPT_ENCODING, comp)
                 .body(Body::empty())
                 .unwrap(),
@@ -1269,7 +1269,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/bogus/whatever"))
+                .uri(format!("{API_V1}/bogus/whatever"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1293,7 +1293,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/"))
+                .uri(format!("{API_V1}/"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1321,7 +1321,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects"))
+                .uri(format!("{API_V1}/projects"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1384,7 +1384,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?limit=5"))
+                .uri(format!("{API_V1}/projects?limit=5"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1447,7 +1447,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?limit=0"))
+                .uri(format!("{API_V1}/projects?limit=0"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1471,7 +1471,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?limit=100000"))
+                .uri(format!("{API_V1}/projects?limit=100000"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1495,7 +1495,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?limit="))
+                .uri(format!("{API_V1}/projects?limit="))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1519,7 +1519,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects?limit=eleventeen"))
+                .uri(format!("{API_V1}/projects?limit=eleventeen"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1553,7 +1553,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1626,7 +1626,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1699,7 +1699,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1772,7 +1772,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1845,7 +1845,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1918,7 +1918,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects{query}"))
+                .uri(format!("{API_V1}/projects{query}"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -1981,7 +1981,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2014,7 +2014,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2054,7 +2054,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -2096,7 +2096,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
                 .unwrap(),
@@ -2121,7 +2121,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
@@ -2147,7 +2147,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
@@ -2173,7 +2173,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project"))
+                .uri(format!("{API_V1}/projects/not_a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap(),
@@ -2203,7 +2203,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -2234,7 +2234,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -2260,7 +2260,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from("{}"))
@@ -2291,7 +2291,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
                 .unwrap(),
@@ -2321,7 +2321,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
@@ -2347,7 +2347,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
@@ -2373,7 +2373,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
@@ -2399,7 +2399,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project"))
+                .uri(format!("{API_V1}/projects/a_project"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap(),
@@ -2424,7 +2424,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/1"))
+                .uri(format!("{API_V1}/projects/a_project/1"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2456,7 +2456,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/1"))
+                .uri(format!("{API_V1}/projects/not_a_project/1"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2480,7 +2480,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/2"))
+                .uri(format!("{API_V1}/projects/a_project/2"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2504,7 +2504,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2542,7 +2542,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/owners"))
+                .uri(format!("{API_V1}/projects/not_a_project/owners"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2566,7 +2566,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2592,7 +2592,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/not_a_project/owners"))
+                .uri(format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2618,7 +2618,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap(),
@@ -2643,7 +2643,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2669,7 +2669,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
@@ -2695,7 +2695,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
@@ -2721,7 +2721,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap(),
@@ -2746,7 +2746,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2772,7 +2772,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/not_a_project/owners"))
+                .uri(format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2798,7 +2798,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap(),
@@ -2823,7 +2823,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
@@ -2849,7 +2849,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(r#"{ "garbage": "whatever" }"#))
@@ -2875,7 +2875,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from("stuff"))
@@ -2901,7 +2901,7 @@ mod test {
          try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/owners"))
+                .uri(format!("{API_V1}/projects/a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from(r#"{ "users": ["alice", "bob"] }"#))
                 .unwrap(),
@@ -2926,7 +2926,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .uri(format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2964,7 +2964,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/players"))
+                .uri(format!("{API_V1}/projects/not_a_project/players"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -2988,7 +2988,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .uri(format!("{API_V1}/projects/a_project/players"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -3013,7 +3013,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/not_a_project/owners"))
+                .uri(format!("{API_V1}/projects/not_a_project/owners"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -3038,7 +3038,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PUT)
-                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .uri(format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -3062,7 +3062,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .uri(format!("{API_V1}/projects/a_project/players"))
                 .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
                 .unwrap(),
@@ -3087,7 +3087,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/not_a_project/players"))
+                .uri(format!("{API_V1}/projects/not_a_project/players"))
                 .header(AUTHORIZATION, token(8))
                 .body(Body::empty())
                 .unwrap(),
@@ -3112,7 +3112,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/players"))
+                .uri(format!("{API_V1}/projects/a_project/players"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -3136,7 +3136,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -3170,7 +3170,7 @@ mod test {
          try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/not_a_project/images/img.png"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -3194,7 +3194,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/projects/a_project/images/not_a.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/not_a.png"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -3218,7 +3218,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3245,7 +3245,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/not_a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3272,7 +3272,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::empty())
@@ -3298,7 +3298,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3325,7 +3325,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .body(Body::empty())
@@ -3351,7 +3351,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, 1)
@@ -3380,7 +3380,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, long.len())
@@ -3409,7 +3409,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .body(Body::from(long))
@@ -3435,7 +3435,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, MAX_IMAGE_SIZE + 1)
@@ -3462,7 +3462,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/images/img.png"))
+                .uri(format!("{API_V1}/projects/a_project/images/img.png"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
                 .header(CONTENT_LENGTH, u64::MAX)
@@ -3489,7 +3489,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, 1)
@@ -3516,7 +3516,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3543,7 +3543,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3570,7 +3570,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/bogus/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/bogus/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
@@ -3597,7 +3597,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::empty())
@@ -3623,7 +3623,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(0))
                 .header(CONTENT_LENGTH, 1)
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
@@ -3652,7 +3652,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, long.len())
@@ -3681,7 +3681,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .body(Body::from(long))
@@ -3707,7 +3707,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, MAX_FILE_SIZE + 1)
@@ -3734,7 +3734,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, u64::MAX)
@@ -3763,7 +3763,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3/war_and_peace.txt"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(CONTENT_LENGTH, long.len() - 1)
@@ -3795,7 +3795,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/newpkg"))
+                .uri(format!("{API_V1}/projects/a_project/packages/newpkg"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -3827,7 +3827,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -3859,7 +3859,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
                 .unwrap(),
@@ -3890,7 +3890,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -3921,7 +3921,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -3952,7 +3952,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -3983,7 +3983,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/not_a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
@@ -4014,7 +4014,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&pd).unwrap()))
                 .unwrap(),
@@ -4039,7 +4039,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4064,7 +4064,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4089,7 +4089,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/not_a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4114,7 +4114,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -4139,7 +4139,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/nonempty"))
+                .uri(format!("{API_V1}/projects/a_project/packages/nonempty"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4164,7 +4164,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4189,7 +4189,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.4"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.4"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4214,7 +4214,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.4"))
+                .uri(format!("{API_V1}/projects/a_project/packages/not_a_package/1.2.4"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4239,7 +4239,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4264,7 +4264,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -4288,7 +4288,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4313,7 +4313,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3"))
+                .uri(format!("{API_V1}/projects/not_a_project/packages/a_package/1.2.3"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4338,7 +4338,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/not_a_package"))
+                .uri(format!("{API_V1}/projects/a_project/packages/not_a_package"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4363,7 +4363,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.3"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -4387,7 +4387,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::DELETE)
-                .uri(&format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
+                .uri(format!("{API_V1}/projects/a_project/packages/a_package/1.2.4"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::empty())
                 .unwrap(),
@@ -4414,7 +4414,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .uri(format!("{API_V1}/projects/a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&fp).unwrap()))
@@ -4442,7 +4442,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/not_a_project/flag"))
+                .uri(format!("{API_V1}/projects/not_a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&fp).unwrap()))
@@ -4470,7 +4470,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .uri(format!("{API_V1}/projects/a_project/flag"))
                 .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
                 .body(Body::from(serde_json::to_vec(&fp).unwrap()))
                 .unwrap(),
@@ -4495,7 +4495,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .uri(format!("{API_V1}/projects/a_project/flag"))
                 .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
@@ -4521,7 +4521,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::POST)
-                .uri(&format!("{API_V1}/projects/a_project/flag"))
+                .uri(format!("{API_V1}/projects/a_project/flag"))
                 .header(AUTHORIZATION, token(BOB_UID))
                 .body(Body::from("stuff"))
                 .unwrap(),
@@ -4546,7 +4546,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/admin/flags"))
+                .uri(format!("{API_V1}/admin/flags"))
                 .header(AUTHORIZATION, token(5))
                 .body(Body::empty())
                 .unwrap(),
@@ -4592,7 +4592,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::GET)
-                .uri(&format!("{API_V1}/admin/flags"))
+                .uri(format!("{API_V1}/admin/flags"))
                 .body(Body::empty())
                 .unwrap(),
             rw
@@ -4616,7 +4616,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/admin/flags/1"))
+                .uri(format!("{API_V1}/admin/flags/1"))
                 .header(AUTHORIZATION, token(5))
                 .body(Body::empty())
                 .unwrap(),
@@ -4641,7 +4641,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/admin/flags/2"))
+                .uri(format!("{API_V1}/admin/flags/2"))
                 .header(AUTHORIZATION, token(5))
                 .body(Body::empty())
                 .unwrap(),
@@ -4666,7 +4666,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/admin/flags/not_an_id"))
+                .uri(format!("{API_V1}/admin/flags/not_an_id"))
                 .header(AUTHORIZATION, token(5))
                 .body(Body::empty())
                 .unwrap(),
@@ -4691,7 +4691,7 @@ mod test {
         try_request(
             Request::builder()
                 .method(Method::PATCH)
-                .uri(&format!("{API_V1}/admin/flags/1"))
+                .uri(format!("{API_V1}/admin/flags/1"))
                 .body(Body::empty())
                 .unwrap(),
             rw
