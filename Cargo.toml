@@ -45,7 +45,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 unicode-ccc = "0.4"
 unicode-normalization = "0.1"
 unicode-properties = "0.1"
-unwrap-infallible = "0.1"
 urlencoding = "2.1.3"
 zip = "5"
 

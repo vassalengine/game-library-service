@@ -15,8 +15,6 @@ use axum_extra::{
     }
 };
 use itertools::Itertools;
-// TODO: replace with into_ok() when that's available
-use unwrap_infallible::UnwrapInfallible;
 
 use crate::{
     core::CoreArc,
@@ -104,10 +102,9 @@ where
     S: Send + Sync,
     Vec<User>: FromRef<S>
 {
-    State::<Vec<User>>::from_request_parts(parts, state)
-        .await
-        .unwrap_infallible()
-        .0
+    let Ok(v) = State::<Vec<User>>::from_request_parts(parts, state)
+        .await;
+    v.0
 }
 
 async fn get_state<S>(
@@ -118,10 +115,9 @@ where
     S: Send + Sync,
     CoreArc: FromRef<S>
 {
-    State::<CoreArc>::from_request_parts(parts, state)
-        .await
-        .unwrap_infallible()
-        .0
+    let Ok(c) = State::<CoreArc>::from_request_parts(parts, state)
+        .await;
+    c.0
 }
 
 async fn get_path_iter<S>(
