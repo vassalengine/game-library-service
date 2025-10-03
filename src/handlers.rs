@@ -229,22 +229,43 @@ pub async fn file_post(
     request: Request
 ) -> Result<(), AppError>
 {
+/*
     let (content_length, limit) = limit_content_length(
         content_length.map(|cl| cl.0.0),
         core.max_file_size()
     )?;
+*/
 
-    Ok(
-        core.add_file(
-            owner,
-            proj,
-            release,
-            &filename,
-            content_type.map(|h| h.0.into()).as_ref(),
-            content_length,
-            into_stream(request, limit)
-        ).await?
-    )
+    let content_length = content_length.map(|cl| cl.0.0);
+
+    if let Some(cl) = content_length && cl > core.max_file_size() as u64 {
+        // drain the stream
+        let stream = TryStreamExt::map_err(
+            request.into_body().into_data_stream(),
+           io::Error::other
+        );
+        let reader = tokio_util::io::StreamReader::new(stream);
+/*
+        let writer = tokio::io::sink();
+        tokio::io::copy(&mut reader, &mut writer)
+            .await
+            .map_err(|_| AppError::TooLarge)?;
+*/
+        Err(AppError::TooLarge)
+    }
+    else {
+        Ok(
+            core.add_file(
+                owner,
+                proj,
+                release,
+                &filename,
+                content_type.map(|h| h.0.into()).as_ref(),
+                content_length,
+                into_stream(request, core.max_file_size())
+            ).await?
+        )
+    }
 }
 
 pub async fn image_get(
