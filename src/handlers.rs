@@ -244,13 +244,11 @@ pub async fn file_post(
             request.into_body().into_data_stream(),
            io::Error::other
         );
-        let reader = tokio_util::io::StreamReader::new(stream);
-/*
-        let writer = tokio::io::sink();
+        let mut reader = tokio_util::io::StreamReader::new(stream);
+        let mut writer = tokio::io::sink();
         tokio::io::copy(&mut reader, &mut writer)
             .await
             .map_err(|_| AppError::TooLarge)?;
-*/
         Err(AppError::TooLarge)
     }
     else {
