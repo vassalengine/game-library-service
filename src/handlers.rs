@@ -205,6 +205,14 @@ fn into_stream(
     )
 }
 
+/*
+  TODO: Sending a 413 repsonse before reading all the data causes clients
+  using HTTP/1.1 to ignore the response and keep the connection open, waiting
+  for a response until the gateway in front of the GLS times out and returns
+  a 502. It would be more robust to wait until the client is done sending
+  data if we're using HTTP/1.1.
+*/
+
 fn limit_content_length(
     content_length: Option<u64>,
     max_size: usize
