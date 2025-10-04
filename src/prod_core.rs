@@ -941,22 +941,20 @@ where
     {
         match dump_moduledata(tempfile).await {
             Ok(md) => {
-                // we got moduledata
+                // we found moduledata
                 let (vstr, v_vstr) = versions_in_moduledata(&md)?;
 
-                if ext != "vmdx" {
-                    // not an extension; it must be a module
-
-                    // modules must have a .vmod extension
-                    if ext != "vmod" {
-                        return Err(AddFileError::InvalidFilename);
-                    }
-
+                if ext == "vmdx" {
+                    // extensions must have valid version numbers
+                    vstr.unwrap_or("".into()).parse::<Version>()?;
+                    Ok(None)
+                }
+                else {
+                    // modules, saves, logs must match the release version
                     let mod_version = vstr
                         .unwrap_or("".into())
                         .parse::<Version>()?;
 
-                    // modules must match the version of their release
                     let rel_version = self.db.get_release_version(release)
                         .await?;
 
@@ -966,37 +964,20 @@ where
                         ));
                     }
 
-                    // set minimum required Vassal version
-                    match v_vstr {
-                        Some(v_vstr) => match v_vstr.parse::<Version>() {
-                            Ok(v) => Ok(
-                                Some(
-                                    format!(
-                                        ">= {}.{}.{}",
-                                        v.major,
-                                        v.minor,
-                                        v.patch
-                                    )
-                                )
-                            ),
-                            _ => Ok(None)
-                        },
-                        _ => Ok(None)
-                    }
-                }
-                else {
-                    // extensions must have valid version numbers
-                    vstr.unwrap_or("".into()).parse::<Version>()?;
-                    Ok(None)
+                    Ok(
+                        if ext == "vmod" {
+                            // set minimum required Vassal version
+                            v_vstr.as_deref()
+                                .and_then(format_minimum_vassal_version)
+                        }
+                        else {
+                            None
+                        }
+                    )
                 }
             },
-            Err(e) => {
-                // modules and extensions must have moduledata
-                if ext == "vmod" || ext == "vmdx" {
-                    return Err(AddFileError::ModuleError(e));
-                }
-                Ok(None)
-            }
+            // modules, extensions, saves, logs must have moduledata
+            Err(e) => Err(AddFileError::ModuleError(e))
         }
     }
 }
@@ -1394,6 +1375,12 @@ where
     let mut buf = [0; 64];
     file.read_exact(&mut buf).await?;
     Ok(buf)
+}
+
+fn format_minimum_vassal_version(v_vstr: &str) -> Option<String> {
+    v_vstr.parse::<Version>()
+        .ok()
+        .map(|v| format!(">= {}.{}.{}", v.major, v.minor, v.patch))
 }
 
 #[cfg(test)]
