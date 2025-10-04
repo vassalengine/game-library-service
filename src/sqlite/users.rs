@@ -69,7 +69,7 @@ where
 {
 // FIXME: go back to "SELECT 1 AS present" once sqlx 0.8 is fixed
     Ok(
-        sqlx::query!(
+        sqlx::query_scalar!(
             "
 SELECT user_id
 FROM owners
