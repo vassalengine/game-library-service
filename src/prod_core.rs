@@ -416,12 +416,25 @@ where
             Some(ext @ "vmod") |
             Some(ext @ "vsav") => {
                 file.rewind().await?;
+                match dump_moduledata(file.file_path()).await {
+                    // we found moduledata
+                    Ok(md) => {
+                        let (mver, vver) = check_moduledata(&md, ext).await?;
 
-                self.check_version_and_get_requires(
-                    file.file_path(),
-                    ext,
-                    release
-                ).await?
+                        if ext == "vmdx" {
+                            // extensions need only a valid version
+                            Ok(None)
+                        }
+                        else {
+                            // modules, saves, logs must match release version
+                            let rver = self.db.get_release_version(release)
+                                .await?;
+                            check_versions(mver, rver, vver, ext)
+                        }
+                    },
+                    // modules, extensions, saves, logs must have moduledata
+                    Err(e) => Err(AddFileError::ModuleError(e))
+                }?
             },
             _ => None
         };
@@ -931,55 +944,6 @@ where
 
         Ok((prev, next, psums, total))
     }
-
-    async fn check_version_and_get_requires<P: AsRef<Path>>(
-        &self,
-        tempfile: P,
-        ext: &str,
-        release: Release
-    ) -> Result<Option<String>, AddFileError>
-    {
-        match dump_moduledata(tempfile).await {
-            Ok(md) => {
-                // we found moduledata
-                let (vstr, v_vstr) = versions_in_moduledata(&md)?;
-
-                if ext == "vmdx" {
-                    // extensions must have valid version numbers
-                    vstr.unwrap_or("".into()).parse::<Version>()?;
-                    Ok(None)
-                }
-                else {
-                    // modules, saves, logs must match the release version
-                    let mod_version = vstr
-                        .unwrap_or("".into())
-                        .parse::<Version>()?;
-
-                    let rel_version = self.db.get_release_version(release)
-                        .await?;
-
-                    if mod_version != rel_version {
-                        return Err(AddFileError::ReleaseVersionMismatch(
-                            mod_version, rel_version
-                        ));
-                    }
-
-                    Ok(
-                        if ext == "vmod" {
-                            // set minimum required Vassal version
-                            v_vstr.as_deref()
-                                .and_then(format_minimum_vassal_version)
-                        }
-                        else {
-                            None
-                        }
-                    )
-                }
-            },
-            // modules, extensions, saves, logs must have moduledata
-            Err(e) => Err(AddFileError::ModuleError(e))
-        }
-    }
 }
 
 fn get_prev_for_before(
@@ -1381,6 +1345,40 @@ fn format_minimum_vassal_version(v_vstr: &str) -> Option<String> {
     v_vstr.parse::<Version>()
         .ok()
         .map(|v| format!(">= {}.{}.{}", v.major, v.minor, v.patch))
+}
+
+async fn check_moduledata(
+    md: &str,
+    ext: &str
+) -> Result<(Version, Option<String>), AddFileError>
+{
+    let (mver, vver) = versions_in_moduledata(md)?;
+    Ok((
+        // enforce that module version is valid
+        mver.unwrap_or("".into()).parse::<Version>()?,
+        vver
+    ))
+}
+
+fn check_versions(
+    mod_version: Version,
+    rel_version: Version,
+    vas_version: Option<String>,
+    ext: &str
+) -> Result<Option<String>, AddFileError>
+{
+    match mod_version == rel_version {
+        true => Ok(match ext == "vmod" {
+            // set minimum required Vassal version
+            true => vas_version.as_deref()
+                .and_then(format_minimum_vassal_version),
+                // not a module
+            false => None
+        }),
+        false => Err(AddFileError::ReleaseVersionMismatch(
+            mod_version, rel_version
+        ))
+    }
 }
 
 #[cfg(test)]
