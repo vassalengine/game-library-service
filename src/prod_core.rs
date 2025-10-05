@@ -23,10 +23,10 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     content_type::{infer_image_type, infer_file_type, supported_image_type},
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetPublishersError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, FileData, Flag, FlagData, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
+    model::{Admin, FileData, Flag, FlagData, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Publishers, Range, Release, ReleaseData, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Facet, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -612,6 +612,10 @@ where
         ).await?;
 
         Ok(())
+    }
+
+    async fn get_publishers(&self) -> Result<Publishers, GetPublishersError> {
+        Ok(Publishers { publishers: self.db.get_publishers().await? })
     }
 
     async fn get_flag_id(

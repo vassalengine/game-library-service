@@ -111,6 +111,11 @@ pub struct Projects {
     pub meta: Pagination
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Publishers {
+    pub publishers: Vec<String>
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
 pub struct Flag(pub i64);
 

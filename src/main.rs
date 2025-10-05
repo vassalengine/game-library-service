@@ -276,6 +276,10 @@ fn routes(
             }
         )
         .route(
+            "/publishers",
+            get(handlers::publishers_get)
+        )
+        .route(
             "/admin/flags",
             get(handlers::admin_flags_get)
         )

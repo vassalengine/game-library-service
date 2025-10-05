@@ -9,6 +9,7 @@ mod packages;
 mod players;
 mod project;
 mod projects;
+mod publishers;
 mod releases;
 mod tags;
 mod users;
@@ -486,6 +487,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         date: i64
     ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery_at(&self.0, proj, date).await
+    }
+
+    async fn get_publishers(
+        &self
+    ) -> Result<Vec<String>, DatabaseError>
+    {
+        publishers::get_publishers(&self.0).await
     }
 
     async fn get_flag_id(

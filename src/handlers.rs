@@ -20,7 +20,7 @@ use crate::{
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Users, User},
+    model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Publishers, Users, User},
     params::ProjectsParams,
 };
 
@@ -303,6 +303,13 @@ pub async fn image_post(
             into_stream(request, limit)
         ).await?
     )
+}
+
+pub async fn publishers_get(
+    State(core): State<CoreArc>
+) -> Result<Json<Publishers>, AppError>
+{
+    Ok(Json(core.get_publishers().await?))
 }
 
 pub async fn flag_post(
