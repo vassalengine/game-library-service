@@ -116,6 +116,11 @@ pub struct Publishers {
     pub publishers: Vec<String>
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Tags {
+    pub tags: Vec<String>
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
 pub struct Flag(pub i64);
 

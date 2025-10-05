@@ -280,6 +280,10 @@ fn routes(
             get(handlers::publishers_get)
         )
         .route(
+            "/tags",
+             get(handlers::tags_get)
+        )
+        .route(
             "/admin/flags",
             get(handlers::admin_flags_get)
         )

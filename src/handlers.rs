@@ -20,7 +20,7 @@ use crate::{
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Publishers, Users, User},
+    model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Publishers, Tags, Users, User},
     params::ProjectsParams,
 };
 
@@ -310,6 +310,13 @@ pub async fn publishers_get(
 ) -> Result<Json<Publishers>, AppError>
 {
     Ok(Json(core.get_publishers().await?))
+}
+
+pub async fn tags_get(
+    State(core): State<CoreArc>
+) -> Result<Json<Tags>, AppError>
+{
+    Ok(Json(core.get_tags().await?))
 }
 
 pub async fn flag_post(

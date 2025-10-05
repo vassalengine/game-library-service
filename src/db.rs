@@ -405,12 +405,12 @@ pub trait DatabaseClient {
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
-    fn get_tags(
+    fn get_project_tags(
         &self,
         _proj: Project
     ) -> impl Future<Output = Result<Vec<String>, DatabaseError>> + Send;
 
-    fn get_tags_at(
+    fn get_project_tags_at(
         &self,
         _proj: Project,
         _date: i64
@@ -428,6 +428,10 @@ pub trait DatabaseClient {
     ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
 
     fn get_publishers(
+        &self
+    ) -> impl Future<Output = Result<Vec<String>, DatabaseError>> + Send;
+
+    fn get_tags(
         &self
     ) -> impl Future<Output = Result<Vec<String>, DatabaseError>> + Send;
 

@@ -457,21 +457,21 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         ).await
     }
 
-    async fn get_tags(
+    async fn get_project_tags(
         &self,
         proj: Project
     ) -> Result<Vec<String>, DatabaseError>
     {
-        tags::get_tags(&self.0, proj).await
+        tags::get_project_tags(&self.0, proj).await
     }
 
-    async fn get_tags_at(
+    async fn get_project_tags_at(
         &self,
         proj: Project,
         date: i64
     ) -> Result<Vec<String>, DatabaseError>
     {
-        tags::get_tags_at(&self.0, proj, date).await
+        tags::get_project_tags_at(&self.0, proj, date).await
     }
 
     async fn get_gallery(
@@ -494,6 +494,13 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
     ) -> Result<Vec<String>, DatabaseError>
     {
         publishers::get_publishers(&self.0).await
+    }
+
+    async fn get_tags(
+        &self
+    ) -> Result<Vec<String>, DatabaseError>
+    {
+        tags::get_tags(&self.0).await
     }
 
     async fn get_flag_id(

@@ -23,10 +23,10 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::{
     content_type::{infer_image_type, infer_file_type, supported_image_type},
-    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetPublishersError, GetOwnersError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+    core::{AddImageError, AddFileError, AddFlagError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetPlayersError, GetProjectError, GetProjectsError, GetPublishersError, GetOwnersError, GetTagsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, FileData, Flag, FlagData, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Publishers, Range, Release, ReleaseData, User, Users},
+    model::{Admin, FileData, Flag, FlagData, Flags, GalleryImage, GameData, Owner, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Publishers, Range, Release, ReleaseData, Tags, User, Users},
     module::{dump_moduledata, versions_in_moduledata},
     pagination::{Anchor, Direction, Facet, Limit, SortBy, Pagination, Seek, SeekLink},
     params::ProjectsParams,
@@ -148,7 +148,7 @@ where
         self.get_project_impl(
             proj,
             self.db.get_project_row(proj).await?,
-            self.db.get_tags(proj).await?,
+            self.db.get_project_tags(proj).await?,
             self.db.get_gallery(proj).await?,
             self.db.get_packages(proj).await?,
             |pc, pkg| pc.db.get_releases(pkg),
@@ -216,7 +216,7 @@ where
             .await?;
         let mtime = proj_row.modified_at;
 
-        let tags = self.db.get_tags_at(proj, mtime).await?;
+        let tags = self.db.get_project_tags_at(proj, mtime).await?;
         let gallery = self.db.get_gallery_at(proj, mtime).await?;
         let package_rows = self.db.get_packages_at(proj, mtime).await?;
 
@@ -618,6 +618,10 @@ where
         Ok(Publishers { publishers: self.db.get_publishers().await? })
     }
 
+    async fn get_tags(&self) -> Result<Tags, GetTagsError> {
+        Ok(Tags { tags: self.db.get_tags().await? })
+    }
+
     async fn get_flag_id(
          &self,
         flag: i64
@@ -933,7 +937,7 @@ where
         // get the tags
         let tags = try_join_all(
             projects.iter()
-                .map(|p| self.db.get_tags(Project(p.project_id)))
+                .map(|p| self.db.get_project_tags(Project(p.project_id)))
         ).await?;
 
         // convert the rows and tags to summaries

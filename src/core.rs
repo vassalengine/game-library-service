@@ -11,7 +11,7 @@ use thiserror::Error;
 use crate::{
     db,
     input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
-    model::{Admin, Flag, Flags, Owner, Package, Projects, ProjectData, Project, Publishers, Release, User, Users},
+    model::{Admin, Flag, Flags, Owner, Package, Projects, ProjectData, Project, Publishers, Release, Tags, User, Users},
     module,
     params::ProjectsParams,
     time,
@@ -304,6 +304,12 @@ impl PartialEq for AddImageError {
 
 #[derive(Debug, Error, PartialEq)]
 pub enum GetPublishersError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum GetTagsError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
@@ -604,6 +610,13 @@ pub trait Core {
     async fn get_publishers(
         &self
     ) -> Result<Publishers, GetPublishersError>
+    {
+        unimplemented!();
+    }
+
+    async fn get_tags(
+        &self
+    ) -> Result<Tags, GetTagsError>
     {
         unimplemented!();
     }
