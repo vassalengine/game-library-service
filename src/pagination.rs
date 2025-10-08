@@ -3,6 +3,7 @@ use std::{
     fmt,
     num::NonZeroU8
 };
+use urlencoding::Encoded;
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum LimitError {
@@ -113,12 +114,12 @@ impl fmt::Display for Anchor {
             Anchor::Before(field, id) => write!(
                 f,
                 "b%09{}%09{id}",
-                urlencoding::Encoded(field)
+                Encoded(field)
             ),
             Anchor::After(field, id) => write!(
                 f,
                 "a%09{}%09{id}",
-                urlencoding::Encoded(field)
+                Encoded(field)
             )
         }
     }
@@ -251,16 +252,14 @@ pub enum Facet {
 
 impl fmt::Display for Facet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (k, v) = match self {
-            Facet::Query(q) => ("q", q),
-            Facet::Publisher(p) => ("publisher", p),
-            Facet::Year(y) => ("year", y),
-            Facet::Tag(t) => ("tag", t),
-            Facet::Owner(o) => ("owner", o),
-            Facet::Player(p) => ("player", p)
-        };
-
-        write!(f, "{k}={}", urlencoding::Encoded(v))
+        match self {
+            Facet::Query(q) => write!(f, "q={}", Encoded(q)),
+            Facet::Publisher(p) => write!(f, "publisher={}", Encoded(p)),
+            Facet::Year(y) => write!(f, "year={}", Encoded(y)),
+            Facet::Tag(t) => write!(f, "tag={}", Encoded(t)),
+            Facet::Owner(o) => write!(f, "owner={}", Encoded(o)),
+            Facet::Player(p) => write!(f, "player={}", Encoded(p))
+        }
     }
 }
 
