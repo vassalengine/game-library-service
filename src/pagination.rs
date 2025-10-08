@@ -239,12 +239,10 @@ pub enum Facet {
     Query(String),
     Publisher(String),
     Year(String),
-/*
     PlayersMin(u32),
     PlayersMax(u32),
     LengthMin(u32),
     LengthMax(u32),
-*/
     Tag(String),
     Owner(String),
     Player(String)
@@ -256,6 +254,10 @@ impl fmt::Display for Facet {
             Facet::Query(q) => write!(f, "q={}", Encoded(q)),
             Facet::Publisher(p) => write!(f, "publisher={}", Encoded(p)),
             Facet::Year(y) => write!(f, "year={}", Encoded(y)),
+            Facet::PlayersMin(m) => write!(f, "players_min={m}"),
+            Facet::PlayersMax(m) => write!(f, "players_max={m}"),
+            Facet::LengthMin(m) => write!(f, "length_min={m}"),
+            Facet::LengthMax(m) => write!(f, "length_max={m}"),
             Facet::Tag(t) => write!(f, "tag={}", Encoded(t)),
             Facet::Owner(o) => write!(f, "owner={}", Encoded(o)),
             Facet::Player(p) => write!(f, "player={}", Encoded(p))

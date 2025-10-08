@@ -26,9 +26,13 @@ impl Facet {
             Facet::Query(_) => 0,
             Facet::Publisher(_) => 1,
             Facet::Year(_) => 2,
-            Facet::Tag(_) => 3,
-            Facet::Owner(_) => 4,
-            Facet::Player(_) => 5
+            Facet::PlayersMin(_) => 3,
+            Facet::PlayersMax(_) => 4,
+            Facet::LengthMin(_) => 5,
+            Facet::LengthMax(_) => 6,
+            Facet::Tag(_) => 7,
+            Facet::Owner(_) => 8,
+            Facet::Player(_) => 9
         }
     }
 }
@@ -105,20 +109,18 @@ where
             Facet::Year(y) =>
                 self.push(" projects.game_year == ")
                     .push_bind_unseparated(y),
-/*
             Facet::PlayersMin(m) =>
-                self.push(" projects.game_players_min == ")
+                self.push(" projects.game_players_min >= ")
                     .push_bind_unseparated(m),
             Facet::PlayersMax(m) =>
-                self.push(" projects.game_players_max == ")
+                self.push(" projects.game_players_max <= ")
                     .push_bind_unseparated(m),
             Facet::LengthMin(m) =>
-                self.push(" projects.game_length_min == ")
+                self.push(" projects.game_length_min >= ")
                     .push_bind_unseparated(m),
             Facet::LengthMax(m) =>
-                self.push(" projects.game_length_max == ")
+                self.push(" projects.game_length_max <= ")
                     .push_bind_unseparated(m),
-*/
             Facet::Tag(t) =>
                 self.push(" tags.tag == ")
                     .push_bind_unseparated(t),
