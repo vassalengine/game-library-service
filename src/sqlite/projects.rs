@@ -20,23 +20,6 @@ fn fts5_quote(s: &str) -> String {
     format!("\"{}\"", s.replace("\"", "\"\""))
 }
 
-impl Facet {
-    fn join_key(&self) -> u8 {
-        match self {
-            Facet::Query(_) => 0,
-            Facet::Publisher(_) => 1,
-            Facet::Year(_) => 2,
-            Facet::PlayersMin(_) => 3,
-            Facet::PlayersMax(_) => 4,
-            Facet::LengthMin(_) => 5,
-            Facet::LengthMax(_) => 6,
-            Facet::Tag(_) => 7,
-            Facet::Owner(_) => 8,
-            Facet::Player(_) => 9
-        }
-    }
-}
-
 trait JoinsExt {
     fn joins(&self) -> impl Iterator<Item = &'static str>;
 }
@@ -46,6 +29,7 @@ impl JoinsExt for &[Facet] {
         let mut has_owner = false;
         let mut has_player = false;
 
+        // deduplicate by type the facets needing JOINS
         let mut fi = self.iter()
             .filter(|f| matches!(
                 f,
@@ -54,9 +38,10 @@ impl JoinsExt for &[Facet] {
                 Facet::Owner(_) |
                 Facet::Player(_)
             ))
-            .unique_by(|f| f.join_key());
+            .unique_by(|f| std::mem::discriminant(*f));
 
         std::iter::from_fn(move || match fi.next() {
+            // add a JOIN for each type
             Some(f) => match f {
                 Facet::Query(_) => Some(" JOIN projects_fts ON projects.project_id = projects_fts.rowid "),
                 Facet::Tag(_) => Some(" JOIN tags ON projects.project_id = tags.project_id "),
@@ -70,6 +55,7 @@ impl JoinsExt for &[Facet] {
                 },
                 _ => unreachable!() // filtered out already
             },
+            // add the extra users JOIN if we need it
             None => match (has_owner, has_player) {
                 (true, true) => {
                     has_owner = false;
