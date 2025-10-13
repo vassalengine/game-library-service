@@ -96,10 +96,10 @@ where
                 self.push(" projects.game_year == ")
                     .push_bind_unseparated(y),
             Facet::PlayersMin(m) =>
-                self.push(" projects.game_players_min >= ")
+                self.push(" projects.game_players_min == ")
                     .push_bind_unseparated(m),
             Facet::PlayersMax(m) =>
-                self.push(" projects.game_players_max <= ")
+                self.push(" projects.game_players_max == ")
                     .push_bind_unseparated(m),
             Facet::PlayersInc(m) =>
                 self.push_bind(m)
