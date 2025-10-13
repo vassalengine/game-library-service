@@ -15,6 +15,7 @@ pub struct MaybeProjectsParams {
     pub year: Option<String>,
     pub players_min: Option<u32>,
     pub players_max: Option<u32>,
+    pub players_inc: Option<u32>,
     pub length_min: Option<u32>,
     pub length_max: Option<u32>,
     #[serde(default)]
@@ -58,6 +59,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             year,
             players_min,
             players_max,
+            players_inc,
             length_min,
             length_max,
             tag,
@@ -102,6 +104,10 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
 
         if let Some(players_max) = players_max {
             facets.push(Facet::PlayersMax(players_max));
+        }
+
+        if let Some(players_inc) = players_inc {
+            facets.push(Facet::PlayersInc(players_inc));
         }
 
         if let Some(length_min) = length_min {

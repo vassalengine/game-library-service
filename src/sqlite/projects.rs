@@ -101,6 +101,9 @@ where
             Facet::PlayersMax(m) =>
                 self.push(" projects.game_players_max <= ")
                     .push_bind_unseparated(m),
+            Facet::PlayersInc(m) =>
+                self.push_bind(m)
+                    .push_unseparated(" BETWEEN projects.game_players_min AND projects.game_players_max "),
             Facet::LengthMin(m) =>
                 self.push(" projects.game_length_min >= ")
                     .push_bind_unseparated(m),
