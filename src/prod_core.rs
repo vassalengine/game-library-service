@@ -1313,8 +1313,14 @@ impl TryFrom<(ProjectSummaryRow, Vec<String>)> for ProjectSummary {
                     title_sort_key: r.game_title_sort,
                     publisher: r.game_publisher,
                     year: r.game_year,
-                    players: Range::default(),
-                    length: Range::default()
+                    players: Range {
+                        min: r.game_players_min,
+                        max: r.game_players_max
+                    },
+                    length: Range {
+                        min: r.game_length_min,
+                        max: r.game_length_max
+                    }
                 }
             }
         )
