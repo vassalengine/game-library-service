@@ -78,6 +78,11 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             (q.is_some() as usize) +
             (publisher.is_some() as usize) +
             (year.is_some() as usize) +
+            (players_min.is_some() as usize) +
+            (players_max.is_some() as usize) +
+            (length_min.is_some() as usize) +
+            (length_max.is_some() as usize) +
+            players_inc.len() +
             tag.len() +
             owner.len() +
             player.len()
