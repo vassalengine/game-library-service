@@ -8,7 +8,7 @@ use mime::Mime;
 use std::{
     future::Future,
     io,
-    path::{Path, PathBuf}
+    path::PathBuf
 };
 use tokio::io::{
     AsyncRead,

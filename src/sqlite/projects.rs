@@ -1,5 +1,4 @@
 use const_format::formatcp;
-use itertools::Itertools;
 use sqlx::{
     Encode, Executor, QueryBuilder, Type,
     query_builder::Separated,
