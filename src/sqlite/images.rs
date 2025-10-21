@@ -2,6 +2,7 @@ use sqlx::{
     Acquire, Executor,
     sqlite::Sqlite
 };
+use std::collections::HashMap;
 
 use crate::{
     db::DatabaseError,
@@ -187,6 +188,78 @@ where
     Ok(())
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct GalleryRow {
+    gallery_id: i64,
+    next_id: Option<i64>,
+    filename: String,
+    description: String
+}
+
+impl From<GalleryRow> for GalleryImage {
+    fn from(r: GalleryRow) -> GalleryImage {
+        GalleryImage {
+            filename: r.filename,
+            description: r.description
+        }
+    }
+}
+
+fn sort_as_ll(imgs: &mut [GalleryRow]) -> Result<(), DatabaseError> {
+    // NB: It is a precondition that the list head is first in the slice
+
+    // empty slices are already sorted
+    if imgs.len() == 0 {
+        return Ok(());
+    }
+
+    // singletons must have no successor
+    if imgs.len() == 1 {
+        if imgs[0].next_id == None {
+            return Ok(())
+        }
+        else {
+            return Err(DatabaseError::InvalidLinkedList);
+        }
+    }
+
+    // make a map from ids to indices
+    let mut idx: HashMap<i64, usize> = HashMap::from_iter(
+        imgs.iter()
+            .enumerate()
+            .map(|(i, img)| (img.gallery_id, i))
+    );
+
+    // chase the next pointers
+    for i in 1..(imgs.len() - 1) {
+        if let Some(next_id) = imgs[i-1].next_id {
+            if let Some(j) = idx.get(&next_id) {
+                // swap the item which should be next with
+                // the item occupying the next index
+                let swap_id = imgs[i].gallery_id;
+                imgs.swap(i, *j);
+                // update the index map
+                idx.insert(swap_id, *j);
+            }
+            else {
+                // imgs[i-1].next_id is a bad index
+                return Err(DatabaseError::InvalidLinkedList);
+            }
+        }
+        else {
+            // imgs[i-1].next_id should never be None
+            return Err(DatabaseError::InvalidLinkedList);
+        }
+    }
+
+    // check that the tail is the last element
+    if imgs[imgs.len() - 1].next_id != None {
+        return Err(DatabaseError::InvalidLinkedList);
+    }
+
+    Ok(())
+}
+
 pub async fn get_gallery<'e, E>(
     ex: E,
     proj: Project
@@ -194,20 +267,29 @@ pub async fn get_gallery<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    Ok(
-       sqlx::query_as!(
-            GalleryImage,
-            "
-SELECT filename, description
+    let mut imgs = sqlx::query_as!(
+        GalleryRow,
+        "
+SELECT
+    gallery_id,
+    next_id,
+    filename,
+    description
 FROM galleries
 WHERE project_id = ?
-    AND removed_at IS NULL
-ORDER BY position
-            ",
-            proj.0
-        )
-        .fetch_all(ex)
-        .await?
+ORDER BY prev_id NULLS FIRST
+        ",
+        proj.0
+    )
+    .fetch_all(ex)
+    .await?;
+
+    sort_as_ll(&mut imgs)?;
+
+    Ok(
+        imgs.into_iter()
+            .map(|r| r.into())
+            .collect::<Vec<_>>()
     )
 }
 
@@ -219,23 +301,33 @@ pub async fn get_gallery_at<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-   Ok(
-       sqlx::query_as!(
-            GalleryImage,
-            "
-SELECT filename, description
-FROM galleries
+    let mut imgs = sqlx::query_as!(
+        GalleryRow,
+        "
+SELECT
+    gallery_id,
+    next_id,
+    filename,
+    description
+FROM galleries_history
 WHERE project_id = ?
     AND published_at <= ?
     AND (removed_at > ? OR removed_at IS NULL)
-ORDER BY position
-            ",
-            proj.0,
-            date,
-            date
-        )
-        .fetch_all(ex)
-        .await?
+ORDER BY prev_id NULLS FIRST
+        ",
+        proj.0,
+        date,
+        date
+    )
+    .fetch_all(ex)
+    .await?;
+
+    sort_as_ll(&mut imgs)?;
+
+    Ok(
+        imgs.into_iter()
+            .map(|r| r.into())
+            .collect::<Vec<_>>()
     )
 }
 
@@ -357,5 +449,190 @@ mod test {
                 DatabaseError::SqlxError(_)
             )
         );
+    }
+
+    #[test]
+    fn sort_as_ll_empty() {
+        let mut v = vec![];
+        sort_as_ll(&mut v).unwrap();
+        assert_eq!(&v, &[]);
+    }
+
+    #[test]
+    fn sort_ll_1() {
+        let exp = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: None,
+                filename: "".into(),
+                description: "".into()
+            }
+        ];
+
+        let mut act = exp.clone();
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp);
+    }
+
+    #[test]
+    fn sort_as_ll_1_bad_next() {
+        let mut act = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: Some(3),
+                filename: "".into(),
+                description: "".into()
+            }
+        ];
+        sort_as_ll(&mut act).unwrap_err();
+    }
+
+    #[test]
+    fn sort_as_ll_12() {
+        let exp = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: Some(2),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 2,
+                next_id: None,
+                filename: "".into(),
+                description: "".into()
+            }
+
+        ];
+
+        let mut act = exp.clone();
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp);
+    }
+
+    #[test]
+    fn sort_as_ll_123() {
+        let exp = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: Some(2),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 2,
+                next_id: Some(3),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 3,
+                next_id: None,
+                filename: "".into(),
+                description: "".into()
+            }
+        ];
+
+        let mut act = exp.clone();
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp);
+    }
+
+    #[test]
+    fn sort_as_ll_132() {
+        let exp = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: Some(3),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 3,
+                next_id: Some(2),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 2,
+                next_id: None,
+                filename: "".into(),
+                description: "".into()
+            },
+        ];
+
+        let mut act = [
+            GalleryRow {
+                gallery_id: 1,
+                next_id: Some(3),
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 2,
+                next_id: None,
+                filename: "".into(),
+                description: "".into()
+            },
+            GalleryRow {
+                gallery_id: 3,
+                next_id: Some(2),
+                filename: "".into(),
+                description: "".into()
+            }
+        ];
+
+        let mut act = exp.clone();
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp);
+    }
+
+    #[test]
+    fn sort_as_ll_10() {
+        let n = 10;
+
+        let exp = (1..=n).map(|i| GalleryRow {
+                gallery_id: i,
+                next_id: if i < n { Some(i+1) } else { None },
+                filename: "".into(),
+                description: "".into()
+            })
+            .collect::<Vec<_>>();
+
+        let mut act = exp.clone();
+        act[1..].reverse();
+
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp);
+    }
+
+    #[test]
+    fn sort_as_ll_lots() {
+        use rand::{
+            RngCore, SeedableRng,
+            rngs::StdRng,
+            seq::SliceRandom
+        };
+
+        let n = 1000;
+
+        let exp = (1..=n).map(|i| GalleryRow {
+                gallery_id: i,
+                next_id: if i < n { Some(i+1) } else { None },
+                filename: "".into(),
+                description: "".into()
+            })
+            .collect::<Vec<_>>();
+
+        let mut act = exp.clone();
+
+        let seed = rand::rng().next_u64();
+        let mut rng = StdRng::seed_from_u64(seed);
+
+        // shuffle, keeping head in place
+        act[1..].shuffle(&mut rng);
+
+        sort_as_ll(&mut act).unwrap();
+        assert_eq!(&act, &exp, "{act:?} != {exp:?}, with seed {seed}");
     }
 }

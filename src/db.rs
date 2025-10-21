@@ -23,6 +23,8 @@ pub enum DatabaseError {
     NotFound,
     #[error("Not empty")]
     NotEmpty,
+    #[error("Invalid linked list")]
+    InvalidLinkedList,
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error)
 }
