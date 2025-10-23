@@ -72,6 +72,7 @@ pub struct PackageData {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GalleryImage {
+    pub id: i64,
     pub filename: String,
     pub description: String
 }

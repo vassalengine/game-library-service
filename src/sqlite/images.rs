@@ -199,6 +199,7 @@ struct GalleryRow {
 impl From<GalleryRow> for GalleryImage {
     fn from(r: GalleryRow) -> GalleryImage {
         GalleryImage {
+            id: r.gallery_id,
             filename: r.filename,
             description: r.description
         }
