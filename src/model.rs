@@ -14,6 +14,9 @@ pub struct Users {
 pub struct Admin(pub i64);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct GalleryItem(pub i64);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Release(pub i64);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
