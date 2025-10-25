@@ -583,7 +583,6 @@ mod test {
             }
         ];
 
-        let mut act = exp.clone();
         sort_as_ll(&mut act).unwrap();
         assert_eq!(&act, &exp);
     }
