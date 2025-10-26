@@ -486,7 +486,7 @@ async fn check_release_row_exists<'e, E>(
     rel: Release,
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -506,7 +506,7 @@ async fn delete_release_row<'e, E>(
     rel: Release,
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -528,7 +528,7 @@ async fn retire_release_history_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "

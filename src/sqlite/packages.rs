@@ -146,7 +146,7 @@ async fn create_package_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -183,7 +183,7 @@ async fn create_package_history_row<'e, E>(
     now: i64
 ) -> Result<Package, DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -215,7 +215,7 @@ async fn create_package_revision_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -294,7 +294,7 @@ async fn update_package_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     let mut qb: QueryBuilder<E::Database> = QueryBuilder::new(
         "UPDATE packages SET "
@@ -335,7 +335,7 @@ async fn update_package_revision_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -394,7 +394,7 @@ async fn check_package_row_exists<'e, E>(
     pkg: Package,
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query_scalar!(
         "
@@ -414,7 +414,7 @@ async fn delete_package_row<'e, E>(
     pkg: Package,
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
@@ -436,7 +436,7 @@ async fn retire_package_history_row<'e, E>(
     now: i64
 ) -> Result<(), DatabaseError>
 where
- E: Executor<'e, Database = Sqlite>
+    E: Executor<'e, Database = Sqlite>
 {
     sqlx::query!(
         "
