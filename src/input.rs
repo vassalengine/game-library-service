@@ -461,6 +461,14 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
     }
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[serde(tag = "op", rename_all = "lowercase")]
+pub enum MaybeGalleryPatch {
+    Update { id: i64,  description: String },
+    Delete { id: i64 },
+    Move { id: i64, next: i64 }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MaybeFlagPost {
     pub flag: FlagTag,
@@ -1473,4 +1481,32 @@ mod test {
             Err(RangePostError(mrp))
         );
     }
+
+    #[test]
+    fn maybe_gallery_patch_delete_from_json() {
+        let json = r#"{ "op": "delete", "id": 3 }"#;
+        assert_eq!(
+            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
+            MaybeGalleryPatch::Delete { id: 3 }
+        );
+    }
+
+    #[test]
+    fn maybe_gallery_patch_update_from_json() {
+        let json = r#"{ "op": "update", "id": 3, "description": "x" }"#;
+        assert_eq!(
+            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
+            MaybeGalleryPatch::Update { id: 3, description: "x".into() }
+        );
+    }
+
+    #[test]
+    fn maybe_gallery_patch_move_from_json() {
+        let json = r#"{ "op": "move", "id": 3, "next": 5 }"#;
+        assert_eq!(
+            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
+            MaybeGalleryPatch::Move { id: 3, next: 5 }
+        );
+    }
+
 }
