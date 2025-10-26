@@ -19,7 +19,7 @@ use crate::{
     core::CoreArc,
     errors::AppError,
     extractors::{ProjectPackage, ProjectPackageRelease, Wrapper},
-    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{FlagPost, GalleryPatch, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{Admin, Flag, Flags, Owned, ProjectData, Project, Projects, Publishers, Tags, Users, User},
     params::ProjectsParams,
 };
@@ -253,6 +253,16 @@ pub async fn file_post(
             into_stream(request, limit)
         ).await?
     )
+}
+
+pub async fn gallery_patch(
+    Owned(owner, proj): Owned,
+    State(core): State<CoreArc>,
+    Wrapper(Json(proj_data)): Wrapper<Json<GalleryPatch>>
+) -> Result<(), AppError>
+{
+
+    Ok(())
 }
 
 pub async fn image_get(
