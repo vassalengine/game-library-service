@@ -497,7 +497,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         now: i64
     ) -> Result<(), DatabaseError>
     {
-        Ok(())
+        images::update_gallery(&self.0, owner, proj, gallery_patch, now).await
     }
 
     async fn get_publishers(

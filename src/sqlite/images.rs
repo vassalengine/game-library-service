@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use crate::{
     db::{DatabaseError, map_unique},
+    input::GalleryPatch,
     model::{GalleryImage, GalleryItem, Owner, Project},
     sqlite::project::update_project_non_project_data
 };
@@ -427,6 +428,28 @@ SET prev_id = excluded.prev_id,
     )
     .execute(ex)
     .await?;
+
+    Ok(())
+}
+
+pub async fn update_gallery<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    gallery_patch: &GalleryPatch,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+
+
+
+
+
+    tx.commit().await?;
 
     Ok(())
 }
