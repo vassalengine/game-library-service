@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{
     db,
-    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{FlagPost, GalleryPatch, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{Admin, Flag, Flags, Owner, Package, Projects, ProjectData, Project, Publishers, Release, Tags, User, Users},
     module,
     params::ProjectsParams,
@@ -257,6 +257,12 @@ pub enum AddPlayerError {
 
 #[derive(Debug, Error, PartialEq)]
 pub enum RemovePlayerError {
+    #[error("{0}")]
+    DatabaseError(#[from] db::DatabaseError)
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum UpdateGalleryError {
     #[error("{0}")]
     DatabaseError(#[from] db::DatabaseError)
 }
@@ -571,6 +577,15 @@ pub trait Core {
         _player: User,
         _proj: Project
     ) -> Result<(), RemovePlayerError>
+    {
+        unimplemented!();
+    }
+
+    async fn update_gallery(
+        &self,
+        _proj: Project,
+        _gallery_patch: &GalleryPatch
+    ) -> Result<(), UpdateGalleryError>
     {
         unimplemented!();
     }
