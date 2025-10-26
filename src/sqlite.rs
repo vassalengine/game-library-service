@@ -16,7 +16,7 @@ mod users;
 
 use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
-    input::{FlagPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
+    input::{FlagPost, GalleryPatch, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{Admin, Flag, GalleryImage, Owner, Package, Project, Release, User, Users},
     pagination::{Direction, Facet, SortBy},
     version::Version
@@ -487,6 +487,17 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         date: i64
     ) -> Result<Vec<GalleryImage>, DatabaseError> {
         images::get_gallery_at(&self.0, proj, date).await
+    }
+
+    async fn update_gallery(
+        &self,
+        owner: Owner,
+        proj: Project,
+        gallery_patch: &GalleryPatch,
+        now: i64
+    ) -> Result<(), DatabaseError>
+    {
+        Ok(())
     }
 
     async fn get_publishers(

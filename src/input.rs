@@ -463,7 +463,23 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(tag = "op", rename_all = "lowercase")]
-pub enum MaybeGalleryPatch {
+pub enum MaybeGalleryOp {
+    Update {
+        id: i64,
+        description: String
+    },
+    Delete {
+        id: i64
+    },
+    Move {
+        id: i64,
+        next: Option<i64>
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(try_from = "MaybeGalleryOp")]
+pub enum GalleryOp {
     Update {
         id: i64,
         description: String
@@ -479,48 +495,37 @@ pub enum MaybeGalleryPatch {
 
 const GALLERY_ITEM_DESCRIPTION_MAX_LENGTH: usize = 128;
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
-#[serde(try_from = "MaybeGalleryPatch")]
-pub enum GalleryPatch {
-    Update {
-        id: i64,
-        description: String
-    },
-    Delete {
-        id: i64
-    },
-    Move {
-        id: i64,
-        next: Option<i64>
-    }
-}
-
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 #[error("invalid data {0:?}")]
-pub struct GalleryPatchError(MaybeGalleryPatch);
+pub struct GalleryOpError(MaybeGalleryOp);
 
-impl TryFrom<MaybeGalleryPatch> for GalleryPatch {
-    type Error = GalleryPatchError;
+impl TryFrom<MaybeGalleryOp> for GalleryOp {
+    type Error = GalleryOpError;
 
-    fn try_from(m: MaybeGalleryPatch) -> Result<Self, Self::Error> {
+    fn try_from(m: MaybeGalleryOp) -> Result<Self, Self::Error> {
         match m {
-            MaybeGalleryPatch::Update { id, description } => {
+            MaybeGalleryOp::Update { id, description } => {
                 // field lengths must be within bounds
                 if description.len() > GALLERY_ITEM_DESCRIPTION_MAX_LENGTH {
-                    Err(GalleryPatchError(
-                        MaybeGalleryPatch::Update { id, description }
+                    Err(GalleryOpError(
+                        MaybeGalleryOp::Update { id, description }
                     ))
                 }
                 else {
-                    Ok(GalleryPatch::Update { id, description })
+                    Ok(GalleryOp::Update { id, description })
                 }
             },
-            MaybeGalleryPatch::Delete { id } =>
-                Ok(GalleryPatch::Delete { id }),
-            MaybeGalleryPatch::Move { id, next } =>
-                Ok(GalleryPatch::Move { id, next })
+            MaybeGalleryOp::Delete { id } =>
+                Ok(GalleryOp::Delete { id }),
+            MaybeGalleryOp::Move { id, next } =>
+                Ok(GalleryOp::Move { id, next })
         }
     }
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+pub struct GalleryPatch {
+    pub ops: Vec<GalleryOp>
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1537,86 +1542,86 @@ mod test {
     }
 
     #[test]
-    fn maybe_gallery_patch_delete_from_json() {
+    fn maybe_gallery_op_delete_from_json() {
         let json = r#"{ "op": "delete", "id": 3 }"#;
         assert_eq!(
-            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
-            MaybeGalleryPatch::Delete { id: 3 }
+            serde_json::from_str::<MaybeGalleryOp>(json).unwrap(),
+            MaybeGalleryOp::Delete { id: 3 }
         );
     }
 
     #[test]
-    fn maybe_gallery_patch_update_from_json() {
+    fn maybe_gallery_op_update_from_json() {
         let json = r#"{ "op": "update", "id": 3, "description": "x" }"#;
         assert_eq!(
-            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
-            MaybeGalleryPatch::Update { id: 3, description: "x".into() }
+            serde_json::from_str::<MaybeGalleryOp>(json).unwrap(),
+            MaybeGalleryOp::Update { id: 3, description: "x".into() }
         );
     }
 
     #[test]
-    fn maybe_gallery_patch_move_from_json() {
+    fn maybe_gallery_op_move_from_json() {
         let json = r#"{ "op": "move", "id": 3, "next": 5 }"#;
         assert_eq!(
-            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
-            MaybeGalleryPatch::Move { id: 3, next: Some(5) }
+            serde_json::from_str::<MaybeGalleryOp>(json).unwrap(),
+            MaybeGalleryOp::Move { id: 3, next: Some(5) }
         );
     }
 
     #[test]
-    fn maybe_gallery_patch_move_end_from_json() {
+    fn maybe_gallery_op_move_end_from_json() {
         let json = r#"{ "op": "move", "id": 3, "next": null }"#;
         assert_eq!(
-            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
-            MaybeGalleryPatch::Move { id: 3, next: None }
+            serde_json::from_str::<MaybeGalleryOp>(json).unwrap(),
+            MaybeGalleryOp::Move { id: 3, next: None }
         );
     }
 
     #[test]
-    fn try_from_maybe_gallery_patch_delete() {
-        let mgp = MaybeGalleryPatch::Delete { id: 3 };
+    fn try_from_maybe_gallery_op_delete() {
+        let mgp = MaybeGalleryOp::Delete { id: 3 };
         assert_eq!(
-            GalleryPatch::try_from(mgp),
-            Ok(GalleryPatch::Delete { id: 3 })
+            GalleryOp::try_from(mgp),
+            Ok(GalleryOp::Delete { id: 3 })
         );
     }
 
     #[test]
-    fn try_from_maybe_gallery_patch_update() {
-        let mgp = MaybeGalleryPatch::Update { id: 3, description: "x".into() };
+    fn try_from_maybe_gallery_op_update() {
+        let mgp = MaybeGalleryOp::Update { id: 3, description: "x".into() };
         assert_eq!(
-            GalleryPatch::try_from(mgp),
-            Ok(GalleryPatch::Update { id: 3, description: "x".into() })
+            GalleryOp::try_from(mgp),
+            Ok(GalleryOp::Update { id: 3, description: "x".into() })
         );
     }
 
     #[test]
-    fn try_from_maybe_gallery_patch_update_too_long() {
-        let mgp = MaybeGalleryPatch::Update {
+    fn try_from_maybe_gallery_op_update_too_long() {
+        let mgp = MaybeGalleryOp::Update {
             id: 3,
             description: "x".repeat(GALLERY_ITEM_DESCRIPTION_MAX_LENGTH + 1)
         };
         assert_eq!(
-            GalleryPatch::try_from(mgp.clone()),
-            Err(GalleryPatchError(mgp))
+            GalleryOp::try_from(mgp.clone()),
+            Err(GalleryOpError(mgp))
         );
     }
 
     #[test]
-    fn try_from_maybe_gallery_patch_move() {
-        let mgp = MaybeGalleryPatch::Move { id: 3, next: Some(5) };
+    fn try_from_maybe_gallery_op_move() {
+        let mgp = MaybeGalleryOp::Move { id: 3, next: Some(5) };
         assert_eq!(
-            GalleryPatch::try_from(mgp),
-            Ok(GalleryPatch::Move { id: 3, next: Some(5) })
+            GalleryOp::try_from(mgp),
+            Ok(GalleryOp::Move { id: 3, next: Some(5) })
         );
     }
 
     #[test]
-    fn try_from_maybe_gallery_patch_move_end() {
-        let mgp = MaybeGalleryPatch::Move { id: 3, next: None };
+    fn try_from_maybe_gallery_op_move_end() {
+        let mgp = MaybeGalleryOp::Move { id: 3, next: None };
         assert_eq!(
-            GalleryPatch::try_from(mgp),
-            Ok(GalleryPatch::Move { id: 3, next: None })
+            GalleryOp::try_from(mgp),
+            Ok(GalleryOp::Move { id: 3, next: None })
         );
     }
 

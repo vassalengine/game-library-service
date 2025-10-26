@@ -264,7 +264,9 @@ pub enum RemovePlayerError {
 #[derive(Debug, Error, PartialEq)]
 pub enum UpdateGalleryError {
     #[error("{0}")]
-    DatabaseError(#[from] db::DatabaseError)
+    DatabaseError(#[from] db::DatabaseError),
+    #[error("{0}")]
+    TimeError(#[from] time::Error),
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -583,6 +585,7 @@ pub trait Core {
 
     async fn update_gallery(
         &self,
+        _owner: Owner,
         _proj: Project,
         _gallery_patch: &GalleryPatch
     ) -> Result<(), UpdateGalleryError>

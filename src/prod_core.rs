@@ -508,11 +508,13 @@ where
 
     async fn update_gallery(
         &self,
+        owner: Owner,
         proj: Project,
         gallery_patch: &GalleryPatch
     ) -> Result<(), UpdateGalleryError>
     {
-        Ok(())
+        let now = self.now_nanos()?;
+        Ok(self.db.update_gallery(owner, proj, gallery_patch, now).await?)
     }
 
     async fn get_image(
