@@ -461,12 +461,66 @@ impl TryFrom<MaybeProjectDataPost> for ProjectDataPost {
     }
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(tag = "op", rename_all = "lowercase")]
 pub enum MaybeGalleryPatch {
-    Update { id: i64,  description: String },
-    Delete { id: i64 },
-    Move { id: i64, next: i64 }
+    Update {
+        id: i64,
+        description: String
+    },
+    Delete {
+        id: i64
+    },
+    Move {
+        id: i64,
+        next: Option<i64>
+    }
+}
+
+const GALLERY_ITEM_DESCRIPTION_MAX_LENGTH: usize = 128;
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[serde(try_from = "MaybeGalleryPatch")]
+pub enum GalleryPatch {
+    Update {
+        id: i64,
+        description: String
+    },
+    Delete {
+        id: i64
+    },
+    Move {
+        id: i64,
+        next: Option<i64>
+    }
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct GalleryPatchError(MaybeGalleryPatch);
+
+impl TryFrom<MaybeGalleryPatch> for GalleryPatch {
+    type Error = GalleryPatchError;
+
+    fn try_from(m: MaybeGalleryPatch) -> Result<Self, Self::Error> {
+        match m {
+            MaybeGalleryPatch::Update { id, description } => {
+                // field lengths must be within bounds
+                if description.len() > GALLERY_ITEM_DESCRIPTION_MAX_LENGTH {
+                    Err(GalleryPatchError(
+                        MaybeGalleryPatch::Update { id, description }
+                    ))
+                }
+                else {
+                    Ok(GalleryPatch::Update { id, description })
+                }
+            },
+            MaybeGalleryPatch::Delete { id } =>
+                Ok(GalleryPatch::Delete { id }),
+            MaybeGalleryPatch::Move { id, next } =>
+                Ok(GalleryPatch::Move { id, next })
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1505,8 +1559,66 @@ mod test {
         let json = r#"{ "op": "move", "id": 3, "next": 5 }"#;
         assert_eq!(
             serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
-            MaybeGalleryPatch::Move { id: 3, next: 5 }
+            MaybeGalleryPatch::Move { id: 3, next: Some(5) }
         );
     }
+
+    #[test]
+    fn maybe_gallery_patch_move_end_from_json() {
+        let json = r#"{ "op": "move", "id": 3, "next": null }"#;
+        assert_eq!(
+            serde_json::from_str::<MaybeGalleryPatch>(json).unwrap(),
+            MaybeGalleryPatch::Move { id: 3, next: None }
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_patch_delete() {
+        let mgp = MaybeGalleryPatch::Delete { id: 3 };
+        assert_eq!(
+            GalleryPatch::try_from(mgp),
+            Ok(GalleryPatch::Delete { id: 3 })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_patch_update() {
+        let mgp = MaybeGalleryPatch::Update { id: 3, description: "x".into() };
+        assert_eq!(
+            GalleryPatch::try_from(mgp),
+            Ok(GalleryPatch::Update { id: 3, description: "x".into() })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_patch_update_too_long() {
+        let mgp = MaybeGalleryPatch::Update {
+            id: 3,
+            description: "x".repeat(GALLERY_ITEM_DESCRIPTION_MAX_LENGTH + 1)
+        };
+        assert_eq!(
+            GalleryPatch::try_from(mgp.clone()),
+            Err(GalleryPatchError(mgp))
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_patch_move() {
+        let mgp = MaybeGalleryPatch::Move { id: 3, next: Some(5) };
+        assert_eq!(
+            GalleryPatch::try_from(mgp),
+            Ok(GalleryPatch::Move { id: 3, next: Some(5) })
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_patch_move_end() {
+        let mgp = MaybeGalleryPatch::Move { id: 3, next: None };
+        assert_eq!(
+            GalleryPatch::try_from(mgp),
+            Ok(GalleryPatch::Move { id: 3, next: None })
+        );
+    }
+
 
 }
