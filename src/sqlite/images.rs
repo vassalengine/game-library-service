@@ -5,8 +5,8 @@ use sqlx::{
 use std::collections::HashMap;
 
 use crate::{
-    db::DatabaseError,
-    model::{GalleryImage, Owner, Project},
+    db::{DatabaseError, map_unique},
+    model::{GalleryImage, GalleryItem, Owner, Project},
     sqlite::project::update_project_non_project_data
 };
 
@@ -330,6 +330,105 @@ ORDER BY prev_id NULLS FIRST
             .map(|r| r.into())
             .collect::<Vec<_>>()
     )
+}
+
+async fn create_galleries_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    img_name: &str,
+    description: &str,
+    now: i64
+) -> Result<(GalleryItem, Option<GalleryItem>), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    prev_id,
+    project_id,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    gallery_id,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
+FROM galleries_history
+WHERE project_id = ?
+    AND next_id IS NULL 
+RETURNING gallery_id, prev_id
+        ",
+        proj.0,
+        img_name,
+        description,
+        now,
+        owner.0,
+        proj.0
+    )
+    .fetch_one(ex)
+    .await
+    .map(|r| (GalleryItem(r.gallery_id), r.prev_id.map(GalleryItem)))
+    .map_err(map_unique)
+}
+
+async fn update_galleries_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    item: GalleryItem,
+    prev: Option<GalleryItem>,
+    next: Option<GalleryItem>,
+    img_name: &str,
+    description: &str,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    let prev_id = prev.map(|i| i.0);
+    let next_id = next.map(|i| i.0);
+
+    sqlx::query!(
+        "
+INSERT INTO galleries (
+    gallery_id,
+    prev_id,
+    next_id,
+    project_id,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(gallery_id)
+DO UPDATE
+SET prev_id = excluded.prev_id,
+    next_id = excluded.next_id,
+    description = excluded.description,
+    published_at = excluded.published_at,
+    published_by = excluded.published_by
+        ",
+        item.0,
+        prev_id,
+        next_id,
+        proj.0,
+        img_name,
+        description,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
