@@ -207,55 +207,6 @@ WHERE projects.slug = ?
     )
 }
 
-async fn create_release_row<'e, E>(
-    ex: E,
-    owner: Owner,
-    pkg: Package,
-    rel: Release,
-    version: &Version,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    let vstr = String::from(version);
-    let pre = version.pre.as_deref().unwrap_or("");
-    let build = version.build.as_deref().unwrap_or("");
-
-    sqlx::query!(
-        "
-INSERT INTO releases (
-    release_id,
-    package_id,
-    version,
-    version_major,
-    version_minor,
-    version_patch,
-    version_pre,
-    version_build,
-    published_at,
-    published_by
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ",
-        rel.0,
-        pkg.0,
-        vstr,
-        version.major,
-        version.minor,
-        version.patch,
-        pre,
-        build,
-        now,
-        owner.0
-    )
-    .execute(ex)
-    .await
-    .map_err(map_unique)?;
-
-    Ok(())
-}
-
 async fn create_release_history_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -323,8 +274,6 @@ where
         version,
         now
     ).await?;
-
-    create_release_row(&mut *tx, owner, pkg, rel, version, now).await?;
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
@@ -481,46 +430,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     Ok(())
 }
 
-async fn check_release_row_exists<'e, E>(
-    ex: E,
-    rel: Release,
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query_scalar!(
-        "
-SELECT 1 FROM releases
-WHERE release_id = ?
-        ",
-        rel.0
-    )
-    .fetch_optional(ex)
-    .await?
-    .and(Some(()))
-    .ok_or(DatabaseError::NotFound)
-}
-
-async fn delete_release_row<'e, E>(
-    ex: E,
-    rel: Release,
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-DELETE FROM releases
-WHERE release_id = ?
-        ",
-        rel.0
-    )
-    .execute(ex)
-    .await
-    .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
-}
-
 async fn retire_release_history_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -560,10 +469,7 @@ where
 {
     let mut tx = conn.begin().await?;
 
-    check_release_row_exists(&mut *tx, rel).await?;
-
     // delete release row
-    delete_release_row(&mut *tx, rel).await?;
     retire_release_history_row(&mut *tx, owner, rel, now).await?;
 
     // update project to reflect the change

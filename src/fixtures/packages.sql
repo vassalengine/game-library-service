@@ -101,56 +101,6 @@ VALUES
     NULL
   );
 
-INSERT INTO releases (
-  release_id,
-  package_id,
-  version,
-  version_major,
-  version_minor,
-  version_patch,
-  version_pre,
-  version_build,
-  published_at,
-  published_by
-)
-VALUES
-  (
-    1,
-    1,
-    "1.2.3",
-    1,
-    2,
-    3,
-    "",
-    "",
-    1702137389180282477,
-    1
-  ),
-  (
-    2,
-    1,
-    "1.2.4",
-    1,
-    2,
-    4,
-    "",
-    "",
-    1702223789180282477,
-    2
-  ),
-  (
-    3,
-    3,
-    "0.1.0",
-    1,
-    2,
-    4,
-    "",
-    "",
-    1702655789180282477,
-    3
-  );
-
 INSERT INTO files (
   file_id,
   release_id,
