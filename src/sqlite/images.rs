@@ -65,49 +65,6 @@ LIMIT 1
     )
 }
 
-async fn update_image_row<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    img_name: &str,
-    url: &str,
-    content_type: &str,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-INSERT INTO images (
-    project_id,
-    filename,
-    url,
-    content_type,
-    published_at,
-    published_by
-)
-VALUES (?, ?, ?, ?, ?, ?)
-ON CONFLICT(project_id, filename)
-DO UPDATE
-SET url = excluded.url,
-    content_type = excluded.content_type,
-    published_at = excluded.published_at,
-    published_by = excluded.published_by
-        ",
-        proj.0,
-        img_name,
-        url,
-        content_type,
-        now,
-        owner.0
-    )
-    .execute(ex)
-    .await?;
-
-    Ok(())
-}
-
 async fn create_image_revision_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -158,17 +115,6 @@ where
     A: Acquire<'a, Database = Sqlite>
 {
     let mut tx = conn.begin().await?;
-
-    // update row in images
-    update_image_row(
-        &mut *tx,
-        owner,
-        proj,
-        img_name,
-        url,
-        content_type,
-        now
-    ).await?;
 
     // insert row in images_revisions
     create_image_revision_row(
