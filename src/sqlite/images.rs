@@ -211,13 +211,13 @@ fn sort_as_ll(imgs: &mut [GalleryRow]) -> Result<(), DatabaseError> {
     // NB: It is a precondition that the list head is first in the slice
 
     // empty slices are already sorted
-    if imgs.len() == 0 {
+    if imgs.is_empty() {
         return Ok(());
     }
 
     // singletons must have no successor
     if imgs.len() == 1 {
-        if imgs[0].next_id == None {
+        if imgs[0].next_id.is_none() {
             return Ok(())
         }
         else {
@@ -255,7 +255,7 @@ fn sort_as_ll(imgs: &mut [GalleryRow]) -> Result<(), DatabaseError> {
     }
 
     // check that the tail is the last element
-    if imgs[imgs.len() - 1].next_id != None {
+    if !imgs[imgs.len() - 1].next_id.is_none() {
         return Err(DatabaseError::InvalidLinkedList);
     }
 
