@@ -181,6 +181,8 @@ CREATE TABLE IF NOT EXISTS galleries (
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(published_by) REFERENCES users(user_id),
   FOREIGN KEY(project_id, filename) REFERENCES images(project_id, filename),
+  UNIQUE(prev_id),
+  UNIQUE(next_id),
   UNIQUE(project_id, filename),
   CHECK(prev_id != gallery_id),
   CHECK(next_id != gallery_id)
@@ -314,12 +316,12 @@ BEGIN
     readme
   )
   VALUES (
-    new.project_id,
-    new.game_title,
-    new.game_publisher,
-    new.game_year,
-    new.description,
-    new.readme
+    NEW.project_id,
+    NEW.game_title,
+    NEW.game_publisher,
+    NEW.game_year,
+    NEW.description,
+    NEW.readme
   );
 END;
 
@@ -336,12 +338,12 @@ BEGIN
   )
   VALUES (
     'delete',
-    old.project_id,
-    old.game_title,
-    old.game_publisher,
-    old.game_year,
-    old.description,
-    old.readme
+    OLD.project_id,
+    OLD.game_title,
+    OLD.game_publisher,
+    OLD.game_year,
+    OLD.description,
+    OLD.readme
   );
 END;
 
@@ -358,12 +360,12 @@ BEGIN
   )
   VALUES (
     'delete',
-    old.project_id,
-    old.game_title,
-    old.game_publisher,
-    old.game_year,
-    old.description,
-    old.readme
+    OLD.project_id,
+    OLD.game_title,
+    OLD.game_publisher,
+    OLD.game_year,
+    OLD.description,
+    OLD.readme
   );
   INSERT INTO projects_fts (
     rowid,
@@ -374,11 +376,11 @@ BEGIN
     readme
   )
   VALUES (
-    new.project_id,
-    new.game_title,
-    new.game_publisher,
-    new.game_year,
-    new.description,
-    new.readme
+    NEW.project_id,
+    NEW.game_title,
+    NEW.game_publisher,
+    NEW.game_year,
+    NEW.description,
+    NEW.readme
   );
 END;
