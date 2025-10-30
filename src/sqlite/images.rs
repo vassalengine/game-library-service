@@ -1,14 +1,17 @@
 use sqlx::{
-    Acquire, Executor,
+    Acquire, Executor, Transaction,
     sqlite::Sqlite
 };
 use std::collections::HashMap;
 
 use crate::{
     db::{DatabaseError, map_unique},
-    input::GalleryPatch,
+    input::{GalleryOp, GalleryPatch},
     model::{GalleryImage, GalleryItem, Owner, Project},
-    sqlite::project::update_project_non_project_data
+    sqlite::{
+        require_one_modified,
+        project::update_project_non_project_data
+    }
 };
 
 pub async fn get_image_url<'e, E>(
@@ -279,6 +282,7 @@ ORDER BY prev_id NULLS FIRST
     )
 }
 
+/*
 async fn create_galleries_history_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -290,6 +294,7 @@ async fn create_galleries_history_row<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
+    // insert new item at the end of the 
     sqlx::query!(
         "
 INSERT INTO galleries_history (
@@ -309,7 +314,8 @@ SELECT
     ?
 FROM galleries_history
 WHERE project_id = ?
-    AND next_id IS NULL 
+    AND removed_at IS NULL
+    AND next_id IS NULL
 RETURNING gallery_id, prev_id
         ",
         proj.0,
@@ -324,27 +330,86 @@ RETURNING gallery_id, prev_id
     .map(|r| (GalleryItem(r.gallery_id), r.prev_id.map(GalleryItem)))
     .map_err(map_unique)
 }
+*/
 
-async fn update_galleries_row<'e, E>(
+async fn end_galleries_history_row<'e, E>(
     ex: E,
     owner: Owner,
     proj: Project,
-    item: GalleryItem,
-    prev: Option<GalleryItem>,
-    next: Option<GalleryItem>,
-    img_name: &str,
+    gallery_id: i64,
+    now: i64
+) -> Result<(Option<i64>, Option<i64>), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE galleries_history
+SET
+    removed_by = ?,
+    removed_at = ?
+WHERE gallery_id = ?
+    AND project_id = ?
+    AND removed_at IS NULL
+RETURNING
+    prev_id AS 'prev_id?',
+    next_id AS 'next_id?'
+        ",
+        owner.0,
+        now,
+        gallery_id,
+        proj.0
+    )
+    .fetch_one(ex)
+    .await
+    .map(|r| (r.prev_id, r.next_id))
+    .map_err(DatabaseError::from)
+}
+
+async fn end_galleries_history_row_last<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    now: i64
+) -> Result<Option<i64>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+UPDATE galleries_history
+SET
+    removed_by = ?,
+    removed_at = ?
+WHERE project_id = ?
+    AND next_id IS NULL
+    AND removed_at IS NULL
+RETURNING
+    gallery_id AS 'gallery_id?'
+        ",
+        owner.0,
+        now,
+        proj.0
+    )
+    .fetch_one(ex)
+    .await
+    .map_err(DatabaseError::from)
+}
+
+async fn update_galleries_history_row_description<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
     description: &str,
     now: i64
 ) -> Result<(), DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let prev_id = prev.map(|i| i.0);
-    let next_id = next.map(|i| i.0);
-
     sqlx::query!(
         "
-INSERT INTO galleries (
+INSERT INTO galleries_history (
     gallery_id,
     prev_id,
     next_id,
@@ -354,28 +419,424 @@ INSERT INTO galleries (
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(gallery_id)
-DO UPDATE
-SET prev_id = excluded.prev_id,
-    next_id = excluded.next_id,
-    description = excluded.description,
-    published_at = excluded.published_at,
-    published_by = excluded.published_by
+SELECT
+    gallery_id,
+    prev_id,
+    next_id,
+    project_id,
+    filename,
+    ?,
+    ?,
+    ?
+FROM galleries_history
+WHERE project_id = ?
+    AND gallery_id = ?
+    AND removed_at = ?
         ",
-        item.0,
-        prev_id,
-        next_id,
-        proj.0,
-        img_name,
         description,
         now,
-        owner.0
+        owner.0,
+        proj.0,
+        gallery_id,
+        now
     )
     .execute(ex)
-    .await?;
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn update_galleries_history_row_next<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    next_id: Option<i64>,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    gallery_id,
+    prev_id,
+    next_id,
+    project_id,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    gallery_id,
+    prev_id,
+    ?,
+    project_id,
+    filename,
+    description,
+    ?,
+    ?
+FROM galleries_history
+WHERE project_id = ?
+    AND gallery_id = ?
+    AND removed_at = ?
+        ",
+        next_id,
+        now,
+        owner.0,
+        proj.0,
+        gallery_id,
+        now
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn update_galleries_history_row_prev<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    prev_id: Option<i64>,
+    now: i64
+) -> Result<Option<i64>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query_scalar!(
+        "
+INSERT INTO galleries_history (
+    gallery_id,
+    prev_id,
+    next_id,
+    project_id,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    gallery_id,
+    ?,
+    next_id,
+    project_id,
+    filename,
+    description,
+    ?,
+    ?
+FROM galleries_history
+WHERE project_id = ?
+    AND gallery_id = ?
+    AND removed_at = ?
+RETURNING prev_id 
+        ",
+        prev_id,
+        now,
+        owner.0,
+        proj.0,
+        gallery_id,
+        now
+    )
+    .fetch_one(ex)
+    .await
+    .map_err(DatabaseError::from)
+}
+
+async fn update_galleries_history_row_prev_next<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    prev_id: Option<i64>,
+    next_id: Option<i64>,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    gallery_id,
+    prev_id,
+    next_id,
+    project_id,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    gallery_id,
+    ?,
+    ?,
+    project_id,
+    filename,
+    description,
+    ?,
+    ?
+FROM galleries_history
+WHERE project_id = ?
+    AND gallery_id = ?
+    AND removed_at = ?
+        ",
+        prev_id,
+        next_id,
+        now,
+        owner.0,
+        proj.0,
+        gallery_id,
+        now
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn update_gallery_item(
+    tx: &mut Transaction<'_, Sqlite>,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    description: &str,
+    now: i64
+) -> Result<(), DatabaseError>
+{
+    // retire old row
+    let (prev_id, next_id) = end_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await?;
+
+    // insert new row
+    update_galleries_history_row_description(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        description,
+        now
+    ).await
+}
+
+async fn delete_gallery_item(
+    tx: &mut Transaction<'_, Sqlite>,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    now: i64
+) -> Result<(), DatabaseError>
+{
+    // for items a?, x, b?:
+
+    // remove x
+    let (a_id, b_id) = end_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await?;
+
+    if let Some(a_id) = a_id {
+        end_galleries_history_row(
+            &mut **tx,
+            owner,
+            proj,
+            a_id,
+            now
+        ).await?;
+
+        // make b next for a
+        update_galleries_history_row_next(
+            &mut **tx,
+            owner,
+            proj,
+            a_id,
+            b_id,
+            now
+        ).await?;
+    }
+
+    if let Some(b_id) = b_id {
+        end_galleries_history_row(
+            &mut **tx,
+            owner,
+            proj,
+            b_id,
+            now
+        ).await?;
+
+        // make a prev for b 
+        update_galleries_history_row_prev(
+            &mut **tx,
+            owner,
+            proj,
+            b_id,
+            a_id,
+            now
+        ).await?;
+    }
 
     Ok(())
+}
+
+async fn move_gallery_item(
+    tx: &mut Transaction<'_, Sqlite>,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    next_id: Option<i64>,
+    now: i64
+) -> Result<(), DatabaseError>
+{
+    // initial: a  m  b
+    // final:   a' m  b'
+
+    // TODO: special case where a = b' or b = a'
+
+    // remove m from between a and b
+    let (a_id, b_id) = end_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await?;
+
+    // NB: at least one of a_id, b_id is Some, or we couldn't move m 
+
+    if let Some(a_id) = a_id { 
+        end_galleries_history_row(
+            &mut **tx,
+            owner,
+            proj,
+            a_id,
+            now
+        ).await?;
+
+        // make b next for a
+        update_galleries_history_row_next(
+            &mut **tx,
+            owner,
+            proj,
+            a_id,
+            b_id,
+            now
+        ).await?;
+    }
+
+    if let Some(b_id) = b_id {
+        end_galleries_history_row(
+            &mut **tx,
+            owner,
+            proj,
+            b_id,
+            now
+        ).await?;
+
+        // make a prev for b 
+        update_galleries_history_row_prev(
+            &mut **tx,
+            owner,
+            proj,
+            b_id,
+            a_id,
+            now
+        ).await?;
+    }
+
+    if let Some(bn_id) = next_id {
+        end_galleries_history_row(
+            &mut **tx,
+            owner,
+            proj,
+            bn_id,
+            now
+        ).await?;
+
+        // get a' as old prev for b', make m new prev for b'
+        let an_id = update_galleries_history_row_prev(
+            &mut **tx,
+            owner,
+            proj,
+            bn_id,
+            Some(gallery_id),
+            now
+        ).await?;
+
+        if let Some(an_id) = an_id {
+            end_galleries_history_row(
+                &mut **tx,
+                owner,
+                proj,
+                an_id,
+                now
+            ).await?;
+
+            // make m new next for a'
+            update_galleries_history_row_next(
+                &mut **tx,
+                owner,
+                proj,
+                an_id,
+                Some(gallery_id),
+                now
+            ).await?;
+        }  
+
+        // insert m between a' and b'
+        update_galleries_history_row_prev_next(
+            &mut **tx,
+            owner,
+            proj,
+            gallery_id,
+            an_id,
+            Some(bn_id),
+            now
+        ).await?;
+    }
+    else {
+        // m is being inserted at the end
+        let an_id = end_galleries_history_row_last(
+            &mut **tx,
+            owner,
+            proj,
+            now
+        ).await?;
+
+        if let Some(an_id) = an_id {
+            // make m new next for a'
+            update_galleries_history_row_next(
+                &mut **tx,
+                owner,
+                proj,
+                an_id,
+                Some(gallery_id),
+                now
+            ).await?;
+        }
+
+        // insert m after a'
+        update_galleries_history_row_prev(
+            &mut **tx,
+            owner,
+            proj,
+            gallery_id,
+            an_id,
+            now
+        ).await?;
+    }
+
+    Ok(())  
 }
 
 pub async fn update_gallery<'a, A>(
@@ -390,10 +851,19 @@ where
 {
     let mut tx = conn.begin().await?;
 
-
-
-
-
+    for op in &gallery_patch.ops {
+        match op {
+            GalleryOp::Update { id, description } => update_gallery_item(
+                &mut tx, owner, proj, *id, description, now
+            ).await,
+            GalleryOp::Delete { id } => delete_gallery_item(
+                &mut tx, owner, proj, *id, now
+            ).await,
+            GalleryOp::Move { id, next } => move_gallery_item(
+                &mut tx, owner, proj, *id, *next, now
+            ).await
+        }?;
+    }
 
     tx.commit().await?;
 
@@ -702,5 +1172,36 @@ mod test {
 
         sort_as_ll(&mut act).unwrap();
         assert_eq!(&act, &exp, "{act:?} != {exp:?}, with seed {seed}");
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_delete(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 1, 
+                    filename: "img.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(42),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Delete { id: 1 }
+                ]
+            }, 
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            []
+        );
     }
 }
