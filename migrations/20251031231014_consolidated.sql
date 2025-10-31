@@ -77,6 +77,42 @@ CREATE TABLE IF NOT EXISTS releases (
   FOREIGN KEY(published_by) REFERENCES users(user_id)
 );
 
+CREATE TRIGGER IF NOT EXISTS releases_history_ai_start
+AFTER INSERT ON releases_history
+BEGIN
+  INSERT INTO releases (
+    release_id,
+    package_id,
+    version,
+    version_major,
+    version_minor,
+    version_patch,
+    version_pre,
+    version_build,
+    published_at,
+    published_by
+  )
+  VALUES (
+    NEW.release_id,
+    NEW.package_id,
+    NEW.version,
+    NEW.version_major,
+    NEW.version_minor,
+    NEW.version_patch,
+    NEW.version_pre,
+    NEW.version_build,
+    NEW.published_at,
+    NEW.published_by
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS releases_history_au_end
+AFTER UPDATE OF deleted_at ON releases_history
+BEGIN
+  DELETE FROM releases
+  WHERE release_id = OLD.release_id;
+END;
+
 CREATE TABLE IF NOT EXISTS packages_history (
   package_id INTEGER PRIMARY KEY NOT NULL CHECK(package_id >= 0),
   project_id INTEGER NOT NULL,
@@ -144,11 +180,31 @@ CREATE TABLE IF NOT EXISTS image_revisions (
   UNIQUE(project_id, filename, published_at)
 );
 
+CREATE TRIGGER IF NOT EXISTS image_revisions_ai_start
+AFTER INSERT ON image_revisions
+BEGIN
+  INSERT OR REPLACE INTO images (
+    project_id,
+    filename,
+    url,
+    content_type,
+    published_at,
+    published_by
+  )
+  VALUES (
+    NEW.project_id,
+    NEW.filename,
+    NEW.url,
+    NEW.content_type,
+    NEW.published_at,
+    NEW.published_by
+  );
+END;
+
 CREATE TABLE IF NOT EXISTS galleries_history (
   gallery_id INTEGER PRIMARY KEY NOT NULL CHECK(gallery_id >= 0),
-  prev_id INTEGER REFERENCES galleries_history(gallery_id),
-  next_id INTEGER REFERENCES galleries_history(gallery_id),
   project_id INTEGER NOT NULL,
+  sort_key BLOB NOT NULL,
   filename TEXT NOT NULL,
   description TEXT NOT NULL,
   published_at INTEGER NOT NULL,
@@ -159,9 +215,6 @@ CREATE TABLE IF NOT EXISTS galleries_history (
   FOREIGN KEY(published_by) REFERENCES users(user_id),
   FOREIGN KEY(removed_by) REFERENCES users(user_id),
   FOREIGN KEY(project_id, filename) REFERENCES images(project_id, filename),
-  UNIQUE(project_id, filename),
-  CHECK(next_id != gallery_id),
-  CHECK(prev_id != gallery_id),
   CHECK(
     (removed_at IS NULL AND removed_by IS NULL) OR
     (removed_at >= published_at AND removed_by IS NOT NULL)
@@ -170,9 +223,8 @@ CREATE TABLE IF NOT EXISTS galleries_history (
 
 CREATE TABLE IF NOT EXISTS galleries (
   gallery_id INTEGER PRIMARY KEY NOT NULL,
-  prev_id INTEGER REFERENCES galleries(gallery_id),
-  next_id INTEGER REFERENCES galleries(gallery_id),
   project_id INTEGER NOT NULL,
+  sort_key BLOB NOT NULL,
   filename TEXT NOT NULL,
   description TEXT NOT NULL,
   published_at INTEGER NOT NULL,
@@ -181,12 +233,39 @@ CREATE TABLE IF NOT EXISTS galleries (
   FOREIGN KEY(project_id) REFERENCES projects(project_id),
   FOREIGN KEY(published_by) REFERENCES users(user_id),
   FOREIGN KEY(project_id, filename) REFERENCES images(project_id, filename),
-  UNIQUE(prev_id),
-  UNIQUE(next_id),
   UNIQUE(project_id, filename),
-  CHECK(prev_id != gallery_id),
-  CHECK(next_id != gallery_id)
+  UNIQUE(project_id, sort_key)
 );
+
+CREATE TRIGGER IF NOT EXISTS galleries_history_ai_start
+AFTER INSERT ON galleries_history
+BEGIN
+  INSERT INTO galleries (
+    gallery_id,
+    project_id,
+    sort_key,
+    filename,
+    description,
+    published_at,
+    published_by
+  )
+  VALUES (
+    NEW.gallery_id,
+    NEW.project_id,
+    NEW.sort_key,
+    NEW.filename,
+    NEW.description,
+    NEW.published_at,
+    NEW.published_by
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS galleries_history_au_end
+AFTER UPDATE OF removed_at ON galleries_history
+BEGIN
+  DELETE FROM galleries
+  WHERE gallery_id = OLD.gallery_id;
+END;
 
 CREATE TABLE IF NOT EXISTS tags (
   project_id INTEGER NOT NULL,
