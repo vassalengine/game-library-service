@@ -1,3 +1,4 @@
+use num_bigint::BigUint;
 use sqlx::{
     Acquire, Executor, Transaction,
     sqlite::Sqlite
@@ -138,79 +139,6 @@ where
     Ok(())
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct GalleryRow {
-    gallery_id: i64,
-    next_id: Option<i64>,
-    filename: String,
-    description: String
-}
-
-impl From<GalleryRow> for GalleryImage {
-    fn from(r: GalleryRow) -> GalleryImage {
-        GalleryImage {
-            id: r.gallery_id,
-            filename: r.filename,
-            description: r.description
-        }
-    }
-}
-
-fn sort_as_ll(imgs: &mut [GalleryRow]) -> Result<(), DatabaseError> {
-    // NB: It is a precondition that the list head is first in the slice
-
-    // empty slices are already sorted
-    if imgs.is_empty() {
-        return Ok(());
-    }
-
-    // singletons must have no successor
-    if imgs.len() == 1 {
-        if imgs[0].next_id.is_none() {
-            return Ok(())
-        }
-        else {
-            return Err(DatabaseError::InvalidLinkedList);
-        }
-    }
-
-    // make a map from ids to indices
-    let mut idx: HashMap<i64, usize> = HashMap::from_iter(
-        imgs.iter()
-            .enumerate()
-            .map(|(i, img)| (img.gallery_id, i))
-    );
-
-    // chase the next pointers
-    for i in 1..(imgs.len() - 1) {
-        if let Some(next_id) = imgs[i-1].next_id {
-            if let Some(j) = idx.get(&next_id) {
-                // swap the item which should be next with
-                // the item occupying the next index
-                let swap_id = imgs[i].gallery_id;
-                imgs.swap(i, *j);
-                // update the index map
-                idx.insert(swap_id, *j);
-            }
-            else {
-                // imgs[i-1].next_id is a bad index
-                return Err(DatabaseError::InvalidLinkedList);
-            }
-        }
-        else {
-            // imgs[i-1].next_id should never be None
-            return Err(DatabaseError::InvalidLinkedList);
-        }
-    }
-
-    // check that the tail is the last element
-    if !imgs[imgs.len() - 1].next_id.is_none() {
-        return Err(DatabaseError::InvalidLinkedList);
-    }
-
-    Ok(())
-}
-
 pub async fn get_gallery<'e, E>(
     ex: E,
     proj: Project
@@ -218,29 +146,22 @@ pub async fn get_gallery<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let mut imgs = sqlx::query_as!(
-        GalleryRow,
-        "
+    Ok(
+        sqlx::query_as!(
+            GalleryImage,
+            "
 SELECT
-    gallery_id,
-    next_id,
+    gallery_id AS id,
     filename,
     description
 FROM galleries
 WHERE project_id = ?
-ORDER BY prev_id NULLS FIRST
-        ",
-        proj.0
-    )
-    .fetch_all(ex)
-    .await?;
-
-    sort_as_ll(&mut imgs)?;
-
-    Ok(
-        imgs.into_iter()
-            .map(|r| r.into())
-            .collect::<Vec<_>>()
+ORDER BY sort_key
+            ",
+            proj.0
+        )
+        .fetch_all(ex)
+        .await?
     )
 }
 
@@ -252,350 +173,27 @@ pub async fn get_gallery_at<'e, E>(
 where
     E: Executor<'e, Database = Sqlite>
 {
-    let mut imgs = sqlx::query_as!(
-        GalleryRow,
-        "
+    Ok(
+        sqlx::query_as!(
+            GalleryImage,
+            "
 SELECT
-    gallery_id,
-    next_id,
+    gallery_id AS id,
     filename,
     description
 FROM galleries_history
 WHERE project_id = ?
     AND published_at <= ?
     AND (removed_at > ? OR removed_at IS NULL)
-ORDER BY prev_id NULLS FIRST
-        ",
-        proj.0,
-        date,
-        date
+ORDER BY sort_key
+            ",
+            proj.0,
+            date,
+            date
+        )
+        .fetch_all(ex)
+        .await?
     )
-    .fetch_all(ex)
-    .await?;
-
-    sort_as_ll(&mut imgs)?;
-
-    Ok(
-        imgs.into_iter()
-            .map(|r| r.into())
-            .collect::<Vec<_>>()
-    )
-}
-
-/*
-async fn create_galleries_history_row<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    img_name: &str,
-    description: &str,
-    now: i64
-) -> Result<(GalleryItem, Option<GalleryItem>), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    // insert new item at the end of the 
-    sqlx::query!(
-        "
-INSERT INTO galleries_history (
-    prev_id,
-    project_id,
-    filename,
-    description,
-    published_at,
-    published_by
-)
-SELECT
-    gallery_id,
-    ?,
-    ?,
-    ?,
-    ?,
-    ?
-FROM galleries_history
-WHERE project_id = ?
-    AND removed_at IS NULL
-    AND next_id IS NULL
-RETURNING gallery_id, prev_id
-        ",
-        proj.0,
-        img_name,
-        description,
-        now,
-        owner.0,
-        proj.0
-    )
-    .fetch_one(ex)
-    .await
-    .map(|r| (GalleryItem(r.gallery_id), r.prev_id.map(GalleryItem)))
-    .map_err(map_unique)
-}
-*/
-
-async fn end_galleries_history_row<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    gallery_id: i64,
-    now: i64
-) -> Result<(Option<i64>, Option<i64>), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-UPDATE galleries_history
-SET
-    removed_by = ?,
-    removed_at = ?
-WHERE gallery_id = ?
-    AND project_id = ?
-    AND removed_at IS NULL
-RETURNING
-    prev_id AS 'prev_id?',
-    next_id AS 'next_id?'
-        ",
-        owner.0,
-        now,
-        gallery_id,
-        proj.0
-    )
-    .fetch_one(ex)
-    .await
-    .map(|r| (r.prev_id, r.next_id))
-    .map_err(DatabaseError::from)
-}
-
-async fn end_galleries_history_row_last<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    now: i64
-) -> Result<Option<i64>, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query_scalar!(
-        "
-UPDATE galleries_history
-SET
-    removed_by = ?,
-    removed_at = ?
-WHERE project_id = ?
-    AND next_id IS NULL
-    AND removed_at IS NULL
-RETURNING
-    gallery_id AS 'gallery_id?'
-        ",
-        owner.0,
-        now,
-        proj.0
-    )
-    .fetch_one(ex)
-    .await
-    .map_err(DatabaseError::from)
-}
-
-async fn update_galleries_history_row_description<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    gallery_id: i64,
-    description: &str,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-INSERT INTO galleries_history (
-    gallery_id,
-    prev_id,
-    next_id,
-    project_id,
-    filename,
-    description,
-    published_at,
-    published_by
-)
-SELECT
-    gallery_id,
-    prev_id,
-    next_id,
-    project_id,
-    filename,
-    ?,
-    ?,
-    ?
-FROM galleries_history
-WHERE project_id = ?
-    AND gallery_id = ?
-    AND removed_at = ?
-        ",
-        description,
-        now,
-        owner.0,
-        proj.0,
-        gallery_id,
-        now
-    )
-    .execute(ex)
-    .await
-    .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
-}
-
-async fn update_galleries_history_row_next<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    gallery_id: i64,
-    next_id: Option<i64>,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-INSERT INTO galleries_history (
-    gallery_id,
-    prev_id,
-    next_id,
-    project_id,
-    filename,
-    description,
-    published_at,
-    published_by
-)
-SELECT
-    gallery_id,
-    prev_id,
-    ?,
-    project_id,
-    filename,
-    description,
-    ?,
-    ?
-FROM galleries_history
-WHERE project_id = ?
-    AND gallery_id = ?
-    AND removed_at = ?
-        ",
-        next_id,
-        now,
-        owner.0,
-        proj.0,
-        gallery_id,
-        now
-    )
-    .execute(ex)
-    .await
-    .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
-}
-
-async fn update_galleries_history_row_prev<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    gallery_id: i64,
-    prev_id: Option<i64>,
-    now: i64
-) -> Result<Option<i64>, DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query_scalar!(
-        "
-INSERT INTO galleries_history (
-    gallery_id,
-    prev_id,
-    next_id,
-    project_id,
-    filename,
-    description,
-    published_at,
-    published_by
-)
-SELECT
-    gallery_id,
-    ?,
-    next_id,
-    project_id,
-    filename,
-    description,
-    ?,
-    ?
-FROM galleries_history
-WHERE project_id = ?
-    AND gallery_id = ?
-    AND removed_at = ?
-RETURNING prev_id 
-        ",
-        prev_id,
-        now,
-        owner.0,
-        proj.0,
-        gallery_id,
-        now
-    )
-    .fetch_one(ex)
-    .await
-    .map_err(DatabaseError::from)
-}
-
-async fn update_galleries_history_row_prev_next<'e, E>(
-    ex: E,
-    owner: Owner,
-    proj: Project,
-    gallery_id: i64,
-    prev_id: Option<i64>,
-    next_id: Option<i64>,
-    now: i64
-) -> Result<(), DatabaseError>
-where
-    E: Executor<'e, Database = Sqlite>
-{
-    sqlx::query!(
-        "
-INSERT INTO galleries_history (
-    gallery_id,
-    prev_id,
-    next_id,
-    project_id,
-    filename,
-    description,
-    published_at,
-    published_by
-)
-SELECT
-    gallery_id,
-    ?,
-    ?,
-    project_id,
-    filename,
-    description,
-    ?,
-    ?
-FROM galleries_history
-WHERE project_id = ?
-    AND gallery_id = ?
-    AND removed_at = ?
-        ",
-        prev_id,
-        next_id,
-        now,
-        owner.0,
-        proj.0,
-        gallery_id,
-        now
-    )
-    .execute(ex)
-    .await
-    .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
 }
 
 async fn update_gallery_item(
@@ -607,24 +205,7 @@ async fn update_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    // retire old row
-    let (prev_id, next_id) = end_galleries_history_row(
-        &mut **tx,
-        owner,
-        proj,
-        gallery_id,
-        now
-    ).await?;
-
-    // insert new row
-    update_galleries_history_row_description(
-        &mut **tx,
-        owner,
-        proj,
-        gallery_id,
-        description,
-        now
-    ).await
+    todo!();
 }
 
 async fn delete_gallery_item(
@@ -635,58 +216,7 @@ async fn delete_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    // for items a?, x, b?:
-
-    // remove x
-    let (a_id, b_id) = end_galleries_history_row(
-        &mut **tx,
-        owner,
-        proj,
-        gallery_id,
-        now
-    ).await?;
-
-    if let Some(a_id) = a_id {
-        end_galleries_history_row(
-            &mut **tx,
-            owner,
-            proj,
-            a_id,
-            now
-        ).await?;
-
-        // make b next for a
-        update_galleries_history_row_next(
-            &mut **tx,
-            owner,
-            proj,
-            a_id,
-            b_id,
-            now
-        ).await?;
-    }
-
-    if let Some(b_id) = b_id {
-        end_galleries_history_row(
-            &mut **tx,
-            owner,
-            proj,
-            b_id,
-            now
-        ).await?;
-
-        // make a prev for b 
-        update_galleries_history_row_prev(
-            &mut **tx,
-            owner,
-            proj,
-            b_id,
-            a_id,
-            now
-        ).await?;
-    }
-
-    Ok(())
+    todo!();
 }
 
 async fn move_gallery_item(
@@ -698,145 +228,32 @@ async fn move_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    // initial: a  m  b
-    // final:   a' m  b'
+    todo!();
+}
 
-    // TODO: special case where a = b' or b = a'
+fn midpoint(a: &[u8], b: &[u8]) -> Vec<u8> {
+    let len = std::cmp::max(a.len(), b.len());
 
-    // remove m from between a and b
-    let (a_id, b_id) = end_galleries_history_row(
-        &mut **tx,
-        owner,
-        proj,
-        gallery_id,
-        now
-    ).await?;
+    let mut av = Vec::with_capacity(len);
+    let mut bv = Vec::with_capacity(len);
 
-    // NB: at least one of a_id, b_id is Some, or we couldn't move m 
+    av.extend(a);
+    av.resize(len, 0);
 
-    if let Some(a_id) = a_id { 
-        end_galleries_history_row(
-            &mut **tx,
-            owner,
-            proj,
-            a_id,
-            now
-        ).await?;
+    bv.extend(b);
+    bv.resize(len, 0);
 
-        // make b next for a
-        update_galleries_history_row_next(
-            &mut **tx,
-            owner,
-            proj,
-            a_id,
-            b_id,
-            now
-        ).await?;
-    }
+    let ai = BigUint::from_bytes_be(&av);
+    let bi = BigUint::from_bytes_be(&bv);
 
-    if let Some(b_id) = b_id {
-        end_galleries_history_row(
-            &mut **tx,
-            owner,
-            proj,
-            b_id,
-            now
-        ).await?;
-
-        // make a prev for b 
-        update_galleries_history_row_prev(
-            &mut **tx,
-            owner,
-            proj,
-            b_id,
-            a_id,
-            now
-        ).await?;
-    }
-
-    if let Some(bn_id) = next_id {
-        end_galleries_history_row(
-            &mut **tx,
-            owner,
-            proj,
-            bn_id,
-            now
-        ).await?;
-
-        // get a' as old prev for b', make m new prev for b'
-        let an_id = update_galleries_history_row_prev(
-            &mut **tx,
-            owner,
-            proj,
-            bn_id,
-            Some(gallery_id),
-            now
-        ).await?;
-
-        if let Some(an_id) = an_id {
-            end_galleries_history_row(
-                &mut **tx,
-                owner,
-                proj,
-                an_id,
-                now
-            ).await?;
-
-            // make m new next for a'
-            update_galleries_history_row_next(
-                &mut **tx,
-                owner,
-                proj,
-                an_id,
-                Some(gallery_id),
-                now
-            ).await?;
-        }  
-
-        // insert m between a' and b'
-        update_galleries_history_row_prev_next(
-            &mut **tx,
-            owner,
-            proj,
-            gallery_id,
-            an_id,
-            Some(bn_id),
-            now
-        ).await?;
+    if &ai + 1u32 == bi {
+        av.push(0x80);
+        av
     }
     else {
-        // m is being inserted at the end
-        let an_id = end_galleries_history_row_last(
-            &mut **tx,
-            owner,
-            proj,
-            now
-        ).await?;
-
-        if let Some(an_id) = an_id {
-            // make m new next for a'
-            update_galleries_history_row_next(
-                &mut **tx,
-                owner,
-                proj,
-                an_id,
-                Some(gallery_id),
-                now
-            ).await?;
-        }
-
-        // insert m after a'
-        update_galleries_history_row_prev(
-            &mut **tx,
-            owner,
-            proj,
-            gallery_id,
-            an_id,
-            now
-        ).await?;
+        let mi: BigUint = (ai + bi) >> 1;
+        mi.to_bytes_be()
     }
-
-    Ok(())  
 }
 
 pub async fn update_gallery<'a, A>(
@@ -991,187 +408,18 @@ mod test {
     }
 
     #[test]
-    fn sort_as_ll_empty() {
-        let mut v = vec![];
-        sort_as_ll(&mut v).unwrap();
-        assert_eq!(&v, &[]);
+    fn midpoint_00_ff() {
+        assert_eq!(midpoint(&[0x00], &[0xFF]), &[0x7F]);
     }
 
     #[test]
-    fn sort_ll_1() {
-        let exp = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: None,
-                filename: "".into(),
-                description: "".into()
-            }
-        ];
-
-        let mut act = exp.clone();
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp);
+    fn midpoint_00_fe() {
+        assert_eq!(midpoint(&[0x00], &[0xFE]), &[0x7F]);
     }
 
     #[test]
-    fn sort_as_ll_1_bad_next() {
-        let mut act = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: Some(3),
-                filename: "".into(),
-                description: "".into()
-            }
-        ];
-        sort_as_ll(&mut act).unwrap_err();
-    }
-
-    #[test]
-    fn sort_as_ll_12() {
-        let exp = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: Some(2),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 2,
-                next_id: None,
-                filename: "".into(),
-                description: "".into()
-            }
-
-        ];
-
-        let mut act = exp.clone();
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp);
-    }
-
-    #[test]
-    fn sort_as_ll_123() {
-        let exp = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: Some(2),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 2,
-                next_id: Some(3),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 3,
-                next_id: None,
-                filename: "".into(),
-                description: "".into()
-            }
-        ];
-
-        let mut act = exp.clone();
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp);
-    }
-
-    #[test]
-    fn sort_as_ll_132() {
-        let exp = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: Some(3),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 3,
-                next_id: Some(2),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 2,
-                next_id: None,
-                filename: "".into(),
-                description: "".into()
-            },
-        ];
-
-        let mut act = [
-            GalleryRow {
-                gallery_id: 1,
-                next_id: Some(3),
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 2,
-                next_id: None,
-                filename: "".into(),
-                description: "".into()
-            },
-            GalleryRow {
-                gallery_id: 3,
-                next_id: Some(2),
-                filename: "".into(),
-                description: "".into()
-            }
-        ];
-
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp);
-    }
-
-    #[test]
-    fn sort_as_ll_10() {
-        let n = 10;
-
-        let exp = (1..=n).map(|i| GalleryRow {
-                gallery_id: i,
-                next_id: if i < n { Some(i+1) } else { None },
-                filename: "".into(),
-                description: "".into()
-            })
-            .collect::<Vec<_>>();
-
-        let mut act = exp.clone();
-        act[1..].reverse();
-
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp);
-    }
-
-    #[test]
-    fn sort_as_ll_lots() {
-        use rand::{
-            RngCore, SeedableRng,
-            rngs::StdRng,
-            seq::SliceRandom
-        };
-
-        let n = 1000;
-
-        let exp = (1..=n).map(|i| GalleryRow {
-                gallery_id: i,
-                next_id: if i < n { Some(i+1) } else { None },
-                filename: "".into(),
-                description: "".into()
-            })
-            .collect::<Vec<_>>();
-
-        let mut act = exp.clone();
-
-        let seed = rand::rng().next_u64();
-        let mut rng = StdRng::seed_from_u64(seed);
-
-        // shuffle, keeping head in place
-        act[1..].shuffle(&mut rng);
-
-        sort_as_ll(&mut act).unwrap();
-        assert_eq!(&act, &exp, "{act:?} != {exp:?}, with seed {seed}");
+    fn midpoint_00_01() {
+        assert_eq!(midpoint(&[0x00], &[0x01]), &[0x00, 0x80]);
     }
 
     #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]

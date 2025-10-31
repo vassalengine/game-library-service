@@ -1,0 +1,23 @@
+INSERT INTO galleries_history (
+  gallery_id,
+  project_id,
+  sort_key,
+  filename,
+  description,
+  published_at,
+  published_by,
+  removed_at,
+  removed_by
+)
+VALUES
+  (
+    1,
+    42,
+    x'80',
+    "img.png",
+    "",
+    1694804206419538067,
+    1,
+    NULL,
+    NULL
+  );
