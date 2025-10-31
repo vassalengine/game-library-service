@@ -196,6 +196,188 @@ ORDER BY sort_key
     )
 }
 
+async fn retire_galleries_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    gallery_id: i64,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE galleries_history
+SET
+    removed_by = ?,
+    removed_at = ?
+WHERE project_id = ?
+    AND gallery_id = ?
+        ",
+        owner.0,
+        now,
+        proj.0,
+        gallery_id,
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn update_galleries_history_row_desc<'e, E>(
+    ex: E,
+    owner: Owner,
+    gallery_id: i64,
+    description: &str,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    project_id,
+    sort_key,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    project_id,
+    sort_key,
+    filename,
+    ?,
+    ?,
+    ?
+FROM galleries_history
+WHERE gallery_id = ?
+    AND removed_at = ?
+        ",
+        description,
+        now,
+        owner.0,
+        gallery_id,
+        now
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn update_galleries_history_row_sort_key<'e, E>(
+    ex: E,
+    owner: Owner,
+    gallery_id: i64,
+    sort_key: &[u8],
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    project_id,
+    sort_key,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+SELECT
+    project_id,
+    ?,
+    filename,
+    description,
+    ?,
+    ?
+FROM galleries_history
+WHERE gallery_id = ?
+    AND removed_at = ?
+        ",
+        sort_key,
+        now,
+        owner.0,
+        gallery_id,
+        now
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
+}
+
+async fn get_prev_next_keys<'e, E>(
+    ex: E,
+    proj: Project,
+    next_id: Option<i64>
+) -> Result<(Vec<u8>, Vec<u8>), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    match next_id {
+        // find the sort keys for prev and next items
+        Some(next_id) => {
+            let r = sqlx::query!(
+                "
+SELECT
+    prev_key,
+    next_key
+FROM (
+    SELECT
+        gallery_id,
+        sort_key AS next_key,
+        LAG(sort_key) OVER (ORDER BY sort_key) prev_key
+    FROM galleries_history
+    WHERE project_id = ?
+        AND removed_at IS NULL
+)
+WHERE gallery_id = ?
+                ",
+                proj.0,
+                next_id
+            )
+            .fetch_optional(ex)
+            .await?
+            .ok_or(DatabaseError::NotFound)?;
+
+            match r.prev_key {
+                Some(prev_key) => {
+                    Ok((prev_key, r.next_key))
+                },
+                None => {
+                    // the next item is first
+                    Ok((vec![0x00], r.next_key))
+                }
+            }
+        },
+        None => {
+            // there is no next item, so prev is the last item
+            // find the sort key for the last item
+            let prev_key = sqlx::query_scalar!(
+                "
+SELECT MAX(sort_key)
+FROM galleries_history
+WHERE project_id = ?
+    AND removed_at IS NULL
+                ",
+                proj.0
+            )
+            .fetch_one(ex)
+            .await?
+            .unwrap_or_else(|| vec![0x00]);
+
+            let prev_key_len = prev_key.len();
+            Ok((prev_key, vec![0xFF; prev_key_len + 1]))
+        }
+    }
+}
+
 async fn update_gallery_item(
     tx: &mut Transaction<'_, Sqlite>,
     owner: Owner,
@@ -205,7 +387,21 @@ async fn update_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    todo!();
+    retire_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await?;
+
+    update_galleries_history_row_desc(
+        &mut **tx,
+        owner,
+        gallery_id,
+        description,
+        now
+    ).await
 }
 
 async fn delete_gallery_item(
@@ -216,7 +412,13 @@ async fn delete_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    todo!();
+    retire_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await
 }
 
 async fn move_gallery_item(
@@ -228,10 +430,38 @@ async fn move_gallery_item(
     now: i64
 ) -> Result<(), DatabaseError>
 {
-    todo!();
+    retire_galleries_history_row(
+        &mut **tx,
+        owner,
+        proj,
+        gallery_id,
+        now
+    ).await?;
+
+    // get sort keys of the prev and next items
+    let (prev_key, next_key) = get_prev_next_keys(
+        &mut **tx,
+        proj,
+        next_id
+    ).await?;
+
+    // find the midpoint between prev and next
+    let sort_key = midpoint(&prev_key, &next_key);
+
+    // insert the new row
+    update_galleries_history_row_sort_key(
+        &mut **tx,
+        owner,
+        gallery_id,
+        &sort_key,
+        now
+    ).await
 }
 
 fn midpoint(a: &[u8], b: &[u8]) -> Vec<u8> {
+    // swap a, b if b is lesser
+    let (a, b) = if a < b { (a, b) } else { (b, a) };
+
     // ensure that a, b have the same length
     let len = std::cmp::max(a.len(), b.len());
 
@@ -252,6 +482,7 @@ fn midpoint(a: &[u8], b: &[u8]) -> Vec<u8> {
     let a = &av[..];
     let b = if let Some(ref bv) = bv { &bv[..] } else { b };
 
+    // make a and b arbitrary-width integers
     let ai = BigUint::from_bytes_be(a);
     let bi = BigUint::from_bytes_be(b);
 
@@ -432,13 +663,18 @@ mod test {
         assert_eq!(midpoint(&[0x00], &[0x01]), &[0x00, 0x80]);
     }
 
+    #[test]
+    fn midpoint_00ff_01() {
+        assert_eq!(midpoint(&[0x00, 0xFF], &[0x01]), &[0x00, 0xFF, 0x80]);
+    }
+
     #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
-    async fn update_gallery_delete(pool: Pool) {
+    async fn update_gallery_delete_ok(pool: Pool) {
         assert_eq!(
             get_gallery(&pool, Project(42)).await.unwrap(),
             [
                 GalleryImage {
-                    id: 1, 
+                    id: 1,
                     filename: "img.png".into(),
                     description: "".into()
                 }
@@ -453,13 +689,442 @@ mod test {
                 ops: vec![
                     GalleryOp::Delete { id: 1 }
                 ]
-            }, 
+            },
             1703980420641538067
         ).await.unwrap();
 
         assert_eq!(
             get_gallery(&pool, Project(42)).await.unwrap(),
             []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_delete_nonexistent_id(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(42),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Delete { id: 0 }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_delete_id_not_for_project(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(6),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Delete { id: 1 }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_delete_id_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(0),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Delete { id: 1 }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_update(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 1,
+                    filename: "img.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(42),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Update { id: 1, description: "x".into() }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 5,
+                    filename: "img.png".into(),
+                    description: "x".into()
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_update_nonexistent_id(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(42),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Update { id: 0, description: "x".into() }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_update_id_not_for_project(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(6),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Update { id: 1, description: "x".into() }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_update_id_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(0),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Update { id: 1, description: "x".into() }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_end(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(6),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 3,  next: None }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 5,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_start(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(6),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 3,  next: Some(2) }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 5,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_mid(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(6),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 4,  next: Some(3) }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 5,
+                    filename: "c.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_nonexistent_id(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(6),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Move { id: 0,  next: None }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_nonexistent_next(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(6),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Move { id: 2,  next: Some(0) }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_only_item(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 1,
+                    filename: "img.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(42),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 1,  next: None }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(42)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 5,
+                    filename: "img.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_id_not_for_project(pool: Pool) {
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(42),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Move { id: 2,  next: None }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_not_a_project(pool: Pool) {
+        // This should not happen; the Project passed in should be good.
+        assert_eq!(
+            update_gallery(
+                &pool,
+                Owner(1),
+                Project(0),
+                &GalleryPatch {
+                    ops: vec![
+                        GalleryOp::Move { id: 2,  next: None }
+                    ]
+                },
+                1703980420641538067
+            ).await.unwrap_err(),
+            DatabaseError::NotFound
         );
     }
 }
