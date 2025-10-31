@@ -232,20 +232,30 @@ async fn move_gallery_item(
 }
 
 fn midpoint(a: &[u8], b: &[u8]) -> Vec<u8> {
+    // ensure that a, b have the same length
     let len = std::cmp::max(a.len(), b.len());
 
     let mut av = Vec::with_capacity(len);
-    let mut bv = Vec::with_capacity(len);
-
     av.extend(a);
     av.resize(len, 0);
 
-    bv.extend(b);
-    bv.resize(len, 0);
+    let bv = if b.len() < len {
+        let mut bv = Vec::with_capacity(len);
+        bv.extend(b);
+        bv.resize(len, 0);
+        Some(bv)
+    }
+    else {
+        None
+    };
 
-    let ai = BigUint::from_bytes_be(&av);
-    let bi = BigUint::from_bytes_be(&bv);
+    let a = &av[..];
+    let b = if let Some(ref bv) = bv { &bv[..] } else { b };
 
+    let ai = BigUint::from_bytes_be(a);
+    let bi = BigUint::from_bytes_be(b);
+
+    // extend if a and b differ by one, otherwise take the average
     if &ai + 1u32 == bi {
         av.push(0x80);
         av
