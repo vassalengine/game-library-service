@@ -252,7 +252,6 @@ fn routes(
                 .delete(handlers::release_delete)
             }
         )
-/*
         .route(
             "/projects/{proj}/gallery",
             if read_only {
@@ -262,7 +261,6 @@ fn routes(
                 patch(handlers::gallery_patch)
             }
         )
-*/
         .route(
             "/projects/{proj}/images/{img_name}",
             if read_only {
