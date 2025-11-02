@@ -489,6 +489,27 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         images::get_gallery_at(&self.0, proj, date).await
     }
 
+    async fn add_gallery_image(
+        &self,
+        owner: Owner,
+        proj: Project,
+        img_name: &str,
+        url: &str,
+        content_type: &str,
+        now: i64
+    ) -> Result<(), DatabaseError>
+    {
+        images::add_gallery_image(
+            &self.0,
+            owner,
+            proj,
+            img_name,
+            url,
+            content_type,
+            now
+        ).await
+    }
+
     async fn update_gallery(
         &self,
         owner: Owner,

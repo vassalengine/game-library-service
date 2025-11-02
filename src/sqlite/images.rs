@@ -113,7 +113,7 @@ pub async fn add_image_url<'a, A>(
     img_name: &str,
     url: &str,
     content_type: &str,
-    now: i64,
+    now: i64
 ) -> Result<(), DatabaseError>
 where
     A: Acquire<'a, Database = Sqlite>
@@ -194,6 +194,43 @@ ORDER BY sort_key
         .fetch_all(ex)
         .await?
     )
+}
+
+async fn create_galleries_history_row<'e, E>(
+    ex: E,
+    owner: Owner,
+    proj: Project,
+    sort_key: &[u8],
+    img_name: &str,
+    description: &str,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+INSERT INTO galleries_history (
+    project_id,
+    sort_key,
+    filename,
+    description,
+    published_at,
+    published_by
+)
+VALUES (?, ?, ?, ?, ?, ?)
+        ",
+        proj.0,
+        sort_key,
+        img_name,
+        description,
+        now,
+        owner.0
+    )
+    .execute(ex)
+    .await
+    .map_err(DatabaseError::from)
+    .and_then(require_one_modified)
 }
 
 async fn retire_galleries_history_row<'e, E>(
@@ -312,6 +349,28 @@ WHERE gallery_id = ?
     .and_then(require_one_modified)
 }
 
+async fn get_last_key<'e, E>(
+    ex: E,
+    proj: Project
+) -> Result<Option<Vec<u8>>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_scalar!(
+            "
+SELECT MAX(sort_key)
+FROM galleries_history
+WHERE project_id = ?
+    AND removed_at IS NULL
+            ",
+            proj.0
+        )
+        .fetch_one(ex)
+        .await?
+    )
+}
+
 async fn get_prev_next_keys<'e, E>(
     ex: E,
     proj: Project,
@@ -359,18 +418,9 @@ WHERE gallery_id = ?
         None => {
             // there is no next item, so prev is the last item
             // find the sort key for the last item
-            let prev_key = sqlx::query_scalar!(
-                "
-SELECT MAX(sort_key)
-FROM galleries_history
-WHERE project_id = ?
-    AND removed_at IS NULL
-                ",
-                proj.0
-            )
-            .fetch_one(ex)
-            .await?
-            .unwrap_or_else(|| vec![0x00]);
+            let prev_key = get_last_key(ex, proj)
+                .await?
+                .unwrap_or_else(|| vec![0x00]);
 
             let prev_key_len = prev_key.len();
             Ok((prev_key, vec![0xFF; prev_key_len + 1]))
@@ -458,6 +508,18 @@ async fn move_gallery_item(
     ).await
 }
 
+fn trailing(a: &[u8]) -> Vec<u8> {
+    if a.iter().all(|b| *b == 0xFF) {
+        let mut bv = vec![0xFF; a.len() + 1];
+        bv[a.len()] = 0x01;
+        bv
+    }
+    else {
+        let bi: BigUint = BigUint::from_bytes_be(a) + 1u32;
+        bi.to_bytes_be()
+    }
+}
+
 fn midpoint(a: &[u8], b: &[u8]) -> Vec<u8> {
     // swap a, b if b is lesser
     let (a, b) = if a < b { (a, b) } else { (b, a) };
@@ -522,6 +584,65 @@ where
             ).await
         }?;
     }
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
+pub async fn add_gallery_image<'a, A>(
+    conn: A,
+    owner: Owner,
+    proj: Project,
+    img_name: &str,
+    url: &str,
+    content_type: &str,
+    now: i64
+) -> Result<(), DatabaseError>
+where
+    A: Acquire<'a, Database = Sqlite>
+{
+    let mut tx = conn.begin().await?;
+
+    // add row to images_revisions
+    create_image_revision_row(
+        &mut *tx,
+        owner,
+        proj,
+        img_name,
+        url,
+        content_type,
+        now
+    ).await?;
+
+    // find the sort key of the last item
+    let last_key = get_last_key(&mut *tx, proj).await?;
+
+    // generate a sort key following it
+    let sort_key = match last_key {
+        Some(last_key) if last_key.is_empty() =>
+            // should not happen, violates db constraint
+            return Err(DatabaseError::InvalidSortKey),
+        Some(last_key) => trailing(&last_key),
+        None => vec![0x40]
+    };
+
+    // add row to galleries_history
+    create_galleries_history_row(
+        &mut *tx,
+        owner,
+        proj,
+        &sort_key,
+        img_name,
+        "",
+        now
+    ).await?;
+
+    // update project to reflect the change
+    update_project_non_project_data(&mut tx, owner, proj, now).await?;
 
     tx.commit().await?;
 
@@ -666,6 +787,31 @@ mod test {
     #[test]
     fn midpoint_00ff_01() {
         assert_eq!(midpoint(&[0x00, 0xFF], &[0x01]), &[0x00, 0xFF, 0x80]);
+    }
+
+    #[test]
+    fn trailling_00() {
+        assert_eq!(trailing(&[0x00]), &[0x01]);
+    }
+
+    #[test]
+    fn trailling_7f() {
+        assert_eq!(trailing(&[0x7F]), &[0x80]);
+    }
+
+    #[test]
+    fn trailling_ff_03() {
+        assert_eq!(trailing(&[0xFF, 0x03]), &[0xFF, 0x04]);
+    }
+
+    #[test]
+    fn trailling_ff() {
+        assert_eq!(trailing(&[0xFF]), &[0xFF, 0x01]);
+    }
+
+    #[test]
+    fn trailling_ffff() {
+        assert_eq!(trailing(&[0xFF, 0xFF]), &[0xFF, 0xFF, 0x01]);
     }
 
     #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]

@@ -583,6 +583,19 @@ pub trait Core {
         unimplemented!();
     }
 
+    async fn add_gallery_image(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _img_name: &str,
+        _content_type: &Mime,
+        _content_length: Option<u64>,
+        _stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
+    ) -> Result<(), AddImageError>
+    {
+        unimplemented!();
+    }
+
     async fn update_gallery(
         &self,
         _owner: Owner,

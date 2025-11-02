@@ -506,6 +506,40 @@ where
         Ok(self.db.remove_player(player, proj).await?)
     }
 
+    async fn add_gallery_image(
+        &self,
+        owner: Owner,
+        proj: Project,
+        filename: &str,
+        content_type: &Mime,
+        content_length: Option<u64>,
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
+    ) -> Result<(), AddImageError>
+    {
+        let now = self.now_nanos()?;
+
+        // do the upload
+        let url = self.upload_image(
+            filename,
+            content_type,
+            content_length,
+            stream,
+            now
+        ).await?;
+
+        // update record
+        self.db.add_gallery_image(
+            owner,
+            proj,
+            filename,
+            &url,
+            content_type.as_ref(),
+            now
+        ).await?;
+
+        Ok(())
+    }
+
     async fn update_gallery(
         &self,
         owner: Owner,
@@ -555,62 +589,14 @@ where
     {
         let now = self.now_nanos()?;
 
-        // MIME type should be an image
-        if !supported_image_type(content_type) {
-            return Err(AddImageError::BadMimeType);
-        }
-
-        // ensure the filename is valid
-        let filename = safe_filename(filename)
-            .or(Err(AddImageError::InvalidFilename))?;
-
-        // write the stream to a file
-        let mut file = TempFile::new_in(&*self.upload_dir)
-            .await
-            .map_err(io::Error::other)?;
-
-        let stream = Box::into_pin(stream);
-
-        let (sha256, size) = stream_to_writer(stream, &mut file)
-            .await?;
-
-        // check that the content length, if given, matches what was read
-        if content_length.is_some_and(|cl| cl != size) {
-            // we know the stream is shorter because were it longer, it
-            // would already have failed from hitting the limit
-            return Err(
-                io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    "stream shorter than Content-Length"
-                )
-            )?;
-        }
-
-        // add hash prefix to file upload path
-        let bucket_path = format!(
-            "{0}/{1}/{filename}",
-            &sha256[0..1],
-            &sha256[1..2]
-        );
-
-        file.rewind().await?;
-
-        // check actual MIME type
-        let ext = filename.rsplit_once('.').map(|(_, ext)| ext);
-        let buf = get_magic(&mut file).await?;
-        let content_type = infer_image_type(ext, &buf)
-            .map_err(|_| AddImageError::BadMimeType)?;
-
-// TODO: check dimensions? resize?
-
-        file.rewind().await?;
-
-        let url = self.uploader.upload_with_content_type(
-            &bucket_path,
-            &mut file,
-            content_type.as_ref()
-        )
-        .await?;
+        // do the upload
+        let url = self.upload_image(
+            filename,
+            content_type,
+            content_length,
+            stream,
+            now
+        ).await?;
 
         // update record
         self.db.add_image_url(
@@ -962,6 +948,75 @@ where
         }?;
 
         Ok((prev, next, psums, total))
+    }
+
+    async fn upload_image(
+        &self,
+        filename: &str,
+        content_type: &Mime,
+        content_length: Option<u64>,
+        stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>,
+        now: i64
+    ) -> Result<String, AddImageError>
+    {
+        // MIME type should be an image
+        if !supported_image_type(content_type) {
+            return Err(AddImageError::BadMimeType);
+        }
+
+        // ensure the filename is valid
+        let filename = safe_filename(filename)
+            .or(Err(AddImageError::InvalidFilename))?;
+
+        // write the stream to a file
+        let mut file = TempFile::new_in(&*self.upload_dir)
+            .await
+            .map_err(io::Error::other)?;
+
+        let stream = Box::into_pin(stream);
+
+        let (sha256, size) = stream_to_writer(stream, &mut file)
+            .await?;
+
+        // check that the content length, if given, matches what was read
+        if content_length.is_some_and(|cl| cl != size) {
+            // we know the stream is shorter because were it longer, it
+            // would already have failed from hitting the limit
+            return Err(
+                io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "stream shorter than Content-Length"
+                )
+            )?;
+        }
+
+        // add hash prefix to file upload path
+        let bucket_path = format!(
+            "{0}/{1}/{filename}",
+            &sha256[0..1],
+            &sha256[1..2]
+        );
+
+        file.rewind().await?;
+
+        // check actual MIME type
+        let ext = filename.rsplit_once('.').map(|(_, ext)| ext);
+        let buf = get_magic(&mut file).await?;
+        let content_type = infer_image_type(ext, &buf)
+            .map_err(|_| AddImageError::BadMimeType)?;
+
+// TODO: check dimensions? resize?
+
+        file.rewind().await?;
+
+        let url = self.uploader.upload_with_content_type(
+            &bucket_path,
+            &mut file,
+            content_type.as_ref()
+        )
+        .await?;
+
+        Ok(url)
     }
 }
 

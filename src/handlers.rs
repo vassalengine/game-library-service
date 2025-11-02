@@ -255,6 +255,35 @@ pub async fn file_post(
     )
 }
 
+pub async fn gallery_post(
+    Owned(owner, proj): Owned,
+    Path((_, img_name)): Path<(String, String)>,
+    content_type: Option<TypedHeader<ContentType>>,
+    content_length: Option<TypedHeader<ContentLength>>,
+    State(core): State<CoreArc>,
+    request: Request
+) -> Result<(), AppError>
+{
+
+    let (content_length, limit) = limit_content_length(
+        content_length.map(|cl| cl.0.0),
+        core.max_file_size()
+    )?;
+
+    // NB: No ContentType header will result in BAD_REQUEST by default, so
+    // have to make it optional and check manually
+    Ok(
+        core.add_gallery_image(
+            owner,
+            proj,
+            &img_name,
+            &content_type.ok_or(AppError::BadMimeType)?.0.into(),
+            content_length,
+            into_stream(request, limit)
+        ).await?
+    )
+}
+
 pub async fn gallery_patch(
     Owned(owner, proj): Owned,
     State(core): State<CoreArc>,

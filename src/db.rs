@@ -23,8 +23,8 @@ pub enum DatabaseError {
     NotFound,
     #[error("Not empty")]
     NotEmpty,
-    #[error("Invalid linked list")]
-    InvalidLinkedList,
+    #[error("Invalid sort key")]
+    InvalidSortKey,
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error)
 }
@@ -428,6 +428,16 @@ pub trait DatabaseClient {
         _proj: Project,
         _date: i64
     ) -> impl Future<Output = Result<Vec<GalleryImage>, DatabaseError>> + Send;
+
+    fn add_gallery_image(
+        &self,
+        _owner: Owner,
+        _proj: Project,
+        _img_name: &str,
+        _url: &str,
+        _content_type: &str,
+        _now: i64
+    ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
 
     fn update_gallery(
         &self,

@@ -262,6 +262,15 @@ fn routes(
             }
         )
         .route(
+            "/projects/{proj}/gallery/{img_name}",
+            if read_only {
+                post(handlers::forbidden)
+            }
+            else {
+                post(handlers::gallery_post)
+            }
+        )
+        .route(
             "/projects/{proj}/images/{img_name}",
             if read_only {
                 post(handlers::forbidden)
