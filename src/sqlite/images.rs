@@ -269,11 +269,11 @@ async fn update_galleries_history_row_desc<'e, E>(
     gallery_id: i64,
     description: &str,
     now: i64
-) -> Result<(), DatabaseError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query!(
+    sqlx::query_scalar!(
         "
 INSERT INTO galleries_history (
     project_id,
@@ -293,6 +293,7 @@ SELECT
 FROM galleries_history
 WHERE gallery_id = ?
     AND removed_at = ?
+RETURNING gallery_id
         ",
         description,
         now,
@@ -300,10 +301,9 @@ WHERE gallery_id = ?
         gallery_id,
         now
     )
-    .execute(ex)
+    .fetch_one(ex)
     .await
     .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
 }
 
 async fn update_galleries_history_row_sort_key<'e, E>(
@@ -312,11 +312,11 @@ async fn update_galleries_history_row_sort_key<'e, E>(
     gallery_id: i64,
     sort_key: &[u8],
     now: i64
-) -> Result<(), DatabaseError>
+) -> Result<i64, DatabaseError>
 where
     E: Executor<'e, Database = Sqlite>
 {
-    sqlx::query!(
+    sqlx::query_scalar!(
         "
 INSERT INTO galleries_history (
     project_id,
@@ -336,6 +336,7 @@ SELECT
 FROM galleries_history
 WHERE gallery_id = ?
     AND removed_at = ?
+RETURNING gallery_id
         ",
         sort_key,
         now,
@@ -343,10 +344,9 @@ WHERE gallery_id = ?
         gallery_id,
         now
     )
-    .execute(ex)
+    .fetch_one(ex)
     .await
     .map_err(DatabaseError::from)
-    .and_then(require_one_modified)
 }
 
 async fn get_last_key<'e, E>(
@@ -435,7 +435,7 @@ async fn update_gallery_item(
     gallery_id: i64,
     description: &str,
     now: i64
-) -> Result<(), DatabaseError>
+) -> Result<i64, DatabaseError>
 {
     retire_galleries_history_row(
         &mut **tx,
@@ -478,7 +478,7 @@ async fn move_gallery_item(
     gallery_id: i64,
     next_id: Option<i64>,
     now: i64
-) -> Result<(), DatabaseError>
+) -> Result<i64, DatabaseError>
 {
     retire_galleries_history_row(
         &mut **tx,
@@ -571,18 +571,37 @@ where
 {
     let mut tx = conn.begin().await?;
 
+    let mut old_to_new = HashMap::new();
+
     for op in &gallery_patch.ops {
         match op {
-            GalleryOp::Update { id, description } => update_gallery_item(
-                &mut tx, owner, proj, *id, description, now
-            ).await,
-            GalleryOp::Delete { id } => delete_gallery_item(
-                &mut tx, owner, proj, *id, now
-            ).await,
-            GalleryOp::Move { id, next } => move_gallery_item(
-                &mut tx, owner, proj, *id, *next, now
-            ).await
-        }?;
+            GalleryOp::Update { id, description } => {
+                let id = *old_to_new.get(id).unwrap_or(id);
+                old_to_new.insert(
+                    id,
+                    update_gallery_item(
+                        &mut tx, owner, proj, id, &description, now
+                    ).await?
+                );
+            },
+            GalleryOp::Delete { id } => {
+                let id = *old_to_new.get(id).unwrap_or(id);
+                delete_gallery_item(
+                    &mut tx, owner, proj, id, now
+                ).await?;
+            },
+            GalleryOp::Move { id, next } => {
+                let id = *old_to_new.get(id).unwrap_or(id);
+                let next = next.as_ref()
+                    .map(|n| *old_to_new.get(n).unwrap_or(n));
+                old_to_new.insert(
+                    id,
+                    move_gallery_item(
+                        &mut tx, owner, proj, id, next, now
+                    ).await?
+                );
+            }
+        }
     }
 
     // update project to reflect the change
@@ -1271,6 +1290,64 @@ mod test {
                 1703980420641538067
             ).await.unwrap_err(),
             DatabaseError::NotFound
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_move(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(6),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 3,  next: Some(2) },
+                    GalleryOp::Move { id: 4,  next: Some(3) }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 6,
+                    filename: "c.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 5,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                }
+            ]
         );
     }
 }
