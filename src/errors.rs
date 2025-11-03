@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CloseFlagError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, GetPublishersError, GetTagsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError};
+use crate::core::{AddFlagError, AddImageError, AddFileError, AddOwnersError, AddPlayerError, CloseFlagError, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, GetPublishersError, GetTagsError, RemoveOwnersError, RemovePlayerError, UpdateGalleryError, UpdatePackageError, UpdateProjectError, UserIsOwnerError};
 
 // TODO: better error messsages
 #[derive(Debug, Error, PartialEq)]
@@ -241,6 +241,15 @@ impl From<AddImageError> for AppError {
             AddImageError::TimeError(e) => AppError::InternalError(e.to_string()),
             AddImageError::TooLarge => AppError::TooLarge,
             AddImageError::UploadError(e) => AppError::UploadError(e.to_string())
+        }
+    }
+}
+
+impl From<UpdateGalleryError> for AppError {
+    fn from(err: UpdateGalleryError) -> Self {
+        match err {
+            UpdateGalleryError::DatabaseError(e) => AppError::DatabaseError(e.to_string()),
+            UpdateGalleryError::TimeError(e) => AppError::InternalError(e.to_string())
         }
     }
 }
