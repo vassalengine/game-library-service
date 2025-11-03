@@ -287,11 +287,10 @@ pub async fn gallery_post(
 pub async fn gallery_patch(
     Owned(owner, proj): Owned,
     State(core): State<CoreArc>,
-    Wrapper(Json(proj_data)): Wrapper<Json<GalleryPatch>>
+    Wrapper(Json(gallery_patch)): Wrapper<Json<GalleryPatch>>
 ) -> Result<(), AppError>
 {
-
-    Ok(())
+    Ok(core.update_gallery(owner, proj, &gallery_patch).await?)
 }
 
 pub async fn image_get(
