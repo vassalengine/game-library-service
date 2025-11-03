@@ -506,13 +506,15 @@ impl TryFrom<MaybeGalleryOp> for GalleryOp {
         match m {
             MaybeGalleryOp::Update { id, description } => {
                 // field lengths must be within bounds
-                if description.len() > GALLERY_ITEM_DESCRIPTION_MAX_LENGTH {
+                if description.len() <= GALLERY_ITEM_DESCRIPTION_MAX_LENGTH &&
+                    description == description.trim()
+                {
+                    Ok(GalleryOp::Update { id, description })
+                }
+                else {
                     Err(GalleryOpError(
                         MaybeGalleryOp::Update { id, description }
                     ))
-                }
-                else {
-                    Ok(GalleryOp::Update { id, description })
                 }
             },
             MaybeGalleryOp::Delete { id } =>
@@ -1600,6 +1602,18 @@ mod test {
         let mgp = MaybeGalleryOp::Update {
             id: 3,
             description: "x".repeat(GALLERY_ITEM_DESCRIPTION_MAX_LENGTH + 1)
+        };
+        assert_eq!(
+            GalleryOp::try_from(mgp.clone()),
+            Err(GalleryOpError(mgp))
+        );
+    }
+
+    #[test]
+    fn try_from_maybe_gallery_op_update_untrimmed() {
+        let mgp = MaybeGalleryOp::Update {
+            id: 3,
+            description: " x ".into()
         };
         assert_eq!(
             GalleryOp::try_from(mgp.clone()),
