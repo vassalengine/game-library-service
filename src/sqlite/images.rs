@@ -580,7 +580,7 @@ where
                 old_to_new.insert(
                     id,
                     update_gallery_item(
-                        &mut tx, owner, proj, id, &description, now
+                        &mut tx, owner, proj, id, description, now
                     ).await?
                 );
             },
