@@ -576,28 +576,28 @@ where
     for op in &gallery_patch.ops {
         match op {
             GalleryOp::Update { id, description } => {
-                let id = *old_to_new.get(id).unwrap_or(id);
+                let cur = *old_to_new.get(id).unwrap_or(id);
                 old_to_new.insert(
                     id,
                     update_gallery_item(
-                        &mut tx, owner, proj, id, description, now
+                        &mut tx, owner, proj, cur, description, now
                     ).await?
                 );
             },
             GalleryOp::Delete { id } => {
-                let id = *old_to_new.get(id).unwrap_or(id);
+                let cur = *old_to_new.get(id).unwrap_or(id);
                 delete_gallery_item(
-                    &mut tx, owner, proj, id, now
+                    &mut tx, owner, proj, cur, now
                 ).await?;
             },
             GalleryOp::Move { id, next } => {
-                let id = *old_to_new.get(id).unwrap_or(id);
+                let cur = *old_to_new.get(id).unwrap_or(id);
                 let next = next.as_ref()
                     .map(|n| *old_to_new.get(n).unwrap_or(n));
                 old_to_new.insert(
                     id,
                     move_gallery_item(
-                        &mut tx, owner, proj, id, next, now
+                        &mut tx, owner, proj, cur, next, now
                     ).await?
                 );
             }
@@ -1345,6 +1345,65 @@ mod test {
                 GalleryImage {
                     id: 2,
                     filename: "a.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "images", "galleries"))]
+    async fn update_gallery_move_same_twice(pool: Pool) {
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 4,
+                    filename: "c.png".into(),
+                    description: "".into()
+                }
+            ]
+        );
+
+        update_gallery(
+            &pool,
+            Owner(1),
+            Project(6),
+            &GalleryPatch {
+                ops: vec![
+                    GalleryOp::Move { id: 4,  next: Some(3) },
+                    GalleryOp::Move { id: 4,  next: Some(2) },
+                    GalleryOp::Update { id: 4,  description: "x".into() }
+                ]
+            },
+            1703980420641538067
+        ).await.unwrap();
+
+        assert_eq!(
+            get_gallery(&pool, Project(6)).await.unwrap(),
+            [
+                GalleryImage {
+                    id: 7,
+                    filename: "c.png".into(),
+                    description: "x".into()
+                },
+                GalleryImage {
+                    id: 2,
+                    filename: "a.png".into(),
+                    description: "".into()
+                },
+                GalleryImage {
+                    id: 3,
+                    filename: "b.png".into(),
                     description: "".into()
                 }
             ]
