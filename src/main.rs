@@ -981,6 +981,30 @@ mod test {
             }
         }
 
+        async fn add_gallery_image(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            _img_name: &str,
+            content_type: &Mime,
+            _content_length: Option<u64>,
+            stream: Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send + Unpin>
+        ) -> Result<(), AddImageError>
+        {
+            if content_type == &TEXT_PLAIN {
+                Err(AddImageError::BadMimeType)
+            }
+            else {
+                match exhaust_stream(stream).await {
+                    Ok(_) => Ok(()),
+                    Err(e) => match e.kind() {
+                        io::ErrorKind::FileTooLarge => Err(AddImageError::TooLarge),
+                        _ => Err(AddImageError::IOError(e))
+                    }
+                }
+            }
+        }
+
         async fn add_file(
             &self,
             _owner: Owner,
@@ -3507,6 +3531,277 @@ mod test {
             rw
         )
         .await
+    }
+
+    async fn post_gallery_image_ok(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_ok_rw() {
+        let response = post_gallery_image_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_ok_ro() {
+        let response = post_gallery_image_ok(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_not_a_project(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/not_a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_not_a_project_rw() {
+        let response = post_gallery_image_not_a_project(true).await;
+        assert_not_found(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_not_a_project_ro() {
+        let response = post_gallery_image_not_a_project(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_unauth(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_unauth_rw() {
+        let response = post_gallery_image_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_unauth_ro() {
+        let response = post_gallery_image_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_not_owner(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(0))
+                .header(CONTENT_LENGTH, 1)
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_not_owner_rw() {
+        let response = post_gallery_image_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_not_owner_ro() {
+        let response = post_gallery_image_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_no_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_LENGTH, 1)
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_no_mime_type_rw() {
+        let response = post_gallery_image_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_no_mime_type_ro() {
+        let response = post_gallery_image_no_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_bad_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(CONTENT_LENGTH, 1)
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_bad_mime_type_rw() {
+        let response = post_gallery_image_bad_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_bad_mime_type_ro() {
+        let response = post_gallery_image_bad_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_too_large(rw: bool) -> Response {
+        let long = "x".repeat(MAX_IMAGE_SIZE + 1);
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, long.len())
+                .body(Body::from(long))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_too_large_rw() {
+        let response = post_gallery_image_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_too_large_ro() {
+        let response = post_gallery_image_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_too_large_no_content_length(rw: bool) -> Response {
+        let long = "x".repeat(MAX_IMAGE_SIZE + 1);
+
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .body(Body::from(long))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_too_large_no_content_length_rw() {
+        let response = post_gallery_image_too_large_no_content_length(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_too_large_no_content_length_ro() {
+        let response = post_gallery_image_too_large_no_content_length(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_content_length_too_large(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, MAX_IMAGE_SIZE + 1)
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_content_length_too_large_rw() {
+        let response = post_gallery_image_content_length_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_content_length_too_large_ro() {
+        let response = post_gallery_image_content_length_too_large(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn post_gallery_image_content_length_way_too_large(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::POST)
+                .uri(format!("{API_V1}/projects/a_project/gallery/img.png"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, IMAGE_PNG.as_ref())
+                .header(CONTENT_LENGTH, u64::MAX)
+                .body(Body::empty())
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_content_length_way_too_large_rw() {
+        let response = post_gallery_image_content_length_way_too_large(true).await;
+        assert_payload_too_large(response).await;
+    }
+
+    #[tokio::test]
+    async fn post_gallery_image_content_length_way_too_large_ro() {
+        let response = post_gallery_image_content_length_way_too_large(false).await;
+        assert_forbidden(response).await;
     }
 
     #[tokio::test]
