@@ -4751,7 +4751,37 @@ mod test {
         let response = patch_gallery_ok(false).await;
         assert_forbidden(response).await;
     }
- 
+
+    async fn patch_gallery_empty_ops(rw: bool) -> Response {
+        let gallery_patch = GalleryPatch {
+            ops: vec![]
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&gallery_patch).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_empty_ops_rw() {
+        let response = patch_gallery_empty_ops(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_empty_ops_ro() {
+        let response = patch_gallery_empty_ops(false).await;
+        assert_forbidden(response).await;
+    }
+
     async fn patch_gallery_no_data(rw: bool) -> Response {
         try_request(
             Request::builder()
