@@ -518,8 +518,8 @@ mod test {
     use tower::ServiceExt; // for oneshot
 
     use crate::{
-        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
-        input::{FlagPost, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, RangePost},
+        core::{AddFileError, AddFlagError, AddImageError, AddOwnersError, AddPlayerError, CloseFlagError, Core, CreatePackageError, CreateProjectError, CreateReleaseError, DeletePackageError, DeleteReleaseError, GetFlagsError, GetIdError, GetImageError, GetOwnersError, GetPlayersError, GetProjectError, GetProjectsError, RemoveOwnersError, RemovePlayerError, UpdateGalleryError, UpdatePackageError, UpdateProjectError, UserIsOwnerError},
+        input::{FlagPost, GalleryPatch, GalleryOp, GameDataPost, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost, RangePost},
         jwt::{self, EncodingKey},
         model::{Admin, Flag, FlagData, Flags, FlagTag, GameData, Owner, FileData, Package, PackageData, ProjectData, Project, Projects, ProjectSummary, Range, Release, ReleaseData, User, Users},
         pagination::{Anchor, Direction, Limit, SortBy, Pagination, Seek, SeekLink},
@@ -1003,6 +1003,16 @@ mod test {
                     }
                 }
             }
+        }
+
+         async fn update_gallery(
+            &self,
+            _owner: Owner,
+            _proj: Project,
+            _gallery_patch: &GalleryPatch
+        ) -> Result<(), UpdateGalleryError>
+        {
+            Ok(())
         }
 
         async fn add_file(
@@ -4709,6 +4719,199 @@ mod test {
     #[tokio::test]
     async fn delete_release_not_empty_ro() {
         let response = delete_release_not_empty(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_ok(rw: bool) -> Response {
+        let gallery_patch = GalleryPatch {
+            ops: vec![GalleryOp::Update { id: 0, description: "".into() }]
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&gallery_patch).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_ok_rw() {
+        let response = patch_gallery_ok(true).await;
+        assert_ok(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_ok_ro() {
+        let response = patch_gallery_ok(false).await;
+        assert_forbidden(response).await;
+    }
+ 
+    async fn patch_gallery_no_data(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from("{}"))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_no_data_rw() {
+        let response = patch_gallery_no_data(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_no_data_ro() {
+        let response = patch_gallery_no_data(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_unauth(rw: bool) -> Response {
+        let proj_data = ProjectDataPatch {
+            description: Some("A module for Empires in Arms".into()),
+            ..Default::default()
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&proj_data).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_unauth_rw() {
+        let response = patch_gallery_unauth(true).await;
+        assert_unauthorized(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_unauth_ro() {
+        let response = patch_gallery_unauth(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_not_owner(rw: bool) -> Response {
+        let gallery_patch = GalleryPatch {
+            ops: vec![GalleryOp::Update { id: 0, description: "".into() }]
+        };
+
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(AUTHORIZATION, token(0))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .body(Body::from(serde_json::to_vec(&gallery_patch).unwrap()))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_not_owner_rw() {
+        let response = patch_gallery_not_owner(true).await;
+        assert_forbidden(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_not_owner_ro() {
+        let response = patch_gallery_not_owner(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_wrong_json(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(CONTENT_TYPE, APPLICATION_JSON.as_ref())
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from(r#"{ "garbage": "whatever" }"#))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_wrong_json_rw() {
+        let response = patch_gallery_wrong_json(true).await;
+        assert_unprocessable_entity(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_wrong_json_ro() {
+        let response = patch_gallery_wrong_json(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_wrong_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(CONTENT_TYPE, TEXT_PLAIN.as_ref())
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from("stuff"))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_wrong_mime_type_rw() {
+        let response = patch_gallery_wrong_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_wrong_mime_type_ro() {
+        let response = patch_gallery_wrong_mime_type(false).await;
+        assert_forbidden(response).await;
+    }
+
+    async fn patch_gallery_no_mime_type(rw: bool) -> Response {
+        try_request(
+            Request::builder()
+                .method(Method::PATCH)
+                .uri(format!("{API_V1}/projects/a_project/gallery"))
+                .header(AUTHORIZATION, token(BOB_UID))
+                .body(Body::from("stuff"))
+                .unwrap(),
+            rw
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_no_mime_type_rw() {
+        let response = patch_gallery_no_mime_type(true).await;
+        assert_unsupported_media_type(response).await;
+    }
+
+    #[tokio::test]
+    async fn patch_gallery_no_mime_type_ro() {
+        let response = patch_gallery_no_mime_type(false).await;
         assert_forbidden(response).await;
     }
 

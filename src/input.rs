@@ -477,8 +477,9 @@ pub enum MaybeGalleryOp {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "MaybeGalleryOp")]
+#[serde(tag = "op", rename_all = "lowercase")]
 pub enum GalleryOp {
     Update {
         id: i64,
@@ -526,8 +527,31 @@ impl TryFrom<MaybeGalleryOp> for GalleryOp {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
+pub struct MaybeGalleryPatch {
+    pub ops: Vec<GalleryOp>
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "MaybeGalleryPatch")]
 pub struct GalleryPatch {
     pub ops: Vec<GalleryOp>
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+#[error("invalid data {0:?}")]
+pub struct GalleryPatchError(MaybeGalleryPatch);
+
+impl TryFrom<MaybeGalleryPatch> for GalleryPatch {
+    type Error = GalleryPatchError;
+
+    fn try_from(m: MaybeGalleryPatch) -> Result<Self, Self::Error> {
+        if m.ops.is_empty() {
+            Err(GalleryPatchError(m))
+        }
+        else {
+            Ok(GalleryPatch { ops: m.ops })
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
