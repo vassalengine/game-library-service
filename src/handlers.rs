@@ -241,14 +241,13 @@ fn limit_content_length(
     }
 }
 
-/*
-async fn write_file<S, F>(
+async fn copy_stream_to_writer<S, W>(
     stream: S,
-    file: F
+    mut writer: W
 ) ->  Result<(String, u64), io::Error>
 where
     S: Stream<Item = Result<Bytes, io::Error>>  + Unpin,
-    F: AsyncWrite + Unpin
+    W: AsyncWrite + Unpin
 {
     let mut off = 0;
     let mut reader = BufReader::new(StreamReader::new(stream));
@@ -257,7 +256,7 @@ where
     let mut hasher = Sha256::new();
     let mut writer = BufWriter::new(
         InspectWriter::new(
-            file,
+            writer,
             |buf| {
                 hasher.update(buf);
                 off += buf.len();
@@ -272,75 +271,8 @@ where
 
     Ok((sha256, size))
 }
-*/
 
 /*
-async fn copy_stream_to_writer<S, W>(
-    stream: S,
-    mut writer: W
-) ->  Result<(String, u64), io::Error>
-where
-    S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
-    W: AsyncWrite + Send + Unpin + 'static
-{
-    let (r_tx, mut r_rx) = tokio::sync::mpsc::channel(1);
-    let (w_tx, mut w_rx) = tokio::sync::mpsc::channel(1);
-
-    let rfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        let mut reader = StreamReader::new(stream);
-        let mut buf = Vec::with_capacity(32768);
-
-        loop {
-            buf.clear();
-
-            match reader.read_buf(&mut buf).await? {
-                0 => break,
-                _ => { w_tx.send(buf).await.map_err(io::Error::other)?; }
-            };
-
-            buf = match r_rx.recv().await {
-                Some(buf) => buf,
-                None => break
-            };
-        }
-
-        Ok(())
-    });
-
-    let wfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        let mut hasher = Sha256::new();
-        let mut off = 0;
-
-        let mut buf = Vec::with_capacity(32768);
-
-        loop {
-            // we don't care if this is received; it won't be in the
-            // case where the input stream is empty
-            let _ = r_tx.send(buf).await;
-
-            buf = match w_rx.recv().await {
-                Some(buf) => buf,
-                None => break
-            };
-
-            hasher.update(&buf[..]);
-            writer.write_all(&buf[..]).await?;
-            off += buf.len() as u64;
-            info!("{off} {}", buf.len());
-        }
-
-        let sha256 = format!("{}", hex::encode(hasher.finalize()));
-
-        Ok((sha256, off))
-    });
-
-    rfut.await??;
-//    wfut.await?
-    let (sha256, off) = wfut.await??;
-    Ok((sha256, off))
-}
-*/
-
 async fn copy_stream_to_writer<S, W>(
     stream: S,
     mut writer: W
@@ -426,6 +358,7 @@ where
     let (sha256, off) = hfut.await??;
     Ok((sha256, off))
 }
+*/
 
 async fn stream_to_temp_file<S>(
     filename: &str,
