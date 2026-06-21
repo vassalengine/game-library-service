@@ -1,4 +1,6 @@
 .*.swp
-config.toml
-projects.db
-target/
+/config.toml
+/projects.db
+/bak/
+/log/
+/target/
