@@ -1,3 +1,9 @@
+```
+sqlx database setup
+cargo test
+cargo build --release
+``
+
 # Game Library Service API
 
 - `/projects GET`
