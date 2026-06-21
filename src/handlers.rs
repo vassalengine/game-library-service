@@ -19,7 +19,8 @@ use http_body_util::{BodyExt, Limited, LengthLimitError};
 use sha2::{Digest, Sha256};
 use std::{
     error::Error,
-    io
+    io,
+    time::Instant
 };
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, AsyncWrite, AsyncWriteExt, BufReader, BufWriter};
 use tokio_util::io::{InspectWriter, StreamReader};
@@ -649,7 +650,7 @@ where
         .await
         .map_err(|e| AppError::InternalError(e.to_string()))?;
 
-    let start_time = std::time::Instant::now();
+    let start_time = Instant::now();
 
 /*
     let writer = std::fs::File::create(&file_path)
