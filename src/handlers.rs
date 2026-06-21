@@ -276,29 +276,6 @@ where
 */
 
 /*
-async fn copy_stream_to_writer<S, F>(
-    mut stream: S,
-    file: F
-) ->  Result<u64, io::Error>
-where
-    S: Stream<Item = Result<Bytes, io::Error>>  + Unpin,
-    F: AsyncWrite + Unpin
-{
-    let mut off = 0;
-
-    use futures::StreamExt;
-    while let Some(r) = stream.next().await {
-        match r {
-            Err(e) => return Err(e),
-            Ok(buf) => { off += buf.len(); }
-        }
-    }
-
-    Ok(off as u64)
-}
-*/
-
-/*
 async fn copy_stream_to_writer<S, W>(
     stream: S,
     mut writer: W
@@ -360,58 +337,6 @@ where
 
     rfut.await??;
 //    wfut.await?
-    let (sha256, off) = wfut.await??;
-    Ok((sha256, off))
-}
-*/
-
-/*
-async fn copy_stream_to_writer<S, W>(
-    mut stream: S,
-    mut writer: W
-) ->  Result<(String, u64), io::Error>
-where
-    S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
-    W: AsyncWrite + Send + Unpin + 'static
-{
-    let (w_tx, mut w_rx) = tokio::sync::mpsc::channel(1);
-//    let (w_tx, mut w_rx) = tokio::sync::mpsc::unbounded_channel();
-
-    let rfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        use futures::StreamExt;
-        while let Some(r) = stream.next().await {
-            match r {
-                Err(e) => return Err(e),
-                Ok(buf) => { w_tx.send(buf).await.map_err(io::Error::other)?; }
-//                Ok(buf) => { w_tx.send(buf).map_err(io::Error::other)?; }
-            }
-        }
-
-        Ok(())
-    });
-
-    let wfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        let mut hasher = Sha256::new();
-        let mut off = 0;
-
-        loop {
-            let buf = match w_rx.recv().await {
-                Some(buf) => buf,
-                None => break
-            };
-
-            hasher.update(&buf[..]);
-            writer.write_all(&buf[..]).await?;
-            off += buf.len() as u64;
-            info!("{off} {}", buf.len());
-        }
-
-        let sha256 = format!("{:x}", hasher.finalize());
-
-        Ok((sha256, off))
-    });
-
-    rfut.await??;
     let (sha256, off) = wfut.await??;
     Ok((sha256, off))
 }
@@ -498,131 +423,8 @@ where
     });
 
     rfut.await??;
-//    wfut.await?
     wfut.await??;
     let (sha256, off) = hfut.await??;
-    Ok((sha256, off))
-}
-
-/*
-use std::io::Write;
-
-pub async fn copy_stream_to_writer<S, W>(
-    stream: S,
-    mut writer: W
-) -> Result<(String, u64), io::Error>
-where
-    S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
-    W: Write + Send + 'static
-{
-    use tokio::runtime::Handle;
-
-    let handle = Handle::current();
-
-    let (sha256, off) = tokio::task::spawn_blocking(move || {
-        let mut reader = StreamReader::new(stream);
-
-        let mut hasher = Sha256::new();
-        let mut buf = vec![0; 8192];
-        let mut off = 0u64;
-
-        loop {
-            match handle.block_on((&mut reader).read(&mut buf)) {
-                Ok(0) => {
-                    let sha256 = format!("{:x}", hasher.finalize());
-                    break Ok((sha256, off))
-                },
-                Ok(r) => {
-                    hasher.update(&buf[..r]);
-                    writer.write(&buf[..r])?;
-                    off += r as u64;
-                    info!("{off} {r}");
-                },
-                Err(e) => break Err(e)
-            }
-        }
-    }).await??;
-
-    Ok((sha256, off))
-}
-*/
-
-/*
-async fn copy_stream_to_writer<S, W>(
-    mut stream: S,
-    mut writer: W
-) ->  Result<u64, io::Error>
-where
-    S: Stream<Item = Result<Bytes, io::Error>> + Send + Unpin + 'static,
-    W: AsyncWrite + Send + Unpin + 'static
-{
-    let (w_tx, mut w_rx) = tokio::sync::mpsc::channel(1);
-
-    let rfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        use futures::StreamExt;
-        while let Some(r) = stream.next().await {
-            match r {
-                Err(e) => return Err(e),
-                Ok(buf) => { w_tx.send(buf).await.map_err(io::Error::other)?; }
-            }
-        }
-
-        Ok(())
-    });
-
-    let wfut: tokio::task::JoinHandle<Result<_, io::Error>> = tokio::spawn(async move {
-        let mut off = 0;
-
-        loop {
-            let buf = match w_rx.recv().await {
-                Some(buf) => buf,
-                None => break
-            };
-
-            writer.write_all(&buf[..]).await?;
-            off += buf.len() as u64;
-            info!("{off} {}", buf.len());
-        }
-
-        Ok(off)
-    });
-
-    rfut.await??;
-    let off = wfut.await??;
-
-    Ok(off)
-}
-*/
-
-async fn hash_reader<R>(
-    mut reader: R
-) -> Result<(String, u64), io::Error>
-where
-    R: AsyncRead + Send + Unpin + 'static
-{
-    use tokio::runtime::Handle;
-    let handle = Handle::current();
-
-    let (sha256, off) = tokio::task::spawn_blocking(move || {
-        let mut hasher = Sha256::new();
-        let mut buf = vec![0; 8192];
-        let mut off = 0u64;
-
-        loop {
-            match handle.block_on((&mut reader).read(&mut buf)) {
-                Ok(0) => {
-                    let sha256 = format!("{}", hex::encode(hasher.finalize()));
-                    break Ok((sha256, off))
-                },
-                Ok(r) => {
-                    hasher.update(&buf[..r]);
-                    off += r as u64;
-                },
-                Err(e) => break Err(e)
-            }
-        }
-    }).await??;
-
     Ok((sha256, off))
 }
 
@@ -652,11 +454,6 @@ where
 
     let start_time = Instant::now();
 
-/*
-    let writer = std::fs::File::create(&file_path)
-        .map_err(|e| AppError::InternalError(e.to_string()))?;
-*/
-
     let (sha256, size) = copy_stream_to_writer(stream, writer)
         .await
         .map_err(|e| match e.kind() {
@@ -664,31 +461,11 @@ where
             _ => AppError::InternalError(e.to_string())
         })?;
 
-/*
-    let size = copy_stream_to_writer(stream, writer)
-        .await
-        .map_err(|e| match e.kind() {
-            io::ErrorKind::FileTooLarge => AppError::TooLarge,
-            _ => AppError::InternalError(e.to_string())
-        })?;
-*/
-
     let elapsed = start_time.elapsed().as_secs_f32();
-    info!("{size}/{} = {}", elapsed, size as f32 / elapsed / 1024.0 / 1024.0 * 8.0);
-
-/*
-    file.rewind()
-        .await
-        .map_err(|e| AppError::InternalError(e.to_string()))?;
-
-    let reader = file.try_clone()
-        .await
-        .map_err(|e| AppError::InternalError(e.to_string()))?;
-
-    let (sha256, size) = hash_reader(reader)
-        .await
-        .map_err(|e| AppError::InternalError(e.to_string()))?;
-*/
+    info!(
+        "uploaded {size}/{elapsed} = {} Mb/s",
+        size as f32 / elapsed / 1024.0 / 1024.0 * 8.0
+    );
 
     info!("wrote temp file {}", file_path.display());
 
