@@ -1,8 +1,11 @@
+# Build and Run
+
 ```
 sqlx database setup
+mkdir uploads
 cargo test
 cargo build --release
-``
+```
 
 # Game Library Service API
 
