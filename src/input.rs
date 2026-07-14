@@ -1,7 +1,6 @@
 use glc::model::FlagTag;
-use regex::Regex;
+use regex::{Regex, regex};
 use serde::{Deserialize, Deserializer, Serialize};
-use std::sync::LazyLock;
 
 pub trait ConsecutiveWhitespace {
     fn has_consecutive_whitespace(&self) -> bool;
@@ -112,20 +111,15 @@ impl MaybePackageDataPatch {
 }
 
 pub fn slug_for(s: &str) -> String {
-    static HYPHENS: LazyLock<Regex> = LazyLock::new(||
-        Regex::new("-+").expect("bad regex")
-    );
-
-    static SPECIAL: LazyLock<Regex> = LazyLock::new(||
-        Regex::new(r#"[:/?#\[\]@!$&'()*+,;=%"<>\\^`{}|]"#).expect("bad regex")
-    );
+    let hyphens = regex!("-+");
+    let special = regex!(r#"[:/?#\[\]@!$&'()*+,;=%"<>\\^`{}|]"#);
 
     // replace whitespace with hyphens
     let s = s.replace(char::is_whitespace, "-");
     // remove all special characters
-    let s = SPECIAL.replace_all(&s, "");
+    let s = special.replace_all(&s, "");
     // coalesce consecutive hyphens
-    let s = HYPHENS.replace_all(&s, "-");
+    let s = hyphens.replace_all(&s, "-");
     // remove leading and trailing hyphens
     s.trim_start_matches('-')
         .trim_end_matches('-')

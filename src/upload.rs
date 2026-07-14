@@ -1,5 +1,5 @@
 use http::header::{HeaderMap, HeaderName, HeaderValue};
-use regex::Regex;
+use regex::{Regex, regex};
 use s3::{
     bucket::Bucket,
     error::S3Error,
@@ -9,10 +9,7 @@ use s3::{
     },
     region::Region
 };
-use std::{
-    future::Future,
-    sync::LazyLock
-};
+use std::future::Future;
 use thiserror::Error;
 use tokio::io::AsyncRead;
 
@@ -35,24 +32,18 @@ pub struct InvalidFilename;
 
 pub fn safe_filename(path: &str) -> Result<&str, InvalidFilename> {
     // characters to reject
-    static BAD_CHAR: LazyLock<Regex> = LazyLock::new(||
-        Regex::new(r#"[\x00-\x1F\x7F-\x9F"'*/:<>?|\\]"#)
-            .expect("bad regex")
-    );
+    let bad_char = regex!(r#"[\x00-\x1F\x7F-\x9F"'*/:<>?|\\]"#);
 
     // reserved names on Windows
-    static WIN_RESERVED: LazyLock<Regex> = LazyLock::new(||
-        Regex::new(r#"^(?i:CON|PRN|AUX|NUL|(COM|LPT)[1-9])($|\.)"#)
-            .expect("bad regex")
-    );
+    let win_reserved = regex!(r#"^(?i:CON|PRN|AUX|NUL|(COM|LPT)[1-9])($|\.)"#);
 
     if path.is_empty() ||           // empty
         path.len() > 255 ||         // overlong
         path != path.trim() ||      // leading, trailing whitespace
         path.ends_with('.') ||      // trailing periods (Windows)
         path.contains("..") ||      // parent directory
-        BAD_CHAR.is_match(path) ||  // control, reserved characters
-        WIN_RESERVED.is_match(path) // reserved filenames (Windows)
+        bad_char.is_match(path) ||  // control, reserved characters
+        win_reserved.is_match(path) // reserved filenames (Windows)
     {
         Err(InvalidFilename)
     }
