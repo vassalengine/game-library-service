@@ -483,7 +483,7 @@ where
 mod test {
     use super::*;
 
-    use std::slice;
+    use std::{assert_matches, slice};
 
     use crate::sqlite::project::get_project_row;
 
@@ -624,22 +624,20 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn create_package_not_a_project(pool: Pool) {
-        assert!(
-            matches!(
-                create_package(
-                    &pool,
-                    Owner(1),
-                    Project(0),
-                    "newpkg",
-                    &PackageDataPost {
-                        name: "newpkg".into(),
-                        sort_key: 4,
-                        description: "".into()
-                    },
-                    1699804206419538067
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            create_package(
+                &pool,
+                Owner(1),
+                Project(0),
+                "newpkg",
+                &PackageDataPost {
+                    name: "newpkg".into(),
+                    sort_key: 4,
+                    description: "".into()
+                },
+                1699804206419538067
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
@@ -881,17 +879,15 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn delete_package_not_empty(pool: Pool) {
-        assert!(
-            matches!(
-                delete_package(
-                    &pool,
-                    Owner(1),
-                    Project(42),
-                    Package(1),
-                    1702137389180282478
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            delete_package(
+                &pool,
+                Owner(1),
+                Project(42),
+                Package(1),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 }

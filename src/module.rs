@@ -85,6 +85,8 @@ pub fn versions_in_moduledata(
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     #[test]
     fn dump_file_ok() {
         assert_ne!(
@@ -95,21 +97,17 @@ mod test {
 
     #[test]
     fn dump_file_zip_not_found() {
-        assert!(
-            matches!(
-                dump_file("test/bogus.zip", "whatever").unwrap_err(),
-                Error::Io(_)
-            )
+        assert_matches!(
+            dump_file("test/bogus.zip", "whatever").unwrap_err(),
+            Error::Io(_)
         );
     }
 
     #[test]
     fn dump_file_not_a_zip() {
-        assert!(
-            matches!(
-                dump_file("test/empty", "whatever").unwrap_err(),
-                Error::Zip(_)
-            )
+        assert_matches!(
+            dump_file("test/empty", "whatever").unwrap_err(),
+            Error::Zip(_)
         );
     }
 
@@ -143,11 +141,9 @@ mod test {
     #[test]
     fn version_in_moduledata_bad_xml() {
         let md = "<data>";
-        assert!(
-            matches!(
-                versions_in_moduledata(md).unwrap_err(),
-                Error::Xml(_)
-            )
+        assert_matches!(
+            versions_in_moduledata(md).unwrap_err(),
+            Error::Xml(_)
         );
     }
 

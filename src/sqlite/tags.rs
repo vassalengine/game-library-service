@@ -327,6 +327,8 @@ where
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     type Pool = sqlx::Pool<Sqlite>;
 
     #[sqlx::test(fixtures("users", "projects", "tags"))]
@@ -604,7 +606,7 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "tags"))]
     async fn update_project_tags_not_an_owner(pool: Pool) {
         // This should not happen; the Owner passed in should be good.
-        assert!(matches!(
+        assert_matches!(
             update_project_tags(
                 &pool,
                 Owner(0),
@@ -616,13 +618,13 @@ mod test {
 // TODO: reenable when we permit tag creation
 //            DatabaseError::SqlxError(_)
             DatabaseError::NotFound
-        ));
+        );
     }
 
     #[sqlx::test(fixtures("users", "projects", "tags"))]
     async fn update_project_tags_not_a_project(pool: Pool) {
         // This should not happen; the Project passed in should be good.
-        assert!(matches!(
+        assert_matches!(
             update_project_tags(
                 &pool,
                 Owner(1),
@@ -634,6 +636,6 @@ mod test {
 // TODO: reenable when we permit tag creation
 //            DatabaseError::SqlxError(_)
             DatabaseError::NotFound
-        ));
+        );
     }
 }

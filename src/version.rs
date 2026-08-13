@@ -137,6 +137,8 @@ impl Ord for Version {
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     #[test]
     fn string_to_version_ok() {
         assert_eq!(
@@ -189,94 +191,76 @@ mod test {
 
     #[test]
     fn string_to_version_empty() {
-        assert!(
-            matches!(
-                "".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            "".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_bogus() {
-        assert!(
-            matches!(
-                "bogus".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            "bogus".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_whitespace() {
-        assert!(
-            matches!(
-                " 1.2.3 ".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            " 1.2.3 ".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_too_few_components() {
-        assert!(
-            matches!(
-                "0.1".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            "0.1".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_too_many_components() {
-        assert!(
-            matches!(
-                "0.1.2.3".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            "0.1.2.3".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_bad_pre() {
-        assert!(
-            matches!(
-                "0.1.2-".parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            "0.1.2-".parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_major_too_large() {
         let v = format!("{}.0.0", i64::MAX as u64 + 1);
-        assert!(
-            matches!(
-                v.parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            v.parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_minor_too_large() {
         let v = format!("0.{}.0", i64::MAX as u64 + 1);
-        assert!(
-            matches!(
-                v.parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            v.parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 
     #[test]
     fn string_to_version_patch_too_large() {
         let v = format!("0.0.{}", i64::MAX as u64 + 1);
-        assert!(
-            matches!(
-                v.parse::<Version>().unwrap_err(),
-                MalformedVersion(_)
-            )
+        assert_matches!(
+            v.parse::<Version>().unwrap_err(),
+            MalformedVersion(_)
         );
     }
 

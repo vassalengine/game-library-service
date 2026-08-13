@@ -89,6 +89,8 @@ WHERE user_id = ?
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     type Pool = sqlx::Pool<Sqlite>;
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
@@ -163,21 +165,17 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_not_a_project(pool: Pool) {
-        assert!(
-            matches!(
-                add_player(&pool, User(2), Project(0)).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            add_player(&pool, User(2), Project(0)).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "players"))]
     async fn add_player_not_a_user(pool: Pool) {
-        assert!(
-            matches!(
-                add_player(&pool, User(0), Project(42)).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            add_player(&pool, User(0), Project(42)).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 

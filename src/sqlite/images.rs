@@ -673,6 +673,8 @@ where
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     type Pool = sqlx::Pool<Sqlite>;
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
@@ -754,38 +756,34 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn add_image_url_not_a_user(pool: Pool) {
         // This should not happen; the Owner passed in should be good.
-        assert!(
-            matches!(
-                add_image_url(
-                    &pool,
-                    Owner(0),
-                    Project(42),
-                    "image.png",
-                    "https://example.com/image.png",
-                    "image/png",
-                    0
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            add_image_url(
+                &pool,
+                Owner(0),
+                Project(42),
+                "image.png",
+                "https://example.com/image.png",
+                "image/png",
+                0
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "images"))]
     async fn add_image_url_not_a_project(pool: Pool) {
         // This should not happen; the Project passed in should be good.
-        assert!(
-            matches!(
-                add_image_url(
-                    &pool,
-                    Owner(1),
-                    Project(0),
-                    "image.png",
-                    "https://example.com/image.png",
-                    "image/png",
-                    0
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            add_image_url(
+                &pool,
+                Owner(1),
+                Project(0),
+                "image.png",
+                "https://example.com/image.png",
+                "image/png",
+                0
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 

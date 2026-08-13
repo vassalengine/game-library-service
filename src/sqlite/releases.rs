@@ -525,7 +525,10 @@ where
 mod test {
     use super::*;
 
-    use std::{slice, sync::LazyLock};
+    use std::{
+        assert_matches, slice,
+        sync::LazyLock
+    };
 
     use crate::sqlite::project::get_project_row;
 
@@ -744,18 +747,16 @@ mod test {
             build: None
         };
 
-        assert!(
-            matches!(
-                create_release(
-                    &pool,
-                    Owner(1),
-                    Project(0),
-                    Package(6),
-                    &ver,
-                    1699804206419538067
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            create_release(
+                &pool,
+                Owner(1),
+                Project(0),
+                Package(6),
+                &ver,
+                1699804206419538067
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
@@ -769,18 +770,16 @@ mod test {
             build: None
         };
 
-        assert!(
-            matches!(
-                create_release(
-                    &pool,
-                    Owner(1),
-                    Project(42),
-                    Package(6),
-                    &ver,
-                    1699804206419538067
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            create_release(
+                &pool,
+                Owner(1),
+                Project(42),
+                Package(6),
+                &ver,
+                1699804206419538067
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
@@ -919,17 +918,15 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn delete_release_not_project(pool: Pool) {
-        assert!(
-            matches!(
-                delete_release(
-                    &pool,
-                    Owner(1),
-                    Project(0),
-                    Release(2),
-                    1702137389180282478
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            delete_release(
+                &pool,
+                Owner(1),
+                Project(0),
+                Release(2),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
@@ -949,17 +946,15 @@ mod test {
 
     #[sqlx::test(fixtures("users", "projects", "packages"))]
     async fn delete_release_not_empty(pool: Pool) {
-        assert!(
-            matches!(
-                delete_release(
-                    &pool,
-                    Owner(1),
-                    Project(42),
-                    Release(1),
-                    1702137389180282478
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            delete_release(
+                &pool,
+                Owner(1),
+                Project(42),
+                Release(1),
+                1702137389180282478
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 

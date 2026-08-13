@@ -671,7 +671,10 @@ pub async fn update_project_non_project_data(
 mod test {
     use super::*;
 
-    use std::sync::LazyLock;
+    use std::{
+        assert_matches,
+        sync::LazyLock
+    };
 
     use crate::{
         input::{GameDataPost, RangePost},
@@ -795,17 +798,15 @@ mod test {
             None
         );
 
-        assert!(
-            matches!(
-                create_project(
-                    &pool,
-                    User(0),
-                    &CREATE_ROW.name,
-                    &CREATE_DATA,
-                    CREATE_ROW.created_at
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            create_project(
+                &pool,
+                User(0),
+                &CREATE_ROW.name,
+                &CREATE_DATA,
+                CREATE_ROW.created_at
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
 
         assert_eq!(
@@ -940,17 +941,15 @@ mod test {
             ..Default::default()
         };
 
-        assert!(
-            matches!(
-                update_project(
-                    &pool,
-                    Owner(0),
-                    Project(42),
-                    &pd,
-                    0
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            update_project(
+                &pool,
+                Owner(0),
+                Project(42),
+                &pd,
+                0
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
@@ -997,16 +996,14 @@ mod test {
         let mut tx = pool.begin().await.unwrap();
 
         // This should not happen; the Owner passed in should be good.
-        assert!(
-            matches!(
-                update_project_non_project_data(
-                    &mut tx,
-                    Owner(0),
-                    Project(42),
-                    0
-                ).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            update_project_non_project_data(
+                &mut tx,
+                Owner(0),
+                Project(42),
+                0
+            ).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 

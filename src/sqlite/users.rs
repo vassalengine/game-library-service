@@ -241,6 +241,8 @@ VALUES (?, ?)
 mod test {
     use super::*;
 
+    use std::assert_matches;
+
     type Pool = sqlx::Pool<Sqlite>;
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
@@ -312,23 +314,19 @@ mod test {
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_not_a_project(pool: Pool) {
         // This should not happen; the Project passed in should be good.
-        assert!(
-            matches!(
-                add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
+        assert_matches!(
+            add_owner(&pool, User(1), Project(0)).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
         );
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
     async fn add_owner_not_a_user(pool: Pool) {
         // This should not happen; the User passed in should be good.
-        assert!(
-            matches!(
-                add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
-                DatabaseError::SqlxError(_)
-            )
-        )
+        assert_matches!(
+            add_owner(&pool, User(0), Project(42)).await.unwrap_err(),
+            DatabaseError::SqlxError(_)
+        );
     }
 
     #[sqlx::test(fixtures("users", "projects", "one_owner"))]
