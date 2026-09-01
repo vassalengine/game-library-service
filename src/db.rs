@@ -373,9 +373,16 @@ pub trait DatabaseClient {
         _sha256: &str,
         _content_type: &str,
         _requires: Option<&str>,
+        _module_name: Option<&str>,
         _url: &str,
         _now: i64
     ) -> impl Future<Output = Result<(), DatabaseError>> + Send;
+
+    fn get_projects_by_module_name(
+        &self,
+        _module_name: &str,
+        _limit: u32
+    ) -> impl Future<Output = Result<Vec<ProjectSummaryRow>, DatabaseError>> + Send;
 
     fn get_players(
         &self,

@@ -383,6 +383,7 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
         sha256: &str,
         content_type: &str,
         requires: Option<&str>,
+        module_name: Option<&str>,
         url: &str,
         now: i64
     ) -> Result<(), DatabaseError>
@@ -397,9 +398,19 @@ impl DatabaseClient for SqlxDatabaseClient<Sqlite> {
             sha256,
             content_type,
             requires,
+            module_name,
             url,
             now
         ).await
+    }
+
+    async fn get_projects_by_module_name(
+        &self,
+        module_name: &str,
+        limit: u32
+    ) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+    {
+        projects::get_projects_by_module_name(&self.0, module_name, limit).await
     }
 
     async fn get_players(

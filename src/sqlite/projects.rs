@@ -231,6 +231,39 @@ SELECT
 FROM projects
 ");
 
+/// Exact lookup of the projects publishing a module whose moduledata
+/// `<name>` is `module_name` — matched against `files.module_name`, which is
+/// extracted from each uploaded `.vmod`.
+pub async fn get_projects_by_module_name<'e, E>(
+    ex: E,
+    module_name: &str,
+    limit: u32
+) -> Result<Vec<ProjectSummaryRow>, DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    Ok(
+        sqlx::query_as::<_, ProjectSummaryRow>(
+            formatcp!("
+SELECT DISTINCT
+    0.0 AS rank,
+    {SUMMARY_FIELDS}
+FROM projects
+JOIN packages ON packages.project_id = projects.project_id
+JOIN releases ON releases.package_id = packages.package_id
+JOIN files ON files.release_id = releases.release_id
+WHERE files.module_name = ?
+ORDER BY projects.name COLLATE NOCASE ASC
+LIMIT ?
+            ")
+        )
+        .bind(module_name)
+        .bind(limit)
+        .fetch_all(ex)
+        .await?
+    )
+}
+
 const WINDOW_SELECT_FTS: &str = formatcp!("
 SELECT
     projects_fts.rank,
@@ -415,6 +448,44 @@ mod test {
     #[sqlx::test(fixtures("users", "projects"))]
     async fn get_projects_count_ok(pool: Pool) {
         assert_eq!(get_projects_count(&pool, &[]).await.unwrap(), 2);
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages", "module_names"))]
+    async fn get_projects_by_module_name_ok(pool: Pool) {
+        let rows = get_projects_by_module_name(&pool, "Test Module", 10)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].project_id, 42);
+        assert_eq!(rows[0].name, "test_game");
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages", "module_names"))]
+    async fn get_projects_by_module_name_not_found(pool: Pool) {
+        assert_eq!(
+            get_projects_by_module_name(&pool, "No Such Module", 10)
+                .await
+                .unwrap(),
+            []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages", "module_names"))]
+    async fn get_projects_by_module_name_is_exact(pool: Pool) {
+        // a module-name lookup is exact, not a substring match
+        assert_eq!(
+            get_projects_by_module_name(&pool, "Test", 10).await.unwrap(),
+            []
+        );
+    }
+
+    #[sqlx::test(fixtures("users", "projects", "packages", "module_names"))]
+    async fn get_projects_query_count_module_name(pool: Pool) {
+        // module names are searchable through the full-text index
+        let facets = [
+            Facet::Query("test module".into())
+        ];
+        assert_eq!(get_projects_count(&pool, &facets).await.unwrap(), 1);
     }
 
     #[sqlx::test(fixtures("users", "projects"))]
