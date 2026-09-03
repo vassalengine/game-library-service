@@ -1007,7 +1007,7 @@ dependencies = [
 [[package]]
 name = "glc"
 version = "0.1.0"
-source = "git+https://github.com/vassalengine/game-library-common.git#2a47f4ab4f31680919d6391c991b56b1cf58e273"
+source = "git+https://github.com/vassalengine/game-library-common.git#d407aa09721656b032627a5712abbe4ba6b6b451"
 dependencies = [
  "axum",
  "digest 0.11.3",
@@ -1019,7 +1019,7 @@ dependencies = [
  "sha2 0.11.0",
  "thiserror",
  "tokio",
- "tower-http",
+ "tower-http 0.7.1",
  "tracing",
  "tracing-appender",
  "tracing-panic",
@@ -1064,7 +1064,7 @@ dependencies = [
  "tokio-util",
  "toml",
  "tower",
- "tower-http",
+ "tower-http 0.7.1",
  "tracing",
  "unicode-ccc",
  "unicode-normalization",
@@ -2210,7 +2210,7 @@ dependencies = [
  "tokio-native-tls",
  "tokio-util",
  "tower",
- "tower-http",
+ "tower-http 0.6.11",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -3143,6 +3143,24 @@ version = "0.6.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840"
 dependencies = [
+ "bitflags",
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body",
+ "pin-project-lite",
+ "tower",
+ "tower-layer",
+ "tower-service",
+ "url",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08a05a66a4fdd61cbbe0a1d755ffe0ca6aba159dd4820936a0ff8a8278245b9c"
+dependencies = [
  "async-compression",
  "bitflags",
  "bytes",
@@ -3159,11 +3177,9 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tokio-util",
- "tower",
  "tower-layer",
  "tower-service",
  "tracing",
- "url",
 ]
 
 [[package]]
