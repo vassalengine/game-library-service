@@ -667,6 +667,44 @@ pub async fn update_project_non_project_data(
     Ok(())
 }
 
+/// Recomputes `projects.module_names` — the newline-joined distinct module
+/// names of the project's files — which feeds the `module_names` column of
+/// the full-text index (via the `projects_au` trigger).
+pub async fn update_module_names<'e, E>(
+    ex: E,
+    proj: Project
+) -> Result<(), DatabaseError>
+where
+    E: Executor<'e, Database = Sqlite>
+{
+    sqlx::query!(
+        "
+UPDATE projects
+SET module_names = IFNULL(
+    (
+        SELECT GROUP_CONCAT(module_name, char(10))
+        FROM (
+            SELECT DISTINCT files.module_name
+            FROM files
+            JOIN releases ON releases.release_id = files.release_id
+            JOIN packages ON packages.package_id = releases.package_id
+            WHERE packages.project_id = ?
+                AND files.module_name IS NOT NULL
+        )
+    ),
+    ''
+)
+WHERE project_id = ?
+        ",
+        proj.0,
+        proj.0
+    )
+    .execute(ex)
+    .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -4,6 +4,7 @@ use serde::Deserialize;
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct MaybeProjectsParams {
     pub q: Option<String>,
+    pub module_name: Option<String>,
     pub from: Option<String>,
     pub sort_by: Option<SortBy>,
     pub dir: Option<Direction>,
@@ -35,7 +36,9 @@ pub struct ProjectsParams {
     pub anchor: Option<Anchor>,
 */
     pub seek: Seek,
-    pub limit: Option<Limit>
+    pub limit: Option<Limit>,
+    /// Exact module-name lookup; admits no other search parameters.
+    pub module_name: Option<String>
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -50,6 +53,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
     fn try_from(m: MaybeProjectsParams) -> Result<Self, Self::Error> {
         let MaybeProjectsParams {
             q,
+            module_name,
             from,
             sort_by,
             dir,
@@ -66,6 +70,25 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             owner,
             player
         } = m;
+
+        if module_name.is_some() {
+            // an exact module-name lookup admits no other search parameters
+            if q.is_some() || from.is_some() || sort_by.is_some()
+                || dir.is_some() || anchor.is_some() || publisher.is_some()
+                || year.is_some() || players_min.is_some()
+                || players_max.is_some() || !players_inc.is_empty()
+                || length_min.is_some() || length_max.is_some()
+                || !tag.is_empty() || !owner.is_empty() || !player.is_empty()
+            {
+                return Err(Error::InvalidCombination);
+            }
+
+            return Ok(ProjectsParams {
+                seek: Seek::default(),
+                limit,
+                module_name
+            });
+        }
 
         if sort_by == Some(SortBy::Relevance) && q.is_none() {
             // Relevance requires a query
@@ -163,7 +186,7 @@ impl TryFrom<MaybeProjectsParams> for ProjectsParams {
             _ => return Err(Error::InvalidCombination)
         };
 
-        Ok(ProjectsParams { seek, limit })
+        Ok(ProjectsParams { seek, limit, module_name: None })
     }
 }
 
@@ -185,7 +208,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -196,6 +220,50 @@ mod test {
         let mpp = MaybeProjectsParams {
             from: Some("whatever".into()),
             q: Some("whatever".into()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectsParams::try_from(mpp).unwrap_err(),
+            Error::InvalidCombination
+        );
+    }
+
+    #[test]
+    fn maybe_projects_params_module_name_ok() {
+        let mpp = MaybeProjectsParams {
+            module_name: Some("Some Module".into()),
+            ..Default::default()
+        };
+
+        let pp = ProjectsParams {
+            seek: Seek::default(),
+            limit: None,
+            module_name: Some("Some Module".into())
+        };
+
+        assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
+    }
+
+    #[test]
+    fn maybe_projects_params_module_name_and_q_invalid() {
+        let mpp = MaybeProjectsParams {
+            module_name: Some("Some Module".into()),
+            q: Some("whatever".into()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            ProjectsParams::try_from(mpp).unwrap_err(),
+            Error::InvalidCombination
+        );
+    }
+
+    #[test]
+    fn maybe_projects_params_module_name_and_sort_invalid() {
+        let mpp = MaybeProjectsParams {
+            module_name: Some("Some Module".into()),
+            sort_by: Some(SortBy::ProjectName),
             ..Default::default()
         };
 
@@ -221,7 +289,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -272,7 +341,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -292,7 +362,8 @@ mod test {
                 anchor: Anchor::After("whatever".into(), 0),
                 facets: vec![]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -312,7 +383,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![]
             },
-            limit: Limit::new(50)
+            limit: Limit::new(50),
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -332,7 +404,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![ Facet::Publisher("abc".into()) ]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -352,7 +425,8 @@ mod test {
                 anchor: Anchor::Start,
                 facets: vec![ Facet::Year("1979".into()) ]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -375,7 +449,8 @@ mod test {
                     Facet::Tag("y".into())
                 ]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -398,7 +473,8 @@ mod test {
                     Facet::Owner("y".into())
                 ]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -421,7 +497,8 @@ mod test {
                     Facet::Player("y".into())
                 ]
             },
-            limit: None
+            limit: None,
+            module_name: None
         };
 
         assert_eq!(ProjectsParams::try_from(mpp).unwrap(), pp);
@@ -438,7 +515,8 @@ mod test {
                 anchor: Anchor::After("battle for fallujah: april 2004".into(), 446),
                 facets: vec![Facet::Query("Battle".into())]
             },
-            limit: Limit::new(50)
+            limit: Limit::new(50),
+            module_name: None
         };
 
         let Query(act): Query<ProjectsParams> = Query::try_from_uri(&uri)
