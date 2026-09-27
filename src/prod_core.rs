@@ -27,7 +27,7 @@ use crate::{
     db::{DatabaseClient, DatabaseError, FileRow, FlagRow, MidField, PackageRow, ProjectRow, ProjectSummaryRow, ReleaseRow},
     input::{is_valid_package_name, slug_for, ConsecutiveWhitespace, FlagPost, GameDataPatch, GameDataPost, GalleryPatch, PackageDataPatch, PackageDataPost, ProjectDataPatch, ProjectDataPost},
     model::{Admin, Flag, Owner, Package, Project, Release, User},
-    module::{dump_moduledata, versions_in_moduledata},
+    module::{dump_moduledata, name_in_moduledata, versions_in_moduledata},
     params::ProjectsParams,
     time::{self, nanos_to_rfc3339, rfc3339_to_nanos},
     upload::Uploader,
@@ -122,7 +122,14 @@ where
         params: ProjectsParams
     ) -> Result<Projects, GetProjectsError>
     {
-        let ProjectsParams { seek, limit } = params;
+        let ProjectsParams { seek, limit, module_name } = params;
+
+        // an exact module-name lookup is a single page, unpaginated
+        if let Some(module_name) = module_name {
+            return self.get_projects_by_module_name(
+                &module_name, limit.unwrap_or_default()
+            ).await;
+        }
 
         let (prev, next, projects, total) = self.get_projects_from(
             seek, limit.unwrap_or_default()
@@ -385,6 +392,7 @@ where
         // has one of those extensions or zip.
 
         // check uploaded file for moduledata
+        let mut module_name = None;
         let requires = match ext {
             Some(ext @ "vlog") |
             Some(ext @ "vmdx") |
@@ -395,6 +403,12 @@ where
                     // we found moduledata
                     Ok(md) => {
                         let (mver, vver) = check_moduledata(&md, ext).await?;
+
+                        if ext == "vmod" {
+                            // record the module name for the search index
+                            module_name = name_in_moduledata(&md)
+                                .map_err(AddFileError::ModuleError)?;
+                        }
 
                         if ext == "vmdx" {
                             // extensions need only a valid version
@@ -448,6 +462,7 @@ where
             sha256,
             content_type.as_ref(),
             requires.as_deref(),
+            module_name.as_deref(),
             &url,
             now
         ).await?;
@@ -875,6 +890,42 @@ where
                     limit_extra
                 ).await
         }
+    }
+
+    async fn get_projects_by_module_name(
+        &self,
+        module_name: &str,
+        limit: Limit
+    ) -> Result<Projects, GetProjectsError>
+    {
+        let projects = self.db.get_projects_by_module_name(
+            module_name, limit.get() as u32
+        ).await?;
+
+        let total = projects.len() as i64;
+
+        // get the tags
+        let tags = try_join_all(
+            projects.iter()
+                .map(|p| self.db.get_project_tags(Project(p.project_id)))
+        ).await?;
+
+        // convert the rows and tags to summaries
+        let projects = projects.into_iter()
+            .zip(tags)
+            .map(make_project_summary)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(
+            Projects {
+                projects,
+                meta: Pagination {
+                    prev_page: None,
+                    next_page: None,
+                    total
+                }
+            }
+        )
     }
 
     async fn get_projects_from(

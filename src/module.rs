@@ -81,6 +81,22 @@ pub fn versions_in_moduledata(
     ))
 }
 
+pub fn name_in_moduledata(
+    md: &str
+) -> Result<Option<String>, Error>
+{
+    let package = sxd_document::parser::parse(md)?;
+    let document = package.as_document();
+
+    Ok(
+        // extract <name> from moduledata
+        sxd_xpath::evaluate_xpath(&document, "/data/name")
+            .ok()
+            .map(Value::into_string)
+            .filter(|s| !s.is_empty())
+    )
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -153,6 +169,33 @@ mod test {
         assert_eq!(
             versions_in_moduledata(md).unwrap(),
             (None, None)
+        );
+    }
+
+    #[test]
+    fn name_in_moduledata_ok() {
+        let md = "<data><name>Some Module</name></data>";
+        assert_eq!(
+            name_in_moduledata(md).unwrap(),
+            Some("Some Module".into())
+        );
+    }
+
+    #[test]
+    fn name_in_moduledata_missing_name() {
+        let md = "<data></data>";
+        assert_eq!(
+            name_in_moduledata(md).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn name_in_moduledata_bad_xml() {
+        let md = "<data>";
+        assert_matches!(
+            name_in_moduledata(md).unwrap_err(),
+            Error::Xml(_)
         );
     }
 }

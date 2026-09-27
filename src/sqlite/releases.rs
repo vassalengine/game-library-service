@@ -9,7 +9,7 @@ use crate::{
     model::{Owner, Package, Project, Release},
     sqlite::{
         require_one_modified,
-        project::update_project_non_project_data
+        project::{update_module_names, update_project_non_project_data}
     },
     version::Version
 };
@@ -383,6 +383,7 @@ ORDER BY
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 async fn create_file_row<'e, E>(
     ex: E,
     owner: Owner,
@@ -392,6 +393,7 @@ async fn create_file_row<'e, E>(
     sha256: &str,
     content_type: &str,
     requires: Option<&str>,
+    module_name: Option<&str>,
     url: &str,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -408,10 +410,11 @@ INSERT INTO files (
     sha256,
     content_type,
     requires,
+    module_name,
     published_at,
     published_by
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ",
         release.0,
         url,
@@ -420,6 +423,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         sha256,
         content_type,
         requires,
+        module_name,
         now,
         owner.0
     )
@@ -491,6 +495,7 @@ pub async fn add_file_url<'a, A>(
     sha256: &str,
     content_type: &str,
     requires: Option<&str>,
+    module_name: Option<&str>,
     url: &str,
     now: i64
 ) -> Result<(), DatabaseError>
@@ -509,9 +514,15 @@ where
         sha256,
         content_type,
         requires,
+        module_name,
         url,
         now
     ).await?;
+
+    // keep the project's searchable module names current
+    if module_name.is_some() {
+        update_module_names(&mut *tx, proj).await?;
+    }
 
     // update project to reflect the change
     update_project_non_project_data(&mut tx, owner, proj, now).await?;
